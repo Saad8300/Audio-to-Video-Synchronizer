@@ -93,6 +93,7 @@ export default function App() {
 
   // ── Required file state ───────────────────────────────────────────────────
   const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioDuration, setAudioDuration] = useState<number | null>(null)
   const [imagesZip, setImagesZip] = useState<File | null>(null)
   const [csvFile, setCsvFile] = useState<File | null>(null)
 
@@ -110,6 +111,24 @@ export default function App() {
   const [result, setResult] = useState<GenerateResponse | null>(null)
   const [healthOk, setHealthOk] = useState<boolean | null>(null)
   const [cancelledMessage, setCancelledMessage] = useState<string | null>(null)
+
+  // ── Parse audio duration ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!audioFile) {
+      setAudioDuration(null)
+      return
+    }
+    const url = URL.createObjectURL(audioFile)
+    const audio = new Audio(url)
+    audio.onloadedmetadata = () => {
+      setAudioDuration(audio.duration)
+      URL.revokeObjectURL(url)
+    }
+    audio.onerror = () => {
+      setAudioDuration(null)
+      URL.revokeObjectURL(url)
+    }
+  }, [audioFile])
 
   // ── Health check on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -480,6 +499,20 @@ export default function App() {
                   )}
                 </div>
               </div>
+
+              {/* Duration warnings */}
+              {audioDuration !== null && audioDuration > 600 && (
+                <div className="text-left w-full max-w-sm mx-auto animate-fade-in" style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.75rem' }}>
+                  <div className="flex items-start gap-2 text-xs">
+                    <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
+                    <span className="text-amber-300 leading-relaxed">
+                      {audioDuration > 1200 
+                        ? 'This video is longer than the recommended tested range. It may take more time depending on your computer.'
+                        : 'Long video detected. For faster testing, use 720p + Fast Preview. 1080p Balanced is recommended for final normal export.'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <button
                 id="generate-btn"

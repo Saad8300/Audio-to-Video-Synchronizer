@@ -455,6 +455,11 @@ def generate_video(
             "Consider Balanced profile for faster results."
         )
 
+    logger.info(
+        f"Starting job. Res: {export_resolution}, Profile: {render_profile}, "
+        f"Aspect: {aspect_ratio}, Watermark: {use_watermark}, Zoom: {zoom_effect}"
+    )
+
     def _check_cancel():
         if cancel_event is not None and cancel_event.is_set():
             raise GenerationCancelled("Job was cancelled by user request.")
@@ -497,6 +502,9 @@ def generate_video(
         errors.append("CSV contains no valid rows.")
         return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
+    total_duration = rows[-1]["end"] if rows else 0
+    logger.info(f"Timeline loaded: {len(rows)} rows, duration: {seconds_to_mmss(total_duration)}")
+
     _check_cancel()
 
     # ------------------------------------------------------------------
@@ -536,7 +544,8 @@ def generate_video(
 
         preprocessed_path = os.path.join(preprocessed_dir, f"pp_{img_name}.jpg")
         try:
-            preprocess_image(src_path, preprocessed_path, target_w, target_h, fit_mode)
+            if not os.path.isfile(preprocessed_path):
+                preprocess_image(src_path, preprocessed_path, target_w, target_h, fit_mode)
         except Exception as e:
             errors.append(f"Failed to preprocess {img_name}: {e}")
             row["status"] = "error"
@@ -741,9 +750,11 @@ def generate_video(
             logger=None,
         )
     except Exception as e:
+        logger.exception("Failed to write video file")
         errors.append(f"Failed to write video file: {e}")
         return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
     finally:
+        logger.info("Closing MoviePy clips to free memory")
         try:
             video.close()
         except Exception:
@@ -768,6 +779,7 @@ def generate_video(
     _check_cancel()
     _progress(100, "Complete")
 
+    logger.info("Video generation completed successfully")
     return {
         "success": True,
         "timeline": timeline,

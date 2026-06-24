@@ -207,7 +207,7 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.timeline_report.map((row, i) => (
+                    {result.timeline_report.slice(0, 100).map((row, i) => (
                       <tr
                         key={i}
                         className={`transition-colors border-b ${
@@ -227,6 +227,13 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
                         </td>
                       </tr>
                     ))}
+                    {result.timeline_report.length > 100 && (
+                      <tr className="bg-surface-input border-b" style={{ borderColor: 'var(--color-surface-card-border)' }}>
+                        <td colSpan={6} className="px-4 py-3 text-center text-xs font-semibold text-muted italic">
+                          + {result.timeline_report.length - 100} more items hidden to improve performance.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

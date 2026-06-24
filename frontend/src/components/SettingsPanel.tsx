@@ -206,6 +206,10 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
           disabled={disabled}
         />
 
+        <div className="text-[11px] text-muted leading-tight mt-2 px-1">
+          <span className="font-semibold text-amber-400/80">Tip:</span> For long videos, use <strong className="text-primary">720p Fast Preview</strong> first to check timing. Slow Zoom In and 4K can take significantly longer.
+        </div>
+
         {is4kHQZoom && (
           <InlineWarning message="4K + HQ + Zoom is very demanding." />
         )}

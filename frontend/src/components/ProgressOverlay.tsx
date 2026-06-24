@@ -168,9 +168,15 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
             <span className="flex items-center gap-1.5">
               <IconClock size={12} />
               Remaining: <strong className="text-secondary tabular-nums font-bold">
-                {remaining !== null && remaining > 0 ? formatTime(remaining) : 'Calculating…'}
+                {remaining !== null && (remaining > 0 || progress > 5) ? formatTime(remaining) : 'Calculating…'}
               </strong>
             </span>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-[10px] text-muted italic">
+              Long videos may take several minutes depending on resolution, zoom, and your computer.
+            </p>
           </div>
 
           {/* Poll error notice */}
