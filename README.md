@@ -161,6 +161,44 @@ images.zip
 
 ---
 
+## ✨ Optional Enhancements
+
+These features are optional — your video generates normally without them.
+Click **Optional Enhancements** on the app to expand this section.
+
+### 🎵 Background Music
+
+Upload a music file (MP3, WAV, M4A, or AAC) to add low-volume background music behind your main audio.
+
+| Option | Details |
+|--------|---------|
+| **Enable toggle** | Must be ON for music to be applied |
+| **Music Volume** | 0–100%. **Recommended: 10–15%** to keep the voice clear |
+| **Fade In / Fade Out** | Smoothly fades the music at the start and end (default: on) |
+
+**How it works:**
+- Music is **automatically looped** if it is shorter than your video
+- Music is **automatically trimmed** if it is longer than your video
+- The main audio (voice) stays at full volume — the music plays behind it
+- If you upload a music file but leave the toggle off, no music is applied
+
+### 🎬 Outro / Ending Video
+
+Upload a short ending video clip (MP4, MOV, or WEBM) to append after your main video.
+
+**Examples of common outros:**
+- "Subscribe" or "Follow for more" screens
+- "Like & Share" animations
+- Channel branding or logo reveals
+
+**How it works:**
+- The outro is automatically **resized and cropped** to match your selected aspect ratio (16:9, 9:16, or 1:1)
+- The outro's original audio is preserved
+- If the outro has no audio, that is fine — no crash occurs
+- The outro can be any duration; very long outros are allowed but not recommended
+
+---
+
 ## ❗ Troubleshooting
 
 ### "Backend offline" shows in the app
@@ -198,6 +236,27 @@ cd backend && source .venv/bin/activate && uvicorn main:app --host 127.0.0.1 --p
 ### ZIP extraction fails
 → Make sure images are at the root of the ZIP, not in a subfolder
 → Re-zip the images by selecting them all in Finder → right-click → Compress
+
+### Unsupported outro video format
+→ Only **MP4, MOV, and WEBM** are supported for outro videos
+→ Convert your outro with FFmpeg: `ffmpeg -i outro.avi -c:v libx264 outro.mp4`
+→ Or use a free converter like HandBrake (https://handbrake.fr/)
+
+### Unsupported background music format
+→ Only **MP3, WAV, M4A, and AAC** are supported for background music
+→ Convert with FFmpeg: `ffmpeg -i music.ogg -c:a libmp3lame music.mp3`
+
+### Outro video fails or shows an error
+→ Check that the outro file is not corrupt by playing it in a media player first
+→ Try re-encoding it: `ffmpeg -i bad_outro.mp4 -c:v libx264 -c:a aac fixed_outro.mp4`
+→ If the outro is a very unusual codec or resolution, re-encode it to standard H.264 MP4
+
+### Background music is too loud or too quiet
+→ Adjust the **Music Volume** slider (recommended: 10–15% for subtle background)
+→ If the main voice is hard to hear, lower the music volume further
+
+### Background music cuts off abruptly
+→ Enable **Fade In / Fade Out** in the Optional Enhancements panel for a smoother ending
 
 ---
 

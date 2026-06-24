@@ -11,6 +11,10 @@ export interface GenerateSettings {
   transition: Transition
   zoomEffect: ZoomEffect
   outputName: string
+  // Batch 2
+  enableBgMusic: boolean
+  musicVolume: number    // 0–100 (integer percentage shown in UI)
+  musicFade: boolean
 }
 
 export interface TimelineRow {

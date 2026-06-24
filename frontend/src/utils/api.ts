@@ -14,20 +14,27 @@ export async function checkHealth(): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
-// Job-based API (new — preferred)
+// Job-based API (preferred)
 // ---------------------------------------------------------------------------
 
 /**
  * Start a background generation job.
  * Returns immediately with a job_id; poll getJobStatus() for updates.
+ *
+ * @param outroFile   Optional outro video to append (mp4/mov/webm)
+ * @param bgMusicFile Optional background music (mp3/wav/m4a/aac)
  */
 export async function startJob(
   audioFile: File,
   imagesZip: File,
   timestampCsv: File,
   settings: GenerateSettings,
+  outroFile?: File | null,
+  bgMusicFile?: File | null,
 ): Promise<{ job_id: string }> {
   const form = new FormData()
+
+  // Required fields
   form.append('audio_file', audioFile)
   form.append('images_zip', imagesZip)
   form.append('timestamp_csv', timestampCsv)
@@ -36,6 +43,15 @@ export async function startJob(
   form.append('transition', settings.transition)
   form.append('zoom_effect', settings.zoomEffect)
   form.append('output_name', settings.outputName || 'video')
+
+  // Batch 2 — background music
+  form.append('enable_bg_music', settings.enableBgMusic ? 'true' : 'false')
+  form.append('music_volume', (settings.musicVolume / 100).toFixed(4))
+  form.append('music_fade', settings.musicFade ? 'true' : 'false')
+
+  // Batch 2 — optional file uploads
+  if (outroFile) form.append('outro_file', outroFile)
+  if (bgMusicFile) form.append('bg_music_file', bgMusicFile)
 
   const res = await fetch(`${BASE_URL}/api/jobs/start`, {
     method: 'POST',

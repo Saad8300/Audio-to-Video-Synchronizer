@@ -54,12 +54,12 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
           <IconSettings size={18} />
         </div>
         <div>
-          <h2 className="text-base font-semibold text-slate-100">Settings</h2>
-          <p className="text-xs text-slate-500">Configure output format and effects</p>
+          <h2 className="text-base font-semibold text-primary">Settings</h2>
+          <p className="text-xs text-muted">Configure output format and effects</p>
         </div>
       </div>
 
-      <div className="h-px bg-slate-700/50" />
+      <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
 
       {/* Grid of settings */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -128,9 +128,9 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
           disabled={disabled}
           maxLength={80}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           Timestamp will be appended automatically. E.g.{' '}
-          <span className="text-slate-400 font-mono">
+          <span className="font-mono text-secondary">
             {settings.outputName || 'video'}_20240101_120000.mp4
           </span>
         </p>

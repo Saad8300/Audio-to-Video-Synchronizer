@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import FileDropZone from './components/FileDropZone'
 import SettingsPanel from './components/SettingsPanel'
+import EnhancementsPanel from './components/EnhancementsPanel'
 import CsvGuide from './components/CsvGuide'
 import ResultsPanel from './components/ResultsPanel'
 import ProgressOverlay from './components/ProgressOverlay'
@@ -25,6 +26,10 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   transition: 'none',
   zoomEffect: 'none',
   outputName: 'my_video',
+  // Batch 2 defaults
+  enableBgMusic: false,
+  musicVolume: 12,
+  musicFade: true,
 }
 
 // ── Theme helpers ──────────────────────────────────────────────────────────
@@ -73,10 +78,14 @@ export default function App() {
 
   const toggleTheme = () => setIsDark((d) => !d)
 
-  // ── File state ───────────────────────────────────────────────────────────
+  // ── Required file state ───────────────────────────────────────────────────
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [imagesZip, setImagesZip] = useState<File | null>(null)
   const [csvFile, setCsvFile] = useState<File | null>(null)
+
+  // ── Optional file state (Batch 2) ─────────────────────────────────────────
+  const [outroFile, setOutroFile] = useState<File | null>(null)
+  const [bgMusicFile, setBgMusicFile] = useState<File | null>(null)
 
   // ── Settings ─────────────────────────────────────────────────────────────
   const [settings, setSettings] = useState<GenerateSettings>(DEFAULT_SETTINGS)
@@ -112,7 +121,14 @@ export default function App() {
     setStatus('uploading')
 
     try {
-      const { job_id } = await startJob(audioFile, imagesZip, csvFile, settings)
+      const { job_id } = await startJob(
+        audioFile,
+        imagesZip,
+        csvFile,
+        settings,
+        outroFile,
+        bgMusicFile,
+      )
       setCurrentJobId(job_id)
       setStatus('generating')
     } catch (err) {
@@ -341,6 +357,7 @@ export default function App() {
               icon={<IconMusic size={20} />}
               file={audioFile}
               onChange={setAudioFile}
+              disabled={isLoading}
             />
 
             <FileDropZone
@@ -351,6 +368,7 @@ export default function App() {
               icon={<IconImage size={20} />}
               file={imagesZip}
               onChange={setImagesZip}
+              disabled={isLoading}
             />
 
             <FileDropZone
@@ -361,6 +379,7 @@ export default function App() {
               icon={<IconFileText size={20} />}
               file={csvFile}
               onChange={setCsvFile}
+              disabled={isLoading}
             />
           </div>
 
@@ -375,7 +394,18 @@ export default function App() {
           disabled={isLoading}
         />
 
-        {/* Row 3: Generate button */}
+        {/* Row 3: Optional Enhancements (Batch 2) */}
+        <EnhancementsPanel
+          settings={settings}
+          onSettingsChange={setSettings}
+          outroFile={outroFile}
+          onOutroChange={setOutroFile}
+          bgMusicFile={bgMusicFile}
+          onBgMusicChange={setBgMusicFile}
+          disabled={isLoading}
+        />
+
+        {/* Row 4: Generate button */}
         <div className="flex flex-col items-center gap-4 py-2">
           {/* File checklist */}
           <div className="flex items-center gap-6 text-xs">
@@ -400,6 +430,15 @@ export default function App() {
                 {label}
               </div>
             ))}
+            {/* Optional enhancements indicator */}
+            {(outroFile || bgMusicFile) && (
+              <div className="flex items-center gap-1.5 text-violet-400">
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] border border-violet-500/40 bg-violet-500/10">
+                  ✦
+                </span>
+                {[bgMusicFile && 'Music', outroFile && 'Outro'].filter(Boolean).join(' + ')}
+              </div>
+            )}
           </div>
 
           <button
@@ -424,12 +463,12 @@ export default function App() {
 
           {!canGenerate && !isLoading && (
             <p className="text-xs text-muted">
-              Upload all three files above to enable generation.
+              Upload all three required files above to enable generation.
             </p>
           )}
         </div>
 
-        {/* Row 4: Results */}
+        {/* Row 5: Results */}
         {result && <ResultsPanel result={result} />}
       </main>
 
@@ -441,7 +480,7 @@ export default function App() {
           <p className="text-xs text-muted">
             Audio Image Sync Studio · Runs fully on localhost · No internet required
           </p>
-          <p className="text-xs text-muted opacity-60">v1.1.0</p>
+          <p className="text-xs text-muted opacity-60">v1.2.0</p>
         </div>
       </footer>
     </div>

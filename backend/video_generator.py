@@ -1,6 +1,7 @@
 """
 video_generator.py - Core video generation engine for Audio Image Sync Studio
 Uses MoviePy 1.0.3 to assemble image clips, apply effects, and mux audio.
+Batch 2: optional outro video and optional background music.
 """
 
 import os
@@ -16,11 +17,15 @@ from PIL import Image
 from moviepy.editor import (
     ImageClip,
     VideoClip,
+    VideoFileClip,
     AudioFileClip,
     CompositeVideoClip,
+    CompositeAudioClip,
     concatenate_videoclips,
+    concatenate_audioclips,
 )
 from moviepy.video.fx.all import fadein, fadeout
+from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 
 from utils import (
     parse_and_validate_csv,
@@ -104,6 +109,88 @@ def make_zoom_clip(image_path: str, duration: float, target_w: int, target_h: in
 
 
 # ---------------------------------------------------------------------------
+# Outro video helper
+# ---------------------------------------------------------------------------
+
+def _load_outro_clip(outro_path: str, target_w: int, target_h: int) -> VideoFileClip:
+    """
+    Load and resize outro video to exactly (target_w, target_h).
+    Uses cover/crop approach: resize to fill target, then centre-crop.
+    Preserves outro's native audio if present.
+    """
+    clip = VideoFileClip(outro_path, audio=True)
+
+    src_w, src_h = clip.size
+    # Compute scale needed to fill target (cover approach)
+    scale_x = target_w / src_w
+    scale_y = target_h / src_h
+    scale = max(scale_x, scale_y)
+
+    new_w = int(src_w * scale)
+    new_h = int(src_h * scale)
+
+    # Resize
+    resized = clip.resize((new_w, new_h))
+
+    # Centre crop to exact target
+    x_off = (new_w - target_w) // 2
+    y_off = (new_h - target_h) // 2
+    cropped = resized.crop(x1=x_off, y1=y_off, x2=x_off + target_w, y2=y_off + target_h)
+
+    # Ensure fps is set
+    if cropped.fps is None or cropped.fps <= 0:
+        cropped = cropped.set_fps(30)
+
+    return cropped
+
+
+# ---------------------------------------------------------------------------
+# Background music helper
+# ---------------------------------------------------------------------------
+
+def _build_music_track(
+    music_path: str,
+    target_duration: float,
+    volume: float,
+    fade: bool,
+) -> Optional[AudioFileClip]:
+    """
+    Load, loop/trim, volume-adjust, and optionally fade background music.
+    Returns an AudioFileClip ready to composite, or None on failure.
+    """
+    music = AudioFileClip(music_path)
+
+    # Loop if music is shorter than video
+    if music.duration < target_duration:
+        # Build enough copies to cover the target duration
+        copies_needed = int(target_duration / music.duration) + 2
+        segments = [music] * copies_needed
+        try:
+            music = concatenate_audioclips(segments)
+        except Exception:
+            # Fallback: just repeat manually via subclip if concat fails
+            pass
+
+    # Trim to exact target duration
+    if music.duration > target_duration:
+        music = music.subclip(0, target_duration)
+
+    # Apply volume
+    music = music.volumex(float(volume))
+
+    # Apply fade in/out
+    if fade:
+        fade_dur = min(1.5, target_duration / 4)
+        try:
+            music = audio_fadein(music, fade_dur)
+            music = audio_fadeout(music, fade_dur)
+        except Exception:
+            pass  # Fade is nice-to-have; skip if it errors
+
+    return music
+
+
+# ---------------------------------------------------------------------------
 # Main generator
 # ---------------------------------------------------------------------------
 
@@ -117,6 +204,13 @@ def generate_video(
     fit_mode: str = "cover",
     transition: str = "none",
     zoom_effect: str = "none",
+    # Batch 2 — optional features
+    outro_path: Optional[str] = None,
+    bg_music_path: Optional[str] = None,
+    enable_bg_music: bool = False,
+    music_volume: float = 0.12,
+    music_fade: bool = True,
+    # Cancellation + progress
     cancel_event: Optional[threading.Event] = None,
     progress_callback: Optional[Callable[[int, str], None]] = None,
 ) -> dict[str, Any]:
@@ -134,6 +228,11 @@ def generate_video(
                   safe checkpoint and GenerationCancelled is raised internally.
     progress_callback: callable(progress_pct: int, step_label: str) — called at
                        each major pipeline stage to report progress.
+    outro_path: optional path to an outro video file (mp4/mov/webm).
+    bg_music_path: optional path to background music (mp3/wav/m4a/aac).
+    enable_bg_music: must be True (and bg_music_path present) for music to apply.
+    music_volume: 0.0–1.0 (already normalised from frontend's 0–100 slider).
+    music_fade: apply 1.5s fade-in and fade-out to the music track.
     """
     warnings: list[str] = []
     errors: list[str] = []
@@ -141,6 +240,17 @@ def generate_video(
 
     target_w, target_h = FORMAT_DIMENSIONS.get(video_format, (1920, 1080))
     fps = 30
+
+    # Clamp volume to safe range
+    music_volume = max(0.0, min(1.0, music_volume))
+
+    # Decide if features are actually active
+    use_outro = outro_path is not None and os.path.isfile(outro_path)
+    use_music = (
+        enable_bg_music
+        and bg_music_path is not None
+        and os.path.isfile(bg_music_path)
+    )
 
     def _check_cancel():
         """Raise GenerationCancelled if the cancel_event has been set."""
@@ -262,8 +372,8 @@ def generate_video(
 
         timeline.append(row)
 
-        # Report per-clip progress between 40% and 55%
-        clip_pct = 40 + int(15 * (idx + 1) / max(total_rows, 1))
+        # Report per-clip progress between 40% and 52%
+        clip_pct = 40 + int(12 * (idx + 1) / max(total_rows, 1))
         _progress(clip_pct, f"Preparing clips ({idx + 1}/{total_rows})")
 
     if not clips:
@@ -273,7 +383,7 @@ def generate_video(
     _check_cancel()
 
     # ------------------------------------------------------------------
-    # 5. Concatenate clips
+    # 5. Concatenate main image clips
     # ------------------------------------------------------------------
     _progress(55, "Building video timeline")
     try:
@@ -288,33 +398,98 @@ def generate_video(
     _check_cancel()
 
     # ------------------------------------------------------------------
-    # 6. Attach audio
+    # 6. Attach main audio
     # ------------------------------------------------------------------
-    _progress(70, "Adding audio")
+    _progress(65, "Mixing audio")
+    main_audio = None
     try:
-        audio = AudioFileClip(audio_path)
+        main_audio = AudioFileClip(audio_path)
 
         # Trim or pad audio to match video length
         video_duration = video.duration
-        if audio.duration > video_duration:
-            audio = audio.subclip(0, video_duration)
+        if main_audio.duration > video_duration:
+            main_audio = main_audio.subclip(0, video_duration)
         else:
             warnings.append(
-                f"Audio ({seconds_to_mmss(audio.duration)}) is shorter than video "
+                f"Audio ({seconds_to_mmss(main_audio.duration)}) is shorter than video "
                 f"({seconds_to_mmss(video_duration)}). "
                 "Video will be silent after audio ends."
             )
-
-        video = video.set_audio(audio)
     except Exception as e:
-        warnings.append(f"Could not attach audio: {e}. Video will be generated without audio.")
+        warnings.append(f"Could not load main audio: {e}. Video will be generated without audio.")
+        main_audio = None
 
     _check_cancel()
 
     # ------------------------------------------------------------------
-    # 7. Write output MP4
+    # 7. Process background music (optional)
     # ------------------------------------------------------------------
-    _progress(85, "Encoding video")
+    if use_music:
+        _progress(72, "Processing background music")
+        try:
+            music_track = _build_music_track(
+                music_path=bg_music_path,
+                target_duration=video.duration,
+                volume=music_volume,
+                fade=music_fade,
+            )
+            if music_track is not None:
+                if main_audio is not None:
+                    # Composite: voice at full vol + music at reduced vol
+                    composite_audio = CompositeAudioClip([main_audio, music_track])
+                    composite_audio = composite_audio.set_duration(video.duration)
+                    video = video.set_audio(composite_audio)
+                else:
+                    # No main audio — play music on its own
+                    video = video.set_audio(music_track)
+                main_audio = None  # already set on video
+        except Exception as e:
+            warnings.append(f"Background music could not be applied: {e}. Continuing without music.")
+
+        _check_cancel()
+    else:
+        # No music — just attach main audio directly
+        if main_audio is not None:
+            video = video.set_audio(main_audio)
+            main_audio = None
+
+    # If music was not used and main_audio still not attached:
+    if main_audio is not None:
+        video = video.set_audio(main_audio)
+        main_audio = None
+
+    _check_cancel()
+
+    # ------------------------------------------------------------------
+    # 8. Append outro video (optional)
+    # ------------------------------------------------------------------
+    outro_clip = None
+    if use_outro:
+        _progress(80, "Appending outro video")
+        try:
+            outro_clip = _load_outro_clip(outro_path, target_w, target_h)
+
+            # Concatenate main video + outro
+            # Use "compose" to handle mixed clip types safely
+            video = concatenate_videoclips([video, outro_clip], method="compose")
+        except GenerationCancelled:
+            raise
+        except Exception as e:
+            errors.append(f"Failed to append outro video: {e}")
+            # Clean up partial outro
+            if outro_clip is not None:
+                try:
+                    outro_clip.close()
+                except Exception:
+                    pass
+            return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+
+    _check_cancel()
+
+    # ------------------------------------------------------------------
+    # 9. Write output MP4
+    # ------------------------------------------------------------------
+    _progress(88, "Encoding video")
     try:
         video.write_videofile(
             output_path,
@@ -341,6 +516,11 @@ def generate_video(
         for c in clips:
             try:
                 c.close()
+            except Exception:
+                pass
+        if outro_clip is not None:
+            try:
+                outro_clip.close()
             except Exception:
                 pass
 

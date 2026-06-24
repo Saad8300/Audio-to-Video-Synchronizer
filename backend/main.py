@@ -1,6 +1,7 @@
 """
 main.py - FastAPI backend for Audio Image Sync Studio
 Handles file uploads, triggers video generation, and serves outputs.
+Batch 2: optional outro video and background music.
 """
 
 import os
@@ -37,6 +38,13 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)s  %(name)s  %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Allowed file types for optional uploads
+# ---------------------------------------------------------------------------
+
+ALLOWED_OUTRO_EXTS = {".mp4", ".mov", ".webm"}
+ALLOWED_MUSIC_EXTS = {".mp3", ".wav", ".m4a", ".aac"}
 
 # ---------------------------------------------------------------------------
 # In-memory job registry
@@ -81,7 +89,7 @@ def _get_job(job_id: str) -> Optional[dict]:
 app = FastAPI(
     title="Audio Image Sync Studio",
     description="Generate perfectly timed videos from audio, ordered images, and timestamps.",
-    version="1.1.0",
+    version="1.2.0",
 )
 
 # Allow local frontend dev server
@@ -112,7 +120,7 @@ async def health_check():
     return {
         "status": "ok",
         "service": "Audio Image Sync Studio",
-        "version": "1.1.0",
+        "version": "1.2.0",
     }
 
 
@@ -122,25 +130,58 @@ async def health_check():
 
 @app.post("/api/jobs/start")
 async def jobs_start(
+    # Required uploads
     audio_file: UploadFile = File(...),
     images_zip: UploadFile = File(...),
     timestamp_csv: UploadFile = File(...),
+    # Required settings
     video_format: str = Form("16:9"),
     fit_mode: str = Form("cover"),
     transition: str = Form("none"),
     zoom_effect: str = Form("none"),
     output_name: Optional[str] = Form(None),
+    # Batch 2 — optional outro
+    outro_file: Optional[UploadFile] = File(None),
+    # Batch 2 — optional background music
+    bg_music_file: Optional[UploadFile] = File(None),
+    enable_bg_music: str = Form("false"),   # "true" | "false"
+    music_volume: float = Form(0.12),       # 0.0–1.0 (frontend divides by 100)
+    music_fade: str = Form("true"),         # "true" | "false"
 ):
     """
     Accept uploaded files, create a background job, return {job_id} immediately.
     The client should poll GET /api/jobs/{job_id}/status for updates.
     """
+
+    # ── Validate optional file types ────────────────────────────────────────
+    if outro_file is not None and outro_file.filename:
+        ext = Path(outro_file.filename).suffix.lower()
+        if ext not in ALLOWED_OUTRO_EXTS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported outro file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_OUTRO_EXTS))}",
+            )
+
+    if bg_music_file is not None and bg_music_file.filename:
+        ext = Path(bg_music_file.filename).suffix.lower()
+        if ext not in ALLOWED_MUSIC_EXTS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported music file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_MUSIC_EXTS))}",
+            )
+
+    # ── Normalise settings ───────────────────────────────────────────────────
+    enable_music_bool = enable_bg_music.strip().lower() == "true"
+    music_fade_bool = music_fade.strip().lower() == "true"
+    music_volume_clamped = max(0.0, min(1.0, float(music_volume)))
+
     job_id = uuid.uuid4().hex
     job_temp = TEMP_DIR / job_id
     job_temp.mkdir(parents=True, exist_ok=True)
 
-    # Save uploads to temp
-    audio_path = str(job_temp / f"audio{Path(audio_file.filename).suffix}")
+    # Save required uploads to temp
+    audio_ext = Path(audio_file.filename).suffix if audio_file.filename else ".mp3"
+    audio_path = str(job_temp / f"audio{audio_ext}")
     zip_path = str(job_temp / "images.zip")
     csv_path = str(job_temp / "timestamps.csv")
 
@@ -151,6 +192,23 @@ async def jobs_start(
     ]:
         content = await upload.read()
         with open(dest, "wb") as f:
+            f.write(content)
+
+    # Save optional uploads to temp
+    outro_path: Optional[str] = None
+    if outro_file is not None and outro_file.filename:
+        outro_ext = Path(outro_file.filename).suffix.lower()
+        outro_path = str(job_temp / f"outro{outro_ext}")
+        content = await outro_file.read()
+        with open(outro_path, "wb") as f:
+            f.write(content)
+
+    bg_music_path: Optional[str] = None
+    if bg_music_file is not None and bg_music_file.filename:
+        music_ext = Path(bg_music_file.filename).suffix.lower()
+        bg_music_path = str(job_temp / f"bgmusic{music_ext}")
+        content = await bg_music_file.read()
+        with open(bg_music_path, "wb") as f:
             f.write(content)
 
     # Determine output filename
@@ -191,6 +249,13 @@ async def jobs_start(
                 fit_mode=fit_mode,
                 transition=transition,
                 zoom_effect=zoom_effect,
+                # Batch 2 params
+                outro_path=outro_path,
+                bg_music_path=bg_music_path,
+                enable_bg_music=enable_music_bool,
+                music_volume=music_volume_clamped,
+                music_fade=music_fade_bool,
+                # Infra
                 cancel_event=state["cancel_event"],
                 progress_callback=progress_callback,
             )
@@ -341,6 +406,8 @@ async def generate(
     """
     Legacy synchronous endpoint — kept for backward compatibility.
     New clients should use POST /api/jobs/start instead.
+    Note: Batch 2 features (outro, background music) are not available
+    via this endpoint. Use /api/jobs/start for full functionality.
     """
     job_id = uuid.uuid4().hex
     job_temp = TEMP_DIR / job_id
@@ -351,7 +418,8 @@ async def generate(
 
     try:
         # Save uploads to temp
-        audio_path = str(job_temp / f"audio{Path(audio_file.filename).suffix}")
+        audio_ext = Path(audio_file.filename).suffix if audio_file.filename else ".mp3"
+        audio_path = str(job_temp / f"audio{audio_ext}")
         zip_path = str(job_temp / "images.zip")
         csv_path = str(job_temp / "timestamps.csv")
 
