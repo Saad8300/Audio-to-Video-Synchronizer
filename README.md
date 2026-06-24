@@ -1,6 +1,6 @@
-# 🎬 Audio Image Sync Studio
+# 🎬 SyncFrame Studio by Atomis Labs
 
-> Create perfectly timed MP4 videos from audio, ordered images, and a timestamp CSV — all locally on your Mac, no internet required.
+> Timestamp-driven video creation for creators and automation workflows. Create perfectly timed MP4 videos locally on your Mac.
 
 ---
 

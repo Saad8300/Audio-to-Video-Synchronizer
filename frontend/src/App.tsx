@@ -240,14 +240,14 @@ export default function App() {
             </div>
             <div className="hidden sm:block">
               <h1 className="text-sm font-bold text-primary leading-none">
-                Audio Image Sync Studio
+                SyncFrame Studio
               </h1>
               <p className="text-xs text-muted mt-0.5 leading-none">
-                Timestamp-driven video generation
+                by <span className="text-brand-300 font-medium">Atomis Labs</span>
               </p>
             </div>
             <h1 className="sm:hidden text-sm font-bold text-primary">
-              AI Sync Studio
+              SyncFrame
             </h1>
           </div>
 
@@ -303,22 +303,36 @@ export default function App() {
               <IconZap size={12} />
               Powered by MoviePy · FFmpeg · FastAPI
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-primary leading-tight">
-              Create perfectly timed{' '}
-              <span className="text-gradient">videos</span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-primary leading-tight">
+              Create perfectly timed <span className="text-gradient">videos</span>
             </h2>
-            <p className="text-secondary text-base leading-relaxed">
-              Upload your audio, a ZIP of ordered images, and a timestamp CSV.
-              We handle the rest — smooth transitions, zoom effects, and precise sync.
+            <p className="text-secondary text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+              Upload audio, ordered images, and timestamps — then export polished videos with music, outro, watermark, and quality controls.
             </p>
+            <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+              {[
+                'Localhost',
+                'No paid APIs',
+                'Music + Outro',
+                'Watermark',
+                '720p–4K',
+              ].map((chip) => (
+                <span
+                  key={chip}
+                  className="px-2.5 py-1 rounded-md bg-brand-500/5 border border-brand-500/20 text-[11px] font-medium text-brand-300"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Main content                                                        */}
+      {/* Main content (Responsive Grid)                                       */}
       {/* ------------------------------------------------------------------ */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
 
         {/* Backend offline banner */}
         {healthOk === false && (
@@ -346,8 +360,11 @@ export default function App() {
           </div>
         )}
 
-        {/* Row 1: Upload panel + CSV template */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Row 1: Responsive 12-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* ── LEFT COLUMN (Uploads, Generate, Results) ── */}
+          <div className="lg:col-span-7 space-y-6">
           {/* Upload panel */}
           <div className="card-glow p-6 space-y-5">
             <div className="flex items-center gap-3">
@@ -396,97 +413,115 @@ export default function App() {
             />
           </div>
 
-          {/* CSV Template (compact) */}
-          <CsvGuide />
+          </div>
+
+          {/* ── RIGHT COLUMN (Guide, Settings, Enhancements) ── */}
+          <div className="lg:col-span-5 space-y-6">
+            <CsvGuide />
+
+            <SettingsPanel
+              settings={settings}
+              onChange={setSettings}
+              disabled={isLoading}
+            />
+
+            <EnhancementsPanel
+              settings={settings}
+              onSettingsChange={setSettings}
+              outroFile={outroFile}
+              onOutroChange={setOutroFile}
+              bgMusicFile={bgMusicFile}
+              onBgMusicChange={setBgMusicFile}
+              disabled={isLoading}
+            />
+          </div>
         </div>
 
-        {/* Row 2: Settings */}
-        <SettingsPanel
-          settings={settings}
-          onChange={setSettings}
-          disabled={isLoading}
-        />
-
-        {/* Row 3: Optional Enhancements (Batch 2) */}
-        <EnhancementsPanel
-          settings={settings}
-          onSettingsChange={setSettings}
-          outroFile={outroFile}
-          onOutroChange={setOutroFile}
-          bgMusicFile={bgMusicFile}
-          onBgMusicChange={setBgMusicFile}
-          disabled={isLoading}
-        />
-
-        {/* Row 4: Generate button */}
-        <div className="flex flex-col items-center gap-4 py-2">
-          {/* File checklist */}
-          <div className="flex items-center gap-6 text-xs">
-            {[
-              { label: 'Audio', file: audioFile },
-              { label: 'Images ZIP', file: imagesZip },
-              { label: 'Timestamp CSV', file: csvFile },
-            ].map(({ label, file }) => (
-              <div
-                key={label}
-                className={`flex items-center gap-1.5 ${file ? 'text-emerald-400' : 'text-muted'}`}
-              >
-                <span
-                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] border ${
-                    file
-                      ? 'border-emerald-500/40 bg-emerald-500/10'
-                      : 'border-slate-600 bg-slate-800'
-                  }`}
-                >
-                  {file ? '✓' : '○'}
-                </span>
-                {label}
-              </div>
-            ))}
-                      {/* Optional enhancements indicator */}
-            {(outroFile || bgMusicFile || (settings.enableWatermark && settings.watermarkText.trim())) && (
-              <div className="flex items-center gap-1.5 text-violet-400">
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] border border-violet-500/40 bg-violet-500/10">
-                  ✦
-                </span>
+        {/* ── Generate button & Results ── */}
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="flex flex-col items-center gap-4 py-2">
+            {/* File checklist and Settings Summary */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-4 text-xs flex-wrap justify-center">
                 {[
-                  bgMusicFile && 'Music',
-                  outroFile && 'Outro',
-                  (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
-                ].filter(Boolean).join(' + ')}
+                  { label: 'Audio', file: audioFile },
+                  { label: 'Images', file: imagesZip },
+                  { label: 'CSV', file: csvFile },
+                ].map(({ label, file }) => (
+                  <div
+                    key={label}
+                    className={`flex items-center gap-1.5 ${file ? 'text-emerald-400' : 'text-muted'}`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border ${
+                        file
+                          ? 'border-emerald-500/40 bg-emerald-500/10'
+                          : 'border-slate-600 bg-slate-800'
+                      }`}
+                    >
+                      {file ? '✓' : '○'}
+                    </span>
+                    {label}
+                  </div>
+                ))}
+
+                <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
+
+                <div className="flex items-center gap-2 text-muted hidden sm:flex">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.exportResolution}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.aspectRatio}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.renderProfile.replace('_', ' ')}</span>
+                </div>
+
+                {/* Optional enhancements indicator */}
+                {(outroFile || bgMusicFile || (settings.enableWatermark && settings.watermarkText.trim())) && (
+                  <>
+                    <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
+                    <div className="flex items-center gap-1.5 text-violet-400">
+                      <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border border-violet-500/40 bg-violet-500/10">
+                        ✦
+                      </span>
+                      {[
+                        bgMusicFile && 'Music',
+                        outroFile && 'Outro',
+                        (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
+                      ].filter(Boolean).join(' + ')}
+                    </div>
+                  </>
+                )}
               </div>
+            </div>
+
+            <button
+              id="generate-btn"
+              onClick={handleGenerate}
+              disabled={!canGenerate}
+              className="btn-primary text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-2xl shadow-2xl shadow-brand-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              aria-label="Generate video"
+            >
+              {isLoading ? (
+                <>
+                  <IconLoader size={20} />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <IconZap size={20} />
+                  Generate Video
+                </>
+              )}
+            </button>
+
+            {!canGenerate && !isLoading && (
+              <p className="text-[11px] sm:text-xs text-muted">
+                Upload all three required files above to enable generation.
+              </p>
             )}
           </div>
 
-          <button
-            id="generate-btn"
-            onClick={handleGenerate}
-            disabled={!canGenerate}
-            className="btn-primary text-lg px-10 py-4 rounded-2xl shadow-2xl shadow-brand-900/50"
-            aria-label="Generate video"
-          >
-            {isLoading ? (
-              <>
-                <IconLoader size={22} />
-                Generating…
-              </>
-            ) : (
-              <>
-                <IconZap size={22} />
-                Generate Video
-              </>
-            )}
-          </button>
-
-          {!canGenerate && !isLoading && (
-            <p className="text-xs text-muted">
-              Upload all three required files above to enable generation.
-            </p>
-          )}
+          {/* Row 5: Results */}
+          {result && <ResultsPanel result={result} settings={settings} />}
         </div>
-
-        {/* Row 5: Results */}
-        {result && <ResultsPanel result={result} />}
       </main>
 
       {/* ------------------------------------------------------------------ */}
@@ -495,7 +530,7 @@ export default function App() {
       <footer className="border-t mt-auto" style={{ borderColor: 'var(--color-surface-card-border)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between gap-4">
           <p className="text-xs text-muted">
-            Audio Image Sync Studio · Runs fully on localhost · No internet required
+            SyncFrame Studio by Atomis Labs · Runs fully on localhost
           </p>
           <p className="text-xs text-muted opacity-60">v1.3.0</p>
         </div>

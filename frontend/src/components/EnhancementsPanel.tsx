@@ -202,13 +202,9 @@ function InfoTip({ children, color = 'brand' }: { children: React.ReactNode; col
   )
 }
 
-// ── Section divider ─────────────────────────────────────────────────────────
-
-function SectionDivider() {
-  return <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
-}
-
 // ── Main component ───────────────────────────────────────────────────────────
+
+type EnhancementSection = 'music' | 'outro' | 'watermark' | null
 
 export default function EnhancementsPanel({
   settings,
@@ -219,184 +215,165 @@ export default function EnhancementsPanel({
   onBgMusicChange,
   disabled,
 }: EnhancementsPanelProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expandedSection, setExpandedSection] = useState<EnhancementSection>(null)
+
+  const toggleSection = (section: EnhancementSection) => {
+    setExpandedSection(prev => prev === section ? null : section)
+  }
 
   const set = <K extends keyof GenerateSettings>(key: K, val: GenerateSettings[K]) =>
     onSettingsChange({ ...settings, [key]: val })
 
-  const hasSomething   = outroFile !== null || bgMusicFile !== null || (settings.enableWatermark && settings.watermarkText.trim() !== '')
   const musicActive    = bgMusicFile !== null && settings.enableBgMusic && !disabled
   const watermarkActive = settings.enableWatermark && settings.watermarkText.trim() !== '' && !disabled
 
-  // Badge labels
-  const badges = [
-    bgMusicFile && 'Music',
-    outroFile   && 'Outro',
-    (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
-  ].filter(Boolean)
-
   return (
-    <div className="card-glow overflow-hidden">
-      {/* ── Collapsible header ────────────────────────────────────────────── */}
-      <button
-        id="enhancements-toggle-btn"
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between gap-4 p-5 text-left transition-colors"
-        style={{ backgroundColor: expanded ? 'rgba(99,102,241,0.04)' : 'transparent' }}
-        aria-expanded={expanded}
-        disabled={disabled}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-violet-400 shrink-0"
-            style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
-          >
-            <IconSparkles size={18} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-base font-semibold text-primary">Optional Enhancements</h2>
-              {hasSomething && badges.length > 0 && (
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-violet-300"
-                  style={{ backgroundColor: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)' }}
-                >
-                  {badges.join(' + ')}
-                </span>
-              )}
+    <div className="space-y-4">
+      {/* ── Background Music Accordion ───────────────────────────────────── */}
+      <div className="card-glow overflow-hidden">
+        <button
+          id="music-toggle-btn"
+          onClick={() => toggleSection('music')}
+          className="w-full flex items-center justify-between gap-4 p-4 text-left transition-colors"
+          style={{ backgroundColor: expandedSection === 'music' ? 'rgba(99,102,241,0.04)' : 'transparent' }}
+          disabled={disabled}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-brand-400 shrink-0"
+              style={{ backgroundColor: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <IconMusic size={14} />
             </div>
-            <p className="text-xs text-muted mt-0.5">Background music · Outro video · Watermark / branding</p>
-          </div>
-        </div>
-        <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expanded ? 'rotate-180' : ''}`}>
-          ▼
-        </span>
-      </button>
-
-      {/* ── Expanded content ──────────────────────────────────────────────── */}
-      {expanded && (
-        <div className="px-5 pb-6 space-y-6">
-          <SectionDivider />
-
-          {/* ── Background Music ─────────────────────────────────────────── */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-brand-400 shrink-0"
-                style={{ backgroundColor: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}
-              >
-                <IconMusic size={14} />
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-primary leading-none">Background Music</h3>
+                {bgMusicFile && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400"></span>
+                )}
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-primary">Background Music</h3>
-                <p className="text-xs text-muted">Low-volume music behind your main audio</p>
-              </div>
+              <p className="text-[11px] text-muted mt-1 leading-none">Low-volume music mixed behind main audio</p>
             </div>
+          </div>
+          <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expandedSection === 'music' ? 'rotate-180' : ''}`}>▼</span>
+        </button>
 
+        {expandedSection === 'music' && (
+          <div className="px-4 pb-5 pt-2 space-y-5 animate-fade-in border-t border-white/5">
             <FileDropZone
               id="bg-music-upload"
-              label="Background Music File (Optional)"
-              description="MP3, WAV, M4A, AAC — looped/trimmed to match video length"
+              label="Music File"
+              description="MP3, WAV, M4A, AAC"
               accept=".mp3,.wav,.m4a,.aac,audio/*"
-              icon={<IconMusic size={18} />}
+              icon={<IconMusic size={16} />}
               file={bgMusicFile}
               onChange={onBgMusicChange}
               disabled={disabled}
             />
 
-            <div className="space-y-4 pl-1">
+            <div className="space-y-4">
               <Toggle
                 id="enable-bg-music-toggle"
                 checked={settings.enableBgMusic}
                 onChange={(v) => set('enableBgMusic', v)}
                 disabled={bgMusicFile === null || disabled}
                 label="Enable Background Music"
-                description={bgMusicFile === null ? 'Upload a music file above to enable this option' : 'Mix background music behind the main audio'}
               />
-              <PercentSlider
-                id="music-volume-slider"
-                label="Music Volume"
-                value={settings.musicVolume}
-                onChange={(v) => set('musicVolume', v)}
-                disabled={!musicActive}
-                hint="Recommended: 10–15% to keep the voice clear"
-              />
-              <Toggle
-                id="music-fade-toggle"
-                checked={settings.musicFade}
-                onChange={(v) => set('musicFade', v)}
-                disabled={!musicActive}
-                label="Fade In / Fade Out"
-                description="Smoothly fade the music at the start and end of the video"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <PercentSlider
+                  id="music-volume-slider"
+                  label="Volume"
+                  value={settings.musicVolume}
+                  onChange={(v) => set('musicVolume', v)}
+                  disabled={!musicActive}
+                  hint="Keep at 10-15% for voice clarity"
+                />
+                <div className="mt-1">
+                  <Toggle
+                    id="music-fade-toggle"
+                    checked={settings.musicFade}
+                    onChange={(v) => set('musicFade', v)}
+                    disabled={!musicActive}
+                    label="Fade In / Out"
+                  />
+                </div>
+              </div>
             </div>
-
-            <InfoTip color="brand">
-              Music is automatically <strong className="text-secondary">looped</strong> if shorter than the video,
-              or <strong className="text-secondary">trimmed</strong> if longer. Keep volume at{' '}
-              <strong className="text-secondary">10–15%</strong> for the best balance.
-            </InfoTip>
           </div>
+        )}
+      </div>
 
-          <SectionDivider />
-
-          {/* ── Outro / Ending Video ─────────────────────────────────────── */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-400 shrink-0"
-                style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}
-              >
-                <IconVideo size={14} />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-primary">Outro / Ending Video</h3>
-                <p className="text-xs text-muted">Appended after the main generated video</p>
-              </div>
+      {/* ── Outro Video Accordion ────────────────────────────────────────── */}
+      <div className="card-glow overflow-hidden">
+        <button
+          id="outro-toggle-btn"
+          onClick={() => toggleSection('outro')}
+          className="w-full flex items-center justify-between gap-4 p-4 text-left transition-colors"
+          style={{ backgroundColor: expandedSection === 'outro' ? 'rgba(16,185,129,0.04)' : 'transparent' }}
+          disabled={disabled}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 shrink-0"
+              style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+              <IconVideo size={14} />
             </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-primary leading-none">Outro Video</h3>
+                {outroFile && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted mt-1 leading-none">Appended after the main video</p>
+            </div>
+          </div>
+          <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expandedSection === 'outro' ? 'rotate-180' : ''}`}>▼</span>
+        </button>
 
+        {expandedSection === 'outro' && (
+          <div className="px-4 pb-5 pt-2 space-y-4 animate-fade-in border-t border-white/5">
             <FileDropZone
               id="outro-upload"
-              label="Outro / Ending Video (Optional)"
-              description="MP4, MOV, WEBM — e.g. Subscribe, Follow for more, Like & Share"
+              label="Outro File"
+              description="MP4, MOV, WEBM"
               accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-              icon={<IconVideo size={18} />}
+              icon={<IconVideo size={16} />}
               file={outroFile}
               onChange={onOutroChange}
               disabled={disabled}
             />
-
-            {outroFile ? (
-              <InfoTip color="emerald">
-                The outro will be automatically resized to match your selected resolution and aspect ratio.
-                Its original audio will be preserved.
-              </InfoTip>
-            ) : (
-              <InfoTip color="brand">
-                Upload any short ending clip — Subscribe screens, social prompts, or branding.
-                It will be matched to your selected aspect ratio and resolution.
-              </InfoTip>
-            )}
+            <InfoTip color="emerald">Automatically resized to match your resolution.</InfoTip>
           </div>
+        )}
+      </div>
 
-          <SectionDivider />
-
-          {/* ── Watermark / Branding ─────────────────────────────────────── */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-400 shrink-0"
-                style={{ backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}
-              >
-                <IconType size={14} />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-primary">Watermark / Branding</h3>
-                <p className="text-xs text-muted">Subtle text overlay — channel handle, brand name, or label</p>
-              </div>
+      {/* ── Watermark Accordion ──────────────────────────────────────────── */}
+      <div className="card-glow overflow-hidden">
+        <button
+          id="watermark-toggle-btn"
+          onClick={() => toggleSection('watermark')}
+          className="w-full flex items-center justify-between gap-4 p-4 text-left transition-colors"
+          style={{ backgroundColor: expandedSection === 'watermark' ? 'rgba(245,158,11,0.04)' : 'transparent' }}
+          disabled={disabled}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-amber-400 shrink-0"
+              style={{ backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+              <IconType size={14} />
             </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-primary leading-none">Watermark</h3>
+                {(settings.enableWatermark && settings.watermarkText.trim()) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted mt-1 leading-none">Subtle text overlay</p>
+            </div>
+          </div>
+          <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expandedSection === 'watermark' ? 'rotate-180' : ''}`}>▼</span>
+        </button>
 
-            {/* Watermark text input */}
+        {expandedSection === 'watermark' && (
+          <div className="px-4 pb-5 pt-2 space-y-5 animate-fade-in border-t border-white/5">
             <div className="space-y-1.5">
               <label htmlFor="watermark-text" className="form-label">Watermark Text</label>
               <input
@@ -404,49 +381,38 @@ export default function EnhancementsPanel({
                 type="text"
                 value={settings.watermarkText}
                 onChange={(e) => set('watermarkText', e.target.value.slice(0, 60))}
-                placeholder="@YourChannel, Atomis Labs, Follow for more…"
+                placeholder="@YourChannel, Atomis Labs"
                 className="form-input"
                 disabled={disabled}
                 maxLength={60}
               />
-              <p className="text-xs text-muted text-right">
-                {settings.watermarkText.length}/60 characters
-              </p>
             </div>
 
-            {/* Enable toggle — disabled if no text */}
             <Toggle
               id="enable-watermark-toggle"
               checked={settings.enableWatermark}
               onChange={(v) => set('enableWatermark', v)}
               disabled={settings.watermarkText.trim() === '' || disabled}
               label="Enable Watermark"
-              description={
-                settings.watermarkText.trim() === ''
-                  ? 'Enter watermark text above to enable this option'
-                  : 'Render text watermark over the final video'
-              }
             />
 
-            {/* Controls — shown always, disabled when watermark inactive */}
-            <div className={`space-y-4 pl-1 ${!watermarkActive ? 'opacity-50 pointer-events-none' : ''}`}>
-              {/* Position Mode */}
-              <div className="space-y-1.5">
-                <label htmlFor="watermark-position-mode" className="form-label">Position Mode</label>
-                <select
-                  id="watermark-position-mode"
-                  value={settings.watermarkPositionMode}
-                  onChange={(e) => set('watermarkPositionMode', e.target.value as any)}
-                  className="form-select"
-                  disabled={!watermarkActive}
-                >
-                  <option value="preset">Preset</option>
-                  <option value="custom">Custom X/Y</option>
-                </select>
-              </div>
+            <div className={`space-y-4 ${!watermarkActive ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="watermark-position-mode" className="form-label">Position Mode</label>
+                  <select
+                    id="watermark-position-mode"
+                    value={settings.watermarkPositionMode}
+                    onChange={(e) => set('watermarkPositionMode', e.target.value as any)}
+                    className="form-select"
+                    disabled={!watermarkActive}
+                  >
+                    <option value="preset">Preset</option>
+                    <option value="custom">Custom X/Y</option>
+                  </select>
+                </div>
 
-              {settings.watermarkPositionMode === 'preset' ? (
-                <>
+                {settings.watermarkPositionMode === 'preset' ? (
                   <div className="space-y-1.5">
                     <label htmlFor="watermark-position" className="form-label">Position</label>
                     <select
@@ -463,81 +429,70 @@ export default function EnhancementsPanel({
                       <option value="center">Center</option>
                     </select>
                   </div>
-                  <PxSlider
-                    id="watermark-margin-slider"
-                    label="Edge Margin"
-                    value={settings.watermarkMargin}
-                    min={10}
-                    max={100}
-                    onChange={(v) => set('watermarkMargin', v)}
-                    disabled={!watermarkActive}
-                  />
-                </>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="watermark-x" className="form-label">X Position (px)</label>
-                    <input
-                      id="watermark-x"
-                      type="number"
-                      min={0}
-                      value={settings.watermarkX}
-                      onChange={(e) => set('watermarkX', Math.max(0, parseInt(e.target.value) || 0))}
-                      className="form-input"
-                      disabled={!watermarkActive}
-                    />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label htmlFor="watermark-x" className="form-label">X Position</label>
+                      <input
+                        id="watermark-x"
+                        type="number"
+                        min={0}
+                        value={settings.watermarkX}
+                        onChange={(e) => set('watermarkX', Math.max(0, parseInt(e.target.value) || 0))}
+                        className="form-input"
+                        disabled={!watermarkActive}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="watermark-y" className="form-label">Y Position</label>
+                      <input
+                        id="watermark-y"
+                        type="number"
+                        min={0}
+                        value={settings.watermarkY}
+                        onChange={(e) => set('watermarkY', Math.max(0, parseInt(e.target.value) || 0))}
+                        className="form-input"
+                        disabled={!watermarkActive}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="watermark-y" className="form-label">Y Position (px)</label>
-                    <input
-                      id="watermark-y"
-                      type="number"
-                      min={0}
-                      value={settings.watermarkY}
-                      onChange={(e) => set('watermarkY', Math.max(0, parseInt(e.target.value) || 0))}
-                      className="form-input"
-                      disabled={!watermarkActive}
-                    />
-                  </div>
-                  <p className="col-span-2 text-[10px] text-muted">
-                    X/Y values are in pixels from the top-left corner of the video.
-                  </p>
-                </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <PercentSlider
+                  id="watermark-size-slider"
+                  label="Size"
+                  value={settings.watermarkSize}
+                  min={1}
+                  onChange={(v) => set('watermarkSize', v)}
+                  disabled={!watermarkActive}
+                />
+                <PercentSlider
+                  id="watermark-opacity-slider"
+                  label="Opacity"
+                  value={settings.watermarkOpacity}
+                  min={10}
+                  onChange={(v) => set('watermarkOpacity', v)}
+                  disabled={!watermarkActive}
+                />
+              </div>
+
+              {settings.watermarkPositionMode === 'preset' && (
+                <PxSlider
+                  id="watermark-margin-slider"
+                  label="Edge Margin"
+                  value={settings.watermarkMargin}
+                  min={10}
+                  max={100}
+                  onChange={(v) => set('watermarkMargin', v)}
+                  disabled={!watermarkActive}
+                />
               )}
-
-              {/* Size slider */}
-              <PercentSlider
-                id="watermark-size-slider"
-                label="Watermark Size"
-                value={settings.watermarkSize}
-                min={1}
-                onChange={(v) => set('watermarkSize', v)}
-                disabled={!watermarkActive}
-                hint="Default: 20 — adjust for different resolutions"
-              />
-
-              {/* Opacity slider */}
-              <PercentSlider
-                id="watermark-opacity-slider"
-                label="Opacity"
-                value={settings.watermarkOpacity}
-                min={10}
-                onChange={(v) => set('watermarkOpacity', v)}
-                disabled={!watermarkActive}
-                hint="Default: 65% — readable but unobtrusive"
-              />
             </div>
-
-            {/* Info tip */}
-            <InfoTip color="amber">
-              The watermark uses a semi-transparent dark pill background for readability on both
-              bright and dark images. It appears on the main video{outroFile ? ' and outro' : ''}.
-              Keep <strong className="text-secondary">Small</strong> size and{' '}
-              <strong className="text-secondary">65%</strong> opacity for a professional look.
-            </InfoTip>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

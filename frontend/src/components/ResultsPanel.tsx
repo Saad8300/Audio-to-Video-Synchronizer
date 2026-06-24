@@ -9,10 +9,11 @@ import {
   IconX,
   IconPlayCircle,
 } from './icons'
-import type { GenerateResponse, TimelineRow } from '../types'
+import type { GenerateResponse, TimelineRow, GenerateSettings } from '../types'
 
 interface ResultsPanelProps {
   result: GenerateResponse
+  settings: GenerateSettings
 }
 
 function StatusBadge({ status }: { status: TimelineRow['status'] }) {
@@ -58,7 +59,7 @@ function MessageList({
   )
 }
 
-export default function ResultsPanel({ result }: ResultsPanelProps) {
+export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
   const [timelineExpanded, setTimelineExpanded] = useState(false)
 
   const videoUrl = result.output_video_url
@@ -76,7 +77,7 @@ export default function ResultsPanel({ result }: ResultsPanelProps) {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
             result.success
               ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
               : 'bg-red-500/10 border border-red-500/20 text-red-400'
@@ -84,11 +85,26 @@ export default function ResultsPanel({ result }: ResultsPanelProps) {
         >
           {result.success ? <IconCheck size={18} /> : <IconX size={18} />}
         </div>
-        <div>
-          <h2 className="text-base font-semibold text-primary">
-            {result.success ? 'Video Generated Successfully' : 'Generation Failed'}
-          </h2>
-          <p className="text-xs text-muted">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center flex-wrap gap-2.5">
+            <h2 className="text-base font-semibold text-primary">
+              {result.success ? 'Video Generated Successfully' : 'Generation Failed'}
+            </h2>
+            {result.success && (
+              <div className="flex gap-1.5">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-muted border border-white/10">
+                  {settings.exportResolution}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-muted border border-white/10">
+                  {settings.aspectRatio}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-muted border border-white/10 hidden sm:inline-block">
+                  {settings.renderProfile.replace('_', ' ')}
+                </span>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted mt-0.5">
             {result.elapsed_seconds != null
               ? `Completed in ${result.elapsed_seconds}s`
               : result.success

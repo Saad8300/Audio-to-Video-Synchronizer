@@ -58,7 +58,7 @@ export default function FileDropZone({
   }
 
   const zoneClass = [
-    'dropzone h-36 px-4 py-5',
+    'dropzone min-h-[4.5rem] px-4 py-3',
     dragging && !disabled ? 'dropzone-active' : '',
     file ? 'dropzone-filled' : '',
     disabled ? 'opacity-50 pointer-events-none' : '',
@@ -96,30 +96,31 @@ export default function FileDropZone({
 
         {file ? (
           // Filled state
-          <div className="flex flex-col items-center gap-2 text-center animate-fade-in">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <IconCheck size={18} />
+          <div className="flex items-center gap-3 w-full animate-fade-in">
+            <div className="w-8 h-8 rounded-full shrink-0 bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <IconCheck size={14} />
             </div>
-            <p className="text-sm font-semibold text-emerald-400 truncate max-w-[200px]">
-              {file.name}
-            </p>
-            <p className="text-xs text-muted">{formatSize(file.size)} · Click to replace</p>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold text-emerald-400 truncate">
+                {file.name}
+              </p>
+              <p className="text-xs text-muted truncate">{formatSize(file.size)} · Click to replace</p>
+            </div>
           </div>
         ) : (
           // Empty state
-          <div className="flex flex-col items-center gap-2.5 text-center">
+          <div className="flex items-center gap-3 w-full">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-muted transition-colors"
+              className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-muted transition-colors"
               style={{ backgroundColor: 'var(--color-surface-input)', border: '1px solid var(--color-surface-input-border)' }}
             >
               {icon}
             </div>
-            <div>
-              <p className="text-sm font-medium text-secondary">
-                Drop file here or{' '}
-                <span className="text-brand-400 hover:text-brand-300">browse</span>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium text-secondary truncate">
+                Drop file or <span className="text-brand-400 hover:text-brand-300">browse</span>
               </p>
-              <p className="text-xs text-muted mt-0.5">{description}</p>
+              <p className="text-[11px] text-muted truncate mt-0.5">{description}</p>
             </div>
           </div>
         )}
