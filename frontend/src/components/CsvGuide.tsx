@@ -1,128 +1,131 @@
-// components/CsvGuide.tsx – CSV format reference card
+// components/CsvGuide.tsx – Compact CSV template card with download button
 
 import React, { useState } from 'react'
-import { IconFileText, IconInfo } from './icons'
+import { IconFileText, IconDownload, IconInfo } from './icons'
 
-const SAMPLE_CSV = `image,start,end,text
+const TEMPLATE_CONTENT = `image,start,end,text
 1.jpg,00:00,00:02,First line here
 2.jpg,00:02,00:05,Second line here
 3.jpg,00:05,00:08,Third line here`
 
 export default function CsvGuide() {
-  const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
-  const copy = () => {
-    navigator.clipboard.writeText(SAMPLE_CSV).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+  const downloadTemplate = () => {
+    const blob = new Blob([TEMPLATE_CONTENT], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'timestamps_template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
-    <div className="card-glow p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-          <IconFileText size={18} />
+    <div className="card-glow p-5 space-y-4">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+            <IconFileText size={18} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-primary">CSV Template</h2>
+            <p className="text-xs text-muted">Timestamp file format guide</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-base font-semibold text-slate-100">CSV Format Guide</h2>
-          <p className="text-xs text-slate-500">How to format your timestamp file</p>
-        </div>
-      </div>
 
-      <div className="h-px bg-slate-700/50" />
-
-      {/* Sample table */}
-      <div className="relative">
+        {/* Download button */}
         <button
-          onClick={copy}
-          aria-label="Copy sample CSV"
-          className="absolute top-2 right-2 text-xs px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors z-10"
+          id="download-csv-template-btn"
+          onClick={downloadTemplate}
+          className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1.5 whitespace-nowrap"
+          aria-label="Download CSV template file"
         >
-          {copied ? '✓ Copied' : 'Copy'}
+          <IconDownload size={13} />
+          Download Template
         </button>
-        <div className="overflow-x-auto rounded-xl border border-slate-700/60 bg-surface-900/70">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-700/60">
-                {['image', 'start', 'end', 'text'].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-2.5 text-left text-xs font-semibold text-brand-400 uppercase tracking-wider"
-                  >
-                    {h}
-                    {h !== 'text' && (
-                      <span className="ml-1 text-red-400 text-[10px] align-top">*</span>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/40">
-              {[
-                ['1.jpg', '00:00', '00:02', 'First line here'],
-                ['2.jpg', '00:02', '00:05', 'Second line here'],
-                ['3.jpg', '00:05', '00:08', 'Third line here'],
-              ].map((row, i) => (
-                <tr key={i} className="hover:bg-slate-800/40 transition-colors">
-                  {row.map((cell, j) => (
-                    <td key={j} className="px-4 py-2.5 font-mono text-xs text-slate-300">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
+      </div>
+
+      <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
+
+      {/* Required columns summary — always visible */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        {[
+          { col: 'image', req: true },
+          { col: 'start', req: true },
+          { col: 'end', req: true },
+          { col: 'text', req: false },
+        ].map(({ col, req }) => (
+          <span
+            key={col}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-mono border ${
+              req
+                ? 'border-brand-500/30 text-brand-300'
+                : 'border-slate-600/40 text-muted'
+            }`}
+            style={{ backgroundColor: req ? 'rgba(99,102,241,0.08)' : 'rgba(100,116,139,0.06)' }}
+          >
+            {col}
+            {req && <span className="text-red-400 text-[9px] font-bold">REQ</span>}
+          </span>
+        ))}
+      </div>
+
+      {/* Toggle for expanded guide */}
+      <button
+        id="csv-guide-toggle-btn"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
+        aria-expanded={expanded}
+      >
+        <IconInfo size={13} />
+        {expanded ? 'Hide guide ▲' : 'Show format guide ▼'}
+      </button>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="space-y-3 animate-fade-in">
+          {/* Compact rules list */}
+          <ul className="space-y-1.5 text-xs text-secondary">
+            <li className="flex items-start gap-2">
+              <span className="text-red-400 font-bold mt-0.5">*</span>
+              <span><strong className="text-primary">image</strong>, <strong className="text-primary">start</strong>, and <strong className="text-primary">end</strong> are required. <strong className="text-primary">text</strong> is optional.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-muted mt-0.5">·</span>
+              <span>Image names must match files inside your ZIP exactly (e.g. <code className="text-primary font-mono">1.jpg</code>).</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-muted mt-0.5">·</span>
+              <span>Accepted image formats: <code className="font-mono">jpg jpeg png webp</code></span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-muted mt-0.5">·</span>
+              <span><strong className="text-primary">end</strong> must be greater than <strong className="text-primary">start</strong>.</span>
+            </li>
+          </ul>
+
+          {/* Accepted time formats */}
+          <div className="rounded-xl border p-3 space-y-2" style={{ backgroundColor: 'rgba(99,102,241,0.05)', borderColor: 'rgba(99,102,241,0.15)' }}>
+            <p className="text-xs font-semibold text-brand-300 flex items-center gap-1.5">
+              <IconInfo size={12} />
+              Accepted time formats
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {['00:02', '00:01.500', '00:00:02', '00:00:02.500'].map((fmt) => (
+                <code
+                  key={fmt}
+                  className="block text-center text-xs rounded-md px-2 py-1 text-secondary font-mono"
+                  style={{ backgroundColor: 'var(--color-surface-input)', border: '1px solid var(--color-surface-input-border)' }}
+                >
+                  {fmt}
+                </code>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Time format info */}
-      <div className="rounded-xl bg-brand-900/20 border border-brand-700/20 p-4 space-y-2">
-        <div className="flex items-center gap-2 text-brand-300 text-xs font-semibold">
-          <IconInfo size={14} />
-          Accepted time formats
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {['00:02', '00:01.500', '00:00:02', '00:00:02.500'].map((fmt) => (
-            <code
-              key={fmt}
-              className="block text-center text-xs bg-surface-900/60 border border-slate-700/50 rounded-lg px-2 py-1.5 text-slate-300 font-mono"
-            >
-              {fmt}
-            </code>
-          ))}
-        </div>
-      </div>
-
-      {/* Rules */}
-      <ul className="space-y-1.5 text-xs text-slate-400">
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 text-red-400 font-bold">*</span>
-          <span>
-            <strong className="text-slate-300">image</strong>, <strong className="text-slate-300">start</strong>, and{' '}
-            <strong className="text-slate-300">end</strong> are required columns.
-          </span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 text-slate-500">·</span>
-          <span>
-            Image names must match files inside your ZIP (e.g. <code className="text-slate-300">1.jpg</code>).
-          </span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 text-slate-500">·</span>
-          <span>
-            <strong className="text-slate-300">end</strong> must always be greater than{' '}
-            <strong className="text-slate-300">start</strong>.
-          </span>
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 text-slate-500">·</span>
-          <span>Supported image formats: jpg, jpeg, png, webp.</span>
-        </li>
-      </ul>
+      )}
     </div>
   )
 }

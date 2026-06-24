@@ -33,4 +33,19 @@ export interface GenerateResponse {
   errors: string[]
 }
 
-export type GenerateStatus = 'idle' | 'uploading' | 'generating' | 'done' | 'error'
+export type GenerateStatus = 'idle' | 'uploading' | 'generating' | 'cancelling' | 'done' | 'error'
+
+/** Shape returned by GET /api/jobs/{job_id}/status */
+export interface JobStatus {
+  job_id: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  progress: number
+  current_step: string
+  elapsed_seconds: number
+  estimated_remaining_seconds: number | null
+  warnings: string[]
+  errors: string[]
+  output_video_url: string | null
+  output_filename: string | null
+  timeline_report: TimelineRow[]
+}

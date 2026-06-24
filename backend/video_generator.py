@@ -6,7 +6,8 @@ Uses MoviePy 1.0.3 to assemble image clips, apply effects, and mux audio.
 import os
 import time
 import logging
-from typing import Any
+import threading
+from typing import Any, Callable, Optional
 
 import numpy as np
 from PIL import Image
@@ -30,6 +31,16 @@ from utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Custom exception for clean cancellation
+# ---------------------------------------------------------------------------
+
+class GenerationCancelled(Exception):
+    """Raised when a job cancel_event is set during generation."""
+    pass
+
 
 # ---------------------------------------------------------------------------
 # Zoom effect helper
@@ -106,6 +117,8 @@ def generate_video(
     fit_mode: str = "cover",
     transition: str = "none",
     zoom_effect: str = "none",
+    cancel_event: Optional[threading.Event] = None,
+    progress_callback: Optional[Callable[[int, str], None]] = None,
 ) -> dict[str, Any]:
     """
     Main entry-point for video generation.
@@ -115,6 +128,12 @@ def generate_video(
         timeline      (list of row dicts enriched with status)
         warnings      (list of str)
         errors        (list of str)
+        cancelled     (bool)
+
+    cancel_event: a threading.Event; if set, generation is aborted at the next
+                  safe checkpoint and GenerationCancelled is raised internally.
+    progress_callback: callable(progress_pct: int, step_label: str) — called at
+                       each major pipeline stage to report progress.
     """
     warnings: list[str] = []
     errors: list[str] = []
@@ -123,34 +142,57 @@ def generate_video(
     target_w, target_h = FORMAT_DIMENSIONS.get(video_format, (1920, 1080))
     fps = 30
 
+    def _check_cancel():
+        """Raise GenerationCancelled if the cancel_event has been set."""
+        if cancel_event is not None and cancel_event.is_set():
+            raise GenerationCancelled("Job was cancelled by user request.")
+
+    def _progress(pct: int, step: str):
+        """Fire the progress callback if supplied."""
+        if progress_callback is not None:
+            try:
+                progress_callback(pct, step)
+            except Exception:
+                pass
+
+    _progress(5, "Preparing job")
+    _check_cancel()
+
     # ------------------------------------------------------------------
     # 1. Extract images ZIP
     # ------------------------------------------------------------------
+    _progress(10, "Extracting ZIP")
     images_dir = os.path.join(temp_dir, "images")
     os.makedirs(images_dir, exist_ok=True)
 
     extracted_files, zip_errors = extract_zip_safely(zip_path, images_dir)
     errors.extend(zip_errors)
     if zip_errors:
-        return {"success": False, "timeline": [], "warnings": warnings, "errors": errors}
+        return {"success": False, "timeline": [], "warnings": warnings, "errors": errors, "cancelled": False}
+
+    _check_cancel()
 
     # ------------------------------------------------------------------
     # 2. Parse & validate CSV
     # ------------------------------------------------------------------
+    _progress(20, "Reading CSV")
     rows, csv_warnings, csv_errors = parse_and_validate_csv(csv_path)
     warnings.extend(csv_warnings)
     errors.extend(csv_errors)
 
     if csv_errors:
-        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors}
+        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
     if not rows:
         errors.append("CSV contains no valid rows.")
-        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors}
+        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+
+    _check_cancel()
 
     # ------------------------------------------------------------------
     # 3. Warn about unused images in ZIP
     # ------------------------------------------------------------------
+    _progress(30, "Validating images and timeline")
     used_images = {r["image"] for r in rows}
     unused = extracted_files - used_images
     if unused:
@@ -158,15 +200,21 @@ def generate_video(
             f"The following images in the ZIP are not referenced in the CSV: {', '.join(sorted(unused))}"
         )
 
+    _check_cancel()
+
     # ------------------------------------------------------------------
     # 4. Preprocess images and build clips
     # ------------------------------------------------------------------
+    _progress(40, "Preparing clips")
     preprocessed_dir = os.path.join(temp_dir, "preprocessed")
     os.makedirs(preprocessed_dir, exist_ok=True)
 
     clips: list = []
+    total_rows = len(rows)
 
-    for row in rows:
+    for idx, row in enumerate(rows):
+        _check_cancel()
+
         img_name = row["image"]
         src_path = os.path.join(images_dir, img_name)
 
@@ -214,13 +262,20 @@ def generate_video(
 
         timeline.append(row)
 
+        # Report per-clip progress between 40% and 55%
+        clip_pct = 40 + int(15 * (idx + 1) / max(total_rows, 1))
+        _progress(clip_pct, f"Preparing clips ({idx + 1}/{total_rows})")
+
     if not clips:
         errors.append("No valid image clips could be created.")
-        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors}
+        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+
+    _check_cancel()
 
     # ------------------------------------------------------------------
     # 5. Concatenate clips
     # ------------------------------------------------------------------
+    _progress(55, "Building video timeline")
     try:
         # "compose" handles both VideoClip and ImageClip in the same sequence;
         # "chain" can break when mixing static ImageClips with VideoClips.
@@ -228,11 +283,14 @@ def generate_video(
         video = concatenate_videoclips(clips, method=concat_method)
     except Exception as e:
         errors.append(f"Failed to concatenate clips: {e}")
-        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors}
+        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+
+    _check_cancel()
 
     # ------------------------------------------------------------------
     # 6. Attach audio
     # ------------------------------------------------------------------
+    _progress(70, "Adding audio")
     try:
         audio = AudioFileClip(audio_path)
 
@@ -251,9 +309,12 @@ def generate_video(
     except Exception as e:
         warnings.append(f"Could not attach audio: {e}. Video will be generated without audio.")
 
+    _check_cancel()
+
     # ------------------------------------------------------------------
     # 7. Write output MP4
     # ------------------------------------------------------------------
+    _progress(85, "Encoding video")
     try:
         video.write_videofile(
             output_path,
@@ -270,7 +331,7 @@ def generate_video(
         )
     except Exception as e:
         errors.append(f"Failed to write video file: {e}")
-        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors}
+        return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
     finally:
         # Release MoviePy resources to avoid file-handle leaks
         try:
@@ -283,9 +344,14 @@ def generate_video(
             except Exception:
                 pass
 
+    _progress(95, "Finalizing output")
+    _check_cancel()
+    _progress(100, "Complete")
+
     return {
         "success": True,
         "timeline": timeline,
         "warnings": warnings,
         "errors": errors,
+        "cancelled": False,
     }

@@ -76,10 +76,10 @@ export default function ResultsPanel({ result }: ResultsPanelProps) {
           {result.success ? <IconCheck size={18} /> : <IconX size={18} />}
         </div>
         <div>
-          <h2 className="text-base font-semibold text-slate-100">
+          <h2 className="text-base font-semibold text-primary">
             {result.success ? 'Video Generated Successfully' : 'Generation Failed'}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             {result.elapsed_seconds != null
               ? `Completed in ${result.elapsed_seconds}s`
               : result.success
@@ -89,7 +89,7 @@ export default function ResultsPanel({ result }: ResultsPanelProps) {
         </div>
       </div>
 
-      <div className="h-px bg-slate-700/50" />
+      <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
 
       {/* Warnings & errors */}
       {result.errors.length > 0 && (
@@ -131,35 +131,36 @@ export default function ResultsPanel({ result }: ResultsPanelProps) {
       {/* Timeline report */}
       {result.timeline_report.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-300">Timeline Report</h3>
-          <div className="overflow-x-auto rounded-xl border border-slate-700/60">
+          <h3 className="text-sm font-semibold text-secondary">Timeline Report</h3>
+          <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--color-surface-card-border)' }}>
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-slate-700/60 bg-surface-900/50">
+                <tr className="border-b" style={{ backgroundColor: 'var(--color-surface-input)', borderColor: 'var(--color-surface-card-border)' }}>
                   {['Image', 'Start', 'End', 'Duration', 'Text', 'Status'].map((h) => (
                     <th
                       key={h}
-                      className="px-4 py-3 text-left font-semibold text-slate-400 uppercase tracking-wider"
+                      className="px-4 py-3 text-left font-semibold text-muted uppercase tracking-wider"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/40">
+              <tbody>
                 {result.timeline_report.map((row, i) => (
                   <tr
                     key={i}
-                    className={`hover:bg-slate-800/40 transition-colors ${
+                    className={`transition-colors border-b ${
                       row.status !== 'ok' ? 'bg-red-900/10' : ''
                     }`}
+                    style={{ borderColor: 'var(--color-surface-card-border)' }}
                   >
-                    <td className="px-4 py-2.5 font-mono text-slate-300">{row.image}</td>
-                    <td className="px-4 py-2.5 font-mono text-slate-400">{row.start}</td>
-                    <td className="px-4 py-2.5 font-mono text-slate-400">{row.end}</td>
-                    <td className="px-4 py-2.5 font-mono text-slate-400">{row.duration}</td>
-                    <td className="px-4 py-2.5 text-slate-400 max-w-[200px] truncate">
-                      {row.text || <span className="text-slate-600 italic">—</span>}
+                    <td className="px-4 py-2.5 font-mono text-secondary">{row.image}</td>
+                    <td className="px-4 py-2.5 font-mono text-muted">{row.start}</td>
+                    <td className="px-4 py-2.5 font-mono text-muted">{row.end}</td>
+                    <td className="px-4 py-2.5 font-mono text-muted">{row.duration}</td>
+                    <td className="px-4 py-2.5 text-muted max-w-[200px] truncate">
+                      {row.text || <span className="opacity-40 italic">—</span>}
                     </td>
                     <td className="px-4 py-2.5">
                       <StatusBadge status={row.status} />

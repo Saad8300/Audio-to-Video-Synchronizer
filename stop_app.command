@@ -67,8 +67,10 @@ stop_by_port() {
         if [ -n "$pids" ]; then
             echo "$pids" | xargs kill -9 2>/dev/null
         fi
-        success "$label on port $port stopped"
+        success "$label on port $port cleared"
         STOPPED_ANY=1
+    else
+        info "Port $port ($label) is already free"
     fi
 }
 
@@ -77,18 +79,22 @@ stop_by_port "Frontend" 5173
 
 # ---- Also kill any lingering uvicorn / vite processes from this project -----
 
-# Kill uvicorn processes pointing to this project
+# Kill uvicorn processes
 UVICORN_PIDS=$(pgrep -f "uvicorn main:app" 2>/dev/null)
 if [ -n "$UVICORN_PIDS" ]; then
     echo "$UVICORN_PIDS" | xargs kill 2>/dev/null
+    sleep 0.3
+    echo "$UVICORN_PIDS" | xargs kill -9 2>/dev/null
     success "Uvicorn process(es) stopped"
     STOPPED_ANY=1
 fi
 
-# Kill vite dev processes pointing to this project  
+# Kill vite dev processes
 VITE_PIDS=$(pgrep -f "vite" 2>/dev/null)
 if [ -n "$VITE_PIDS" ]; then
     echo "$VITE_PIDS" | xargs kill 2>/dev/null
+    sleep 0.3
+    echo "$VITE_PIDS" | xargs kill -9 2>/dev/null
     success "Vite process(es) stopped"
     STOPPED_ANY=1
 fi
@@ -104,6 +110,7 @@ else
 fi
 echo -e "$(printf '═%.0s' {1..60})"
 echo ""
+echo -e "  Ports 8000 and 5173 are now free."
 echo -e "  To start the app again, double-click ${BOLD}start_app.command${RESET}"
 echo ""
 

@@ -2,6 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   CSS CUSTOM PROPERTIES
+   Dark mode (default) and Light mode overrides
+   ============================================================ */
+
+:root {
+  /* Dark mode tokens — these are the default */
+  --color-surface-bg: #010409;
+  --color-surface-card: rgba(15, 23, 42, 0.8);
+  --color-surface-card-border: rgba(51, 65, 85, 0.5);
+  --color-surface-input: #020617;
+  --color-surface-input-border: #475569;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-placeholder: #475569;
+  --color-scrollbar-track: #020617;
+  --color-scrollbar-thumb: #475569;
+  --color-scrollbar-thumb-hover: #64748b;
+  --color-dropzone-border: #475569;
+  --color-dropzone-bg: rgba(2, 6, 23, 0.5);
+  --body-bg-gradient-1: rgba(99, 102, 241, 0.08);
+  --body-bg-gradient-2: rgba(139, 92, 246, 0.06);
+}
+
+/* Light mode — activated by adding class="light" (or removing "dark") on <html> */
+html:not(.dark) {
+  --color-surface-bg: #f4f6fb;
+  --color-surface-card: rgba(255, 255, 255, 0.92);
+  --color-surface-card-border: rgba(148, 163, 184, 0.35);
+  --color-surface-input: #f8fafc;
+  --color-surface-input-border: #cbd5e1;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-text-placeholder: #94a3b8;
+  --color-scrollbar-track: #e2e8f0;
+  --color-scrollbar-thumb: #94a3b8;
+  --color-scrollbar-thumb-hover: #64748b;
+  --color-dropzone-border: #94a3b8;
+  --color-dropzone-bg: rgba(248, 250, 252, 0.8);
+  --body-bg-gradient-1: rgba(99, 102, 241, 0.05);
+  --body-bg-gradient-2: rgba(139, 92, 246, 0.04);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -12,11 +57,14 @@
   }
 
   body {
-    @apply bg-surface-950 text-slate-100 font-sans antialiased;
+    @apply font-sans antialiased;
+    background-color: var(--color-surface-bg);
+    color: var(--color-text-primary);
     background-image:
-      radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 40%);
+      radial-gradient(ellipse at 20% 50%, var(--body-bg-gradient-1) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, var(--body-bg-gradient-2) 0%, transparent 40%);
     min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::-webkit-scrollbar {
@@ -25,42 +73,54 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-surface-900;
+    background-color: var(--color-scrollbar-track);
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-600 rounded-full;
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-500;
+    background-color: var(--color-scrollbar-thumb-hover);
   }
 }
 
 @layer components {
   /* ---- Cards ---- */
   .card {
-    @apply bg-surface-800/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl;
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-surface-card-border);
+    @apply backdrop-blur-sm rounded-2xl;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
   }
 
   .card-glow {
-    @apply card shadow-lg shadow-brand-900/20;
+    @apply card shadow-lg;
+    box-shadow: 0 4px 24px 0 rgba(99, 102, 241, 0.08);
   }
 
   /* ---- Upload dropzone ---- */
   .dropzone {
     @apply relative flex flex-col items-center justify-center w-full rounded-xl
-           border-2 border-dashed border-slate-600 hover:border-brand-500
-           bg-surface-900/50 hover:bg-brand-900/10
+           border-2 border-dashed hover:border-brand-500
            transition-all duration-200 cursor-pointer select-none;
+    border-color: var(--color-dropzone-border);
+    background-color: var(--color-dropzone-bg);
+  }
+
+  .dropzone:hover {
+    background-color: rgba(99, 102, 241, 0.05);
   }
 
   .dropzone-active {
-    @apply border-brand-400 bg-brand-900/20 shadow-inner;
+    @apply border-brand-400 shadow-inner;
+    background-color: rgba(99, 102, 241, 0.08) !important;
   }
 
   .dropzone-filled {
-    @apply border-emerald-500/60 bg-emerald-900/10;
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    background-color: rgba(6, 78, 59, 0.07) !important;
   }
 
   /* ---- Buttons ---- */
@@ -75,28 +135,51 @@
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
-           font-medium text-slate-300 bg-slate-700/60 hover:bg-slate-700
-           border border-slate-600/50 hover:border-slate-500
-           active:scale-[0.98] transition-all duration-150
+           font-medium active:scale-[0.98] transition-all duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
+    color: var(--color-text-secondary);
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-surface-card-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-surface-input);
+    border-color: var(--color-surface-input-border);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+           font-medium text-red-200 bg-red-900/40 border border-red-700/50
+           hover:bg-red-900/60 hover:border-red-600/70
+           active:scale-[0.98] transition-all duration-150;
   }
 
   /* ---- Form controls ---- */
   .form-select {
-    @apply w-full bg-surface-900 border border-slate-600 rounded-lg px-3 py-2
-           text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50
+    @apply w-full rounded-lg px-3 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-500/50
            focus:border-brand-500 transition-colors;
+    background-color: var(--color-surface-input);
+    border: 1px solid var(--color-surface-input-border);
+    color: var(--color-text-primary);
   }
 
   .form-input {
-    @apply w-full bg-surface-900 border border-slate-600 rounded-lg px-3 py-2
-           text-slate-200 text-sm placeholder-slate-500
+    @apply w-full rounded-lg px-3 py-2 text-sm
            focus:outline-none focus:ring-2 focus:ring-brand-500/50
            focus:border-brand-500 transition-colors;
+    background-color: var(--color-surface-input);
+    border: 1px solid var(--color-surface-input-border);
+    color: var(--color-text-primary);
+  }
+
+  .form-input::placeholder {
+    color: var(--color-text-placeholder);
   }
 
   .form-label {
-    @apply block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5;
+    @apply block text-xs font-semibold uppercase tracking-wider mb-1.5;
+    color: var(--color-text-muted);
   }
 
   /* ---- Status badges ---- */
@@ -114,6 +197,19 @@
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
            bg-amber-500/15 text-amber-400 border border-amber-500/20;
   }
+
+  /* ---- Header / surface ---- */
+  .header-surface {
+    background-color: var(--color-surface-card);
+    border-color: var(--color-surface-card-border);
+    backdrop-filter: blur(12px);
+    transition: background-color 0.2s ease;
+  }
+
+  /* ---- Text utilities ---- */
+  .text-primary   { color: var(--color-text-primary); }
+  .text-secondary { color: var(--color-text-secondary); }
+  .text-muted     { color: var(--color-text-muted); }
 }
 
 @layer utilities {
