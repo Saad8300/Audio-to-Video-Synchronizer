@@ -13,6 +13,23 @@ from typing import Any, Callable, Optional
 import numpy as np
 from PIL import Image
 
+# ---------------------------------------------------------------------------
+# Pillow compatibility shim — must come BEFORE MoviePy imports.
+#
+# MoviePy 1.0.3 internally references PIL.Image.ANTIALIAS during video resize
+# operations (e.g. VideoFileClip.resize).  Pillow ≥ 10.0.0 removed that
+# attribute in favour of Image.Resampling.LANCZOS.  We patch it back so
+# MoviePy never encounters the AttributeError.
+# ---------------------------------------------------------------------------
+if not hasattr(Image, 'ANTIALIAS'):
+    try:
+        Image.ANTIALIAS = Image.Resampling.LANCZOS  # type: ignore[attr-defined]
+    except AttributeError:
+        try:
+            Image.ANTIALIAS = Image.LANCZOS          # type: ignore[attr-defined]
+        except AttributeError:
+            Image.ANTIALIAS = Image.BICUBIC          # type: ignore[attr-defined]
+
 # MoviePy 1.0.3 imports
 from moviepy.editor import (
     ImageClip,
