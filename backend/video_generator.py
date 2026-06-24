@@ -141,9 +141,12 @@ def _make_watermark_overlay(
     target_w: int,
     target_h: int,
     text: str,
+    position_mode: str = "preset",
     position: str = "bottom_right",
+    x_pos: int = 50,
+    y_pos: int = 50,
     opacity: float = 0.65,
-    size: str = "small",
+    size: int = 20,
     margin: int = 36,
 ) -> Optional[np.ndarray]:
     """
@@ -160,7 +163,9 @@ def _make_watermark_overlay(
         return None
 
     # Scale font size proportionally to the video height
-    size_factor = {"small": 0.022, "medium": 0.036, "large": 0.054}.get(size.lower(), 0.022)
+    # Map 1-100 numeric size to a factor
+    # size=20 roughly maps to old 'small' (~0.022)
+    size_factor = max(0.01, size * 0.0011)
     font_size = max(14, int(target_h * size_factor))
 
     try:
@@ -193,19 +198,23 @@ def _make_watermark_overlay(
         margin = max(5, min(margin, min(target_w, target_h) // 4))
 
         # Compute pill top-left corner based on position
-        pos = position.lower().replace("-", "_")
-        if pos == "top_left":
-            x, y = margin, margin
-        elif pos == "top_right":
-            x, y = target_w - pill_w - margin, margin
-        elif pos == "bottom_left":
-            x, y = margin, target_h - pill_h - margin
-        elif pos == "center":
-            x = (target_w - pill_w) // 2
-            y = (target_h - pill_h) // 2
-        else:  # bottom_right (default)
-            x = target_w - pill_w - margin
-            y = target_h - pill_h - margin
+        if position_mode == "custom":
+            x = x_pos
+            y = y_pos
+        else:
+            pos = position.lower().replace("-", "_")
+            if pos == "top_left":
+                x, y = margin, margin
+            elif pos == "top_right":
+                x, y = target_w - pill_w - margin, margin
+            elif pos == "bottom_left":
+                x, y = margin, target_h - pill_h - margin
+            elif pos == "center":
+                x = (target_w - pill_w) // 2
+                y = (target_h - pill_h) // 2
+            else:  # bottom_right (default)
+                x = target_w - pill_w - margin
+                y = target_h - pill_h - margin
 
         # Keep pill inside canvas
         x = max(0, min(x, target_w - pill_w))
@@ -381,9 +390,12 @@ def generate_video(
     # Watermark (Batch 3)
     enable_watermark: bool = False,
     watermark_text: str = "",
+    watermark_position_mode: str = "preset",
     watermark_position: str = "bottom_right",
+    watermark_x: int = 50,
+    watermark_y: int = 50,
     watermark_opacity: float = 0.65,
-    watermark_size: str = "small",
+    watermark_size: int = 20,
     watermark_margin: int = 36,
     # Batch 2 — optional features
     outro_path: Optional[str] = None,
@@ -635,7 +647,10 @@ def generate_video(
             target_w=target_w,
             target_h=target_h,
             text=watermark_text,
+            position_mode=watermark_position_mode,
             position=watermark_position,
+            x_pos=watermark_x,
+            y_pos=watermark_y,
             opacity=watermark_opacity,
             size=watermark_size,
             margin=watermark_margin,

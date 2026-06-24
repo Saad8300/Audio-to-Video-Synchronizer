@@ -14,7 +14,6 @@ import {
 import type {
   GenerateSettings,
   WatermarkPosition,
-  WatermarkSize,
 } from '../types'
 
 interface EnhancementsPanelProps {
@@ -431,39 +430,91 @@ export default function EnhancementsPanel({
 
             {/* Controls — shown always, disabled when watermark inactive */}
             <div className={`space-y-4 pl-1 ${!watermarkActive ? 'opacity-50 pointer-events-none' : ''}`}>
-              {/* Position */}
+              {/* Position Mode */}
               <div className="space-y-1.5">
-                <label htmlFor="watermark-position" className="form-label">Position</label>
+                <label htmlFor="watermark-position-mode" className="form-label">Position Mode</label>
                 <select
-                  id="watermark-position"
-                  value={settings.watermarkPosition}
-                  onChange={(e) => set('watermarkPosition', e.target.value as WatermarkPosition)}
+                  id="watermark-position-mode"
+                  value={settings.watermarkPositionMode}
+                  onChange={(e) => set('watermarkPositionMode', e.target.value as any)}
                   className="form-select"
                   disabled={!watermarkActive}
                 >
-                  <option value="top_left">Top Left</option>
-                  <option value="top_right">Top Right</option>
-                  <option value="bottom_left">Bottom Left</option>
-                  <option value="bottom_right">Bottom Right</option>
-                  <option value="center">Center</option>
+                  <option value="preset">Preset</option>
+                  <option value="custom">Custom X/Y</option>
                 </select>
               </div>
 
-              {/* Size */}
-              <div className="space-y-1.5">
-                <label htmlFor="watermark-size" className="form-label">Size</label>
-                <select
-                  id="watermark-size"
-                  value={settings.watermarkSize}
-                  onChange={(e) => set('watermarkSize', e.target.value as WatermarkSize)}
-                  className="form-select"
-                  disabled={!watermarkActive}
-                >
-                  <option value="small">Small (subtle, recommended)</option>
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
-              </div>
+              {settings.watermarkPositionMode === 'preset' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <label htmlFor="watermark-position" className="form-label">Position</label>
+                    <select
+                      id="watermark-position"
+                      value={settings.watermarkPosition}
+                      onChange={(e) => set('watermarkPosition', e.target.value as any)}
+                      className="form-select"
+                      disabled={!watermarkActive}
+                    >
+                      <option value="top_left">Top Left</option>
+                      <option value="top_right">Top Right</option>
+                      <option value="bottom_left">Bottom Left</option>
+                      <option value="bottom_right">Bottom Right</option>
+                      <option value="center">Center</option>
+                    </select>
+                  </div>
+                  <PxSlider
+                    id="watermark-margin-slider"
+                    label="Edge Margin"
+                    value={settings.watermarkMargin}
+                    min={10}
+                    max={100}
+                    onChange={(v) => set('watermarkMargin', v)}
+                    disabled={!watermarkActive}
+                  />
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="watermark-x" className="form-label">X Position (px)</label>
+                    <input
+                      id="watermark-x"
+                      type="number"
+                      min={0}
+                      value={settings.watermarkX}
+                      onChange={(e) => set('watermarkX', Math.max(0, parseInt(e.target.value) || 0))}
+                      className="form-input"
+                      disabled={!watermarkActive}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="watermark-y" className="form-label">Y Position (px)</label>
+                    <input
+                      id="watermark-y"
+                      type="number"
+                      min={0}
+                      value={settings.watermarkY}
+                      onChange={(e) => set('watermarkY', Math.max(0, parseInt(e.target.value) || 0))}
+                      className="form-input"
+                      disabled={!watermarkActive}
+                    />
+                  </div>
+                  <p className="col-span-2 text-[10px] text-muted">
+                    X/Y values are in pixels from the top-left corner of the video.
+                  </p>
+                </div>
+              )}
+
+              {/* Size slider */}
+              <PercentSlider
+                id="watermark-size-slider"
+                label="Watermark Size"
+                value={settings.watermarkSize}
+                min={1}
+                onChange={(v) => set('watermarkSize', v)}
+                disabled={!watermarkActive}
+                hint="Default: 20 — adjust for different resolutions"
+              />
 
               {/* Opacity slider */}
               <PercentSlider
@@ -474,17 +525,6 @@ export default function EnhancementsPanel({
                 onChange={(v) => set('watermarkOpacity', v)}
                 disabled={!watermarkActive}
                 hint="Default: 65% — readable but unobtrusive"
-              />
-
-              {/* Margin slider */}
-              <PxSlider
-                id="watermark-margin-slider"
-                label="Edge Margin"
-                value={settings.watermarkMargin}
-                min={10}
-                max={100}
-                onChange={(v) => set('watermarkMargin', v)}
-                disabled={!watermarkActive}
               />
             </div>
 

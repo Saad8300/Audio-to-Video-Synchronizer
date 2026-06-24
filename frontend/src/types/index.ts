@@ -7,7 +7,7 @@ export type Transition     = 'none' | 'fade'
 export type ZoomEffect     = 'none' | 'slow_zoom_in'
 export type RenderProfile  = 'fast_preview' | 'balanced' | 'high_quality'
 export type WatermarkPosition = 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right' | 'center'
-export type WatermarkSize  = 'small' | 'medium' | 'large'
+export type WatermarkPositionMode = 'preset' | 'custom'
 
 export interface GenerateSettings {
   // Core video
@@ -25,9 +25,12 @@ export interface GenerateSettings {
   // Batch 3 — watermark
   enableWatermark:    boolean
   watermarkText:      string
-  watermarkPosition:  WatermarkPosition
+  watermarkPositionMode: WatermarkPositionMode
+  watermarkPosition:  WatermarkPosition // Used when mode is 'preset'
+  watermarkX:         number            // Used when mode is 'custom'
+  watermarkY:         number            // Used when mode is 'custom'
   watermarkOpacity:   number   // 10–100 (integer percentage in UI, /100 before sending)
-  watermarkSize:      WatermarkSize
+  watermarkSize:      number   // 1-100 numeric slider
   watermarkMargin:    number   // 10–100 px
 }
 

@@ -140,12 +140,15 @@ async def jobs_start(
     render_profile:    str   = Form("balanced"),
     output_name:       Optional[str] = Form(None),
     # Watermark (Batch 3)
-    enable_watermark:     str   = Form("false"),
-    watermark_text:       str   = Form(""),
-    watermark_position:   str   = Form("bottom_right"),
-    watermark_opacity:    float = Form(0.65),
-    watermark_size:       str   = Form("small"),
-    watermark_margin:     int   = Form(36),
+    enable_watermark:        str   = Form("false"),
+    watermark_text:          str   = Form(""),
+    watermark_position_mode: str   = Form("preset"),
+    watermark_position:      str   = Form("bottom_right"),
+    watermark_x:             int   = Form(50),
+    watermark_y:             int   = Form(50),
+    watermark_opacity:       float = Form(0.65),
+    watermark_size:          int   = Form(20),
+    watermark_margin:        int   = Form(36),
     # Optional outro (Batch 2)
     outro_file:    Optional[UploadFile] = File(None),
     # Optional background music (Batch 2)
@@ -180,12 +183,15 @@ async def jobs_start(
 
     # ── Validate / normalise watermark ──────────────────────────────────────
     wm_text     = watermark_text.strip()[:100]           # cap at 100 chars
+    wm_mode     = watermark_position_mode.strip().lower()
+    if wm_mode not in {"preset", "custom"}:
+        wm_mode = "preset"
     wm_position = watermark_position.lower().replace("-", "_")
     if wm_position not in VALID_WM_POSITIONS:
         wm_position = "bottom_right"
-    wm_size = watermark_size.lower()
-    if wm_size not in VALID_WM_SIZES:
-        wm_size = "small"
+    wm_x = max(0, int(watermark_x))
+    wm_y = max(0, int(watermark_y))
+    wm_size = max(1, min(100, int(watermark_size)))
     wm_opacity = max(0.0, min(1.0, float(watermark_opacity)))
     wm_margin  = max(5, min(int(watermark_margin), 200))
     wm_enabled = enable_watermark.strip().lower() == "true"
@@ -270,7 +276,10 @@ async def jobs_start(
                 render_profile=render_profile,
                 enable_watermark=wm_enabled,
                 watermark_text=wm_text,
+                watermark_position_mode=wm_mode,
                 watermark_position=wm_position,
+                watermark_x=wm_x,
+                watermark_y=wm_y,
                 watermark_opacity=wm_opacity,
                 watermark_size=wm_size,
                 watermark_margin=wm_margin,

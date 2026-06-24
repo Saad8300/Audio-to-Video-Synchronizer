@@ -34,12 +34,15 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   musicVolume:   12,
   musicFade:     true,
   // Batch 3 — watermark
-  enableWatermark:   false,
-  watermarkText:     '',
-  watermarkPosition: 'bottom_right',
-  watermarkOpacity:  65,
-  watermarkSize:     'small',
-  watermarkMargin:   36,
+  enableWatermark:       false,
+  watermarkText:         '',
+  watermarkPositionMode: 'preset',
+  watermarkPosition:     'bottom_right',
+  watermarkX:            50,
+  watermarkY:            50,
+  watermarkOpacity:      65,
+  watermarkSize:         20,
+  watermarkMargin:       36,
 }
 
 // ── Theme helpers ──────────────────────────────────────────────────────────
