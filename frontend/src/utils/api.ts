@@ -21,6 +21,7 @@ export async function checkHealth(): Promise<boolean> {
  * Start a background generation job.
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  *
+ * @param introFile   Optional intro video to prepend (mp4/mov/webm)
  * @param outroFile   Optional outro video to append (mp4/mov/webm)
  * @param bgMusicFile Optional background music (mp3/wav/m4a/aac)
  */
@@ -29,6 +30,7 @@ export async function startJob(
   imagesZip:    File,
   timestampCsv: File,
   settings:     GenerateSettings,
+  introFile?:   File | null,
   outroFile?:   File | null,
   bgMusicFile?: File | null,
 ): Promise<{ job_id: string }> {
@@ -49,7 +51,9 @@ export async function startJob(
   form.append('output_name',       settings.outputName || 'video')
 
   // Watermark (Batch 3)
-  form.append('enable_watermark',        settings.enableWatermark ? 'true' : 'false')
+  // Determine if it should be enabled based on text length (Batch 6)
+  const watermarkActive = settings.watermarkText.trim().length > 0
+  form.append('enable_watermark',        watermarkActive ? 'true' : 'false')
   form.append('watermark_text',          settings.watermarkText)
   form.append('watermark_position_mode', settings.watermarkPositionMode)
   form.append('watermark_position',      settings.watermarkPosition)
@@ -60,11 +64,14 @@ export async function startJob(
   form.append('watermark_margin',        String(settings.watermarkMargin))
 
   // Background music (Batch 2)
-  form.append('enable_bg_music', settings.enableBgMusic ? 'true' : 'false')
+  // Determine if it should be enabled based on file presence (Batch 6)
+  const musicActive = !!bgMusicFile
+  form.append('enable_bg_music', musicActive ? 'true' : 'false')
   form.append('music_volume',    (settings.musicVolume / 100).toFixed(4))
   form.append('music_fade',      settings.musicFade ? 'true' : 'false')
 
-  // Optional file uploads (Batch 2)
+  // Optional file uploads (Batch 2/6)
+  if (introFile)   form.append('intro_file',     introFile)
   if (outroFile)   form.append('outro_file',     outroFile)
   if (bgMusicFile) form.append('bg_music_file',  bgMusicFile)
 

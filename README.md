@@ -1,4 +1,4 @@
-# 🎬 SyncFrame Studio by Atomis Labs
+# 🎬 SyncFrame Studio by Automist Labs
 
 > Timestamp-driven video creation for creators and automation workflows. Create perfectly timed MP4 videos locally on your Mac.
 
@@ -226,7 +226,7 @@ Add a subtle text label over the entire video.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Watermark Text | *(empty)* | e.g. `@YourChannel`, `Atomis Labs`, `Follow for more` |
+| Watermark Text | *(empty)* | e.g. `@YourChannel`, `Automist Labs`, `Follow for more` |
 | Position | Bottom Right | Top Left · Top Right · Bottom Left · Bottom Right · Center |
 | Size | Small | Small · Medium · Large (scales with resolution) |
 | Opacity | 65% | 10–100% — lower is more subtle |

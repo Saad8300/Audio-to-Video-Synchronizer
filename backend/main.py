@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 # Allowed values
 # ---------------------------------------------------------------------------
 
+ALLOWED_INTRO_EXTS      = {".mp4", ".mov", ".webm"}
 ALLOWED_OUTRO_EXTS      = {".mp4", ".mov", ".webm"}
 ALLOWED_MUSIC_EXTS      = {".mp3", ".wav", ".m4a", ".aac"}
 VALID_ASPECT_RATIOS     = {"9:16", "16:9", "1:1"}
@@ -149,7 +150,8 @@ async def jobs_start(
     watermark_opacity:       float = Form(0.65),
     watermark_size:          int   = Form(20),
     watermark_margin:        int   = Form(36),
-    # Optional outro (Batch 2)
+    # Optional intro/outro (Batch 2/6)
+    intro_file:    Optional[UploadFile] = File(None),
     outro_file:    Optional[UploadFile] = File(None),
     # Optional background music (Batch 2)
     bg_music_file:     Optional[UploadFile] = File(None),
@@ -171,6 +173,11 @@ async def jobs_start(
         raise HTTPException(400, f"Invalid render_profile '{render_profile}'. Valid: {sorted(VALID_RENDER_PROFILES)}")
 
     # ── Validate optional file types ────────────────────────────────────────
+    if intro_file is not None and intro_file.filename:
+        ext = Path(intro_file.filename).suffix.lower()
+        if ext not in ALLOWED_INTRO_EXTS:
+            raise HTTPException(400, f"Unsupported intro file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_INTRO_EXTS))}")
+
     if outro_file is not None and outro_file.filename:
         ext = Path(outro_file.filename).suffix.lower()
         if ext not in ALLOWED_OUTRO_EXTS:
@@ -189,8 +196,8 @@ async def jobs_start(
     wm_position = watermark_position.lower().replace("-", "_")
     if wm_position not in VALID_WM_POSITIONS:
         wm_position = "bottom_right"
-    wm_x = max(0, int(watermark_x))
-    wm_y = max(0, int(watermark_y))
+    wm_x = int(watermark_x)
+    wm_y = int(watermark_y)
     wm_size = max(1, min(100, int(watermark_size)))
     wm_opacity = max(0.0, min(1.0, float(watermark_opacity)))
     wm_margin  = max(5, min(int(watermark_margin), 200))
@@ -218,6 +225,14 @@ async def jobs_start(
             f.write(content)
 
     # Save optional uploads
+    intro_path: Optional[str] = None
+    if intro_file is not None and intro_file.filename:
+        intro_ext  = Path(intro_file.filename).suffix.lower()
+        intro_path = str(job_temp / f"intro{intro_ext}")
+        content    = await intro_file.read()
+        with open(intro_path, "wb") as f:
+            f.write(content)
+
     outro_path: Optional[str] = None
     if outro_file is not None and outro_file.filename:
         outro_ext  = Path(outro_file.filename).suffix.lower()
@@ -283,7 +298,8 @@ async def jobs_start(
                 watermark_opacity=wm_opacity,
                 watermark_size=wm_size,
                 watermark_margin=wm_margin,
-                # Batch 2
+                # Batch 2/6
+                intro_path=intro_path,
                 outro_path=outro_path,
                 bg_music_path=bg_music_path,
                 enable_bg_music=enable_music_bool,

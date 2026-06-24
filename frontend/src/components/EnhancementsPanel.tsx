@@ -1,24 +1,21 @@
 // components/EnhancementsPanel.tsx
-// Collapsible "Optional Enhancements" card — outro video, background music, and watermark
+// "Optional Enhancements" modules — Intro, Outro, Background Music, and Watermark
 
-import React, { useState } from 'react'
+import React from 'react'
 import FileDropZone from './FileDropZone'
 import {
   IconMusic,
   IconVideo,
   IconType,
-  IconSparkles,
   IconInfo,
-  IconAlertTriangle,
 } from './icons'
-import type {
-  GenerateSettings,
-  WatermarkPosition,
-} from '../types'
+import type { GenerateSettings } from '../types'
 
 interface EnhancementsPanelProps {
   settings:         GenerateSettings
   onSettingsChange: (s: GenerateSettings) => void
+  introFile:        File | null
+  onIntroChange:    (f: File | null) => void
   outroFile:        File | null
   onOutroChange:    (f: File | null) => void
   bgMusicFile:      File | null
@@ -72,7 +69,7 @@ function Toggle({ id, checked, onChange, disabled, label, description }: ToggleP
         >
           {label}
         </label>
-        {description && <p className="text-xs text-muted mt-0.5">{description}</p>}
+        {description && <p className="text-[10px] text-muted mt-0.5">{description}</p>}
       </div>
     </div>
   )
@@ -98,7 +95,7 @@ function PercentSlider({ id, label, value, min = 0, onChange, disabled, hint }: 
           {label}
         </label>
         <span
-          className={`text-sm font-semibold tabular-nums px-2 py-0.5 rounded-md ${disabled ? 'opacity-40' : 'text-brand-300'}`}
+          className={`text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded ${disabled ? 'opacity-40' : 'text-brand-300'}`}
           style={{ backgroundColor: 'rgba(99,102,241,0.1)' }}
         >
           {value}%
@@ -123,7 +120,7 @@ function PercentSlider({ id, label, value, min = 0, onChange, disabled, hint }: 
         aria-label={`${label}: ${value}%`}
       />
       {hint && (
-        <p className="text-[10px] text-muted">{hint}</p>
+        <p className="text-[10px] text-muted leading-tight mt-1">{hint}</p>
       )}
     </div>
   )
@@ -150,7 +147,7 @@ function PxSlider({ id, label, value, min, max, onChange, disabled }: PxSliderPr
           {label}
         </label>
         <span
-          className={`text-sm font-semibold tabular-nums px-2 py-0.5 rounded-md ${disabled ? 'opacity-40' : 'text-brand-300'}`}
+          className={`text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded ${disabled ? 'opacity-40' : 'text-brand-300'}`}
           style={{ backgroundColor: 'rgba(99,102,241,0.1)' }}
         >
           {value}px
@@ -193,10 +190,10 @@ function InfoTip({ children, color = 'brand' }: { children: React.ReactNode; col
   const s = styles[color]
   return (
     <div
-      className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs"
+      className="flex items-start gap-2 rounded-lg px-3 py-2 text-[11px]"
       style={{ backgroundColor: s.bg, border: `1px solid ${s.border}` }}
     >
-      <IconInfo size={13} className={`${s.icon} shrink-0 mt-0.5`} />
+      <IconInfo size={12} className={`${s.icon} shrink-0 mt-0.5`} />
       <span className="text-muted leading-relaxed">{children}</span>
     </div>
   )
@@ -204,294 +201,215 @@ function InfoTip({ children, color = 'brand' }: { children: React.ReactNode; col
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-type EnhancementSection = 'music' | 'outro' | 'watermark' | null
-
 export default function EnhancementsPanel({
   settings,
   onSettingsChange,
+  introFile,
+  onIntroChange,
   outroFile,
   onOutroChange,
   bgMusicFile,
   onBgMusicChange,
   disabled,
 }: EnhancementsPanelProps) {
-  const [expandedSection, setExpandedSection] = useState<EnhancementSection>(null)
-
-  const toggleSection = (section: EnhancementSection) => {
-    setExpandedSection(prev => prev === section ? null : section)
-  }
 
   const set = <K extends keyof GenerateSettings>(key: K, val: GenerateSettings[K]) =>
     onSettingsChange({ ...settings, [key]: val })
 
-  const musicActive    = bgMusicFile !== null && settings.enableBgMusic && !disabled
-  const watermarkActive = settings.enableWatermark && settings.watermarkText.trim() !== '' && !disabled
+  const musicActive    = bgMusicFile !== null && !disabled
+  const watermarkActive = settings.watermarkText.trim() !== '' && !disabled
 
   return (
-    <div className="space-y-4">
-      {/* ── Background Music Accordion ───────────────────────────────────── */}
-      <div className="card-glow overflow-hidden">
-        <button
-          id="music-toggle-btn"
-          onClick={() => toggleSection('music')}
-          className="w-full flex items-center justify-between gap-4 p-4 text-left transition-colors"
-          style={{ backgroundColor: expandedSection === 'music' ? 'rgba(99,102,241,0.04)' : 'transparent' }}
-          disabled={disabled}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-brand-400 shrink-0"
-              style={{ backgroundColor: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <IconMusic size={14} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-primary leading-none">Background Music</h3>
-                {bgMusicFile && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400"></span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted mt-1 leading-none">Low-volume music mixed behind main audio</p>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 pl-1">
+        <h2 className="text-sm font-semibold text-primary uppercase tracking-widest opacity-80">Optional Enhancements</h2>
+      </div>
+
+      {/* ── MODULE: MEDIA (Intro, Outro, Music) ── */}
+      <div className="card-glow p-5 space-y-5">
+        <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: 'var(--color-surface-card-border)' }}>
+          <IconVideo size={14} className="text-emerald-400" />
+          <span className="text-xs font-bold text-primary tracking-wide">Additional Media</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FileDropZone
+            id="intro-upload"
+            label="Intro Video"
+            description="MP4, MOV, WEBM"
+            accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+            icon={<IconVideo size={16} />}
+            file={introFile}
+            onChange={onIntroChange}
+            disabled={disabled}
+          />
+          <FileDropZone
+            id="outro-upload"
+            label="Outro Video"
+            description="MP4, MOV, WEBM"
+            accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+            icon={<IconVideo size={16} />}
+            file={outroFile}
+            onChange={onOutroChange}
+            disabled={disabled}
+          />
+        </div>
+
+        {(introFile || outroFile) && (
+           <InfoTip color="emerald">Intro and outro clips are automatically resized to match your export resolution.</InfoTip>
+        )}
+
+        <div className="pt-2">
+          <FileDropZone
+            id="bg-music-upload"
+            label="Background Music"
+            description="MP3, WAV, M4A, AAC"
+            accept=".mp3,.wav,.m4a,.aac,audio/*"
+            icon={<IconMusic size={16} />}
+            file={bgMusicFile}
+            onChange={onBgMusicChange}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className={`space-y-3 pt-1 transition-opacity ${!musicActive ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <PercentSlider
+              id="music-volume-slider"
+              label="Music Volume"
+              value={settings.musicVolume}
+              onChange={(v) => set('musicVolume', v)}
+              disabled={!musicActive}
+              hint="Keep at 10-15% for voice clarity"
+            />
+            <div className="pb-1 px-1">
+              <Toggle
+                id="music-fade-toggle"
+                checked={settings.musicFade}
+                onChange={(v) => set('musicFade', v)}
+                disabled={!musicActive}
+                label="Fade In / Out"
+              />
             </div>
           </div>
-          <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expandedSection === 'music' ? 'rotate-180' : ''}`}>▼</span>
-        </button>
+        </div>
+      </div>
 
-        {expandedSection === 'music' && (
-          <div className="px-4 pb-5 pt-2 space-y-5 animate-fade-in border-t border-white/5">
-            <FileDropZone
-              id="bg-music-upload"
-              label="Music File"
-              description="MP3, WAV, M4A, AAC"
-              accept=".mp3,.wav,.m4a,.aac,audio/*"
-              icon={<IconMusic size={16} />}
-              file={bgMusicFile}
-              onChange={onBgMusicChange}
-              disabled={disabled}
-            />
+      {/* ── MODULE: WATERMARK ── */}
+      <div className="card-glow p-5 space-y-5">
+        <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: 'var(--color-surface-card-border)' }}>
+          <IconType size={14} className="text-amber-400" />
+          <span className="text-xs font-bold text-primary tracking-wide">Watermark</span>
+        </div>
 
-            <div className="space-y-4">
-              <Toggle
-                id="enable-bg-music-toggle"
-                checked={settings.enableBgMusic}
-                onChange={(v) => set('enableBgMusic', v)}
-                disabled={bgMusicFile === null || disabled}
-                label="Enable Background Music"
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <PercentSlider
-                  id="music-volume-slider"
-                  label="Volume"
-                  value={settings.musicVolume}
-                  onChange={(v) => set('musicVolume', v)}
-                  disabled={!musicActive}
-                  hint="Keep at 10-15% for voice clarity"
-                />
-                <div className="mt-1">
-                  <Toggle
-                    id="music-fade-toggle"
-                    checked={settings.musicFade}
-                    onChange={(v) => set('musicFade', v)}
-                    disabled={!musicActive}
-                    label="Fade In / Out"
+        <div className="space-y-1.5">
+          <label htmlFor="watermark-text" className="form-label">Watermark Text (Leave empty to disable)</label>
+          <input
+            id="watermark-text"
+            type="text"
+            value={settings.watermarkText}
+            onChange={(e) => set('watermarkText', e.target.value.slice(0, 60))}
+            placeholder="@YourChannel, Automist Labs"
+            className="form-input"
+            disabled={disabled}
+            maxLength={60}
+          />
+        </div>
+
+        <div className={`space-y-5 transition-opacity ${!watermarkActive ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="watermark-position-mode" className="form-label">Position Mode</label>
+              <select
+                id="watermark-position-mode"
+                value={settings.watermarkPositionMode}
+                onChange={(e) => set('watermarkPositionMode', e.target.value as any)}
+                className="form-select"
+                disabled={!watermarkActive}
+              >
+                <option value="preset">Preset</option>
+                <option value="custom">Custom X/Y</option>
+              </select>
+            </div>
+
+            {settings.watermarkPositionMode === 'preset' ? (
+              <div className="space-y-1.5 animate-fade-in">
+                <label htmlFor="watermark-position" className="form-label">Position</label>
+                <select
+                  id="watermark-position"
+                  value={settings.watermarkPosition}
+                  onChange={(e) => set('watermarkPosition', e.target.value as any)}
+                  className="form-select"
+                  disabled={!watermarkActive}
+                >
+                  <option value="top_left">Top Left</option>
+                  <option value="top_right">Top Right</option>
+                  <option value="bottom_left">Bottom Left</option>
+                  <option value="bottom_right">Bottom Right</option>
+                  <option value="center">Center</option>
+                </select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 animate-fade-in">
+                <div className="space-y-1.5">
+                  <label htmlFor="watermark-x" className="form-label">X Position</label>
+                  <input
+                    id="watermark-x"
+                    type="number"
+                    value={settings.watermarkX}
+                    onChange={(e) => set('watermarkX', parseInt(e.target.value) || 0)}
+                    className="form-input"
+                    disabled={!watermarkActive}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="watermark-y" className="form-label">Y Position</label>
+                  <input
+                    id="watermark-y"
+                    type="number"
+                    value={settings.watermarkY}
+                    onChange={(e) => set('watermarkY', parseInt(e.target.value) || 0)}
+                    className="form-input"
+                    disabled={!watermarkActive}
                   />
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* ── Outro Video Accordion ────────────────────────────────────────── */}
-      <div className="card-glow overflow-hidden">
-        <button
-          id="outro-toggle-btn"
-          onClick={() => toggleSection('outro')}
-          className="w-full flex items-center justify-between gap-4 p-4 text-left transition-colors"
-          style={{ backgroundColor: expandedSection === 'outro' ? 'rgba(16,185,129,0.04)' : 'transparent' }}
-          disabled={disabled}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 shrink-0"
-              style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <IconVideo size={14} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-primary leading-none">Outro Video</h3>
-                {outroFile && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted mt-1 leading-none">Appended after the main video</p>
-            </div>
-          </div>
-          <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expandedSection === 'outro' ? 'rotate-180' : ''}`}>▼</span>
-        </button>
-
-        {expandedSection === 'outro' && (
-          <div className="px-4 pb-5 pt-2 space-y-4 animate-fade-in border-t border-white/5">
-            <FileDropZone
-              id="outro-upload"
-              label="Outro File"
-              description="MP4, MOV, WEBM"
-              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-              icon={<IconVideo size={16} />}
-              file={outroFile}
-              onChange={onOutroChange}
-              disabled={disabled}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <PercentSlider
+              id="watermark-size-slider"
+              label="Size"
+              value={settings.watermarkSize}
+              min={1}
+              onChange={(v) => set('watermarkSize', v)}
+              disabled={!watermarkActive}
             />
-            <InfoTip color="emerald">Automatically resized to match your resolution.</InfoTip>
+            <PercentSlider
+              id="watermark-opacity-slider"
+              label="Opacity"
+              value={settings.watermarkOpacity}
+              min={10}
+              onChange={(v) => set('watermarkOpacity', v)}
+              disabled={!watermarkActive}
+            />
           </div>
-        )}
-      </div>
 
-      {/* ── Watermark Accordion ──────────────────────────────────────────── */}
-      <div className="card-glow overflow-hidden">
-        <button
-          id="watermark-toggle-btn"
-          onClick={() => toggleSection('watermark')}
-          className="w-full flex items-center justify-between gap-4 p-4 text-left transition-colors"
-          style={{ backgroundColor: expandedSection === 'watermark' ? 'rgba(245,158,11,0.04)' : 'transparent' }}
-          disabled={disabled}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-amber-400 shrink-0"
-              style={{ backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <IconType size={14} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-primary leading-none">Watermark</h3>
-                {(settings.enableWatermark && settings.watermarkText.trim()) && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted mt-1 leading-none">Subtle text overlay</p>
-            </div>
-          </div>
-          <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${expandedSection === 'watermark' ? 'rotate-180' : ''}`}>▼</span>
-        </button>
-
-        {expandedSection === 'watermark' && (
-          <div className="px-4 pb-5 pt-2 space-y-5 animate-fade-in border-t border-white/5">
-            <div className="space-y-1.5">
-              <label htmlFor="watermark-text" className="form-label">Watermark Text</label>
-              <input
-                id="watermark-text"
-                type="text"
-                value={settings.watermarkText}
-                onChange={(e) => set('watermarkText', e.target.value.slice(0, 60))}
-                placeholder="@YourChannel, Atomis Labs"
-                className="form-input"
-                disabled={disabled}
-                maxLength={60}
+          {settings.watermarkPositionMode === 'preset' && (
+            <div className="animate-fade-in">
+              <PxSlider
+                id="watermark-margin-slider"
+                label="Edge Margin"
+                value={settings.watermarkMargin}
+                min={10}
+                max={100}
+                onChange={(v) => set('watermarkMargin', v)}
+                disabled={!watermarkActive}
               />
             </div>
-
-            <Toggle
-              id="enable-watermark-toggle"
-              checked={settings.enableWatermark}
-              onChange={(v) => set('enableWatermark', v)}
-              disabled={settings.watermarkText.trim() === '' || disabled}
-              label="Enable Watermark"
-            />
-
-            <div className={`space-y-4 ${!watermarkActive ? 'opacity-50 pointer-events-none' : ''}`}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="watermark-position-mode" className="form-label">Position Mode</label>
-                  <select
-                    id="watermark-position-mode"
-                    value={settings.watermarkPositionMode}
-                    onChange={(e) => set('watermarkPositionMode', e.target.value as any)}
-                    className="form-select"
-                    disabled={!watermarkActive}
-                  >
-                    <option value="preset">Preset</option>
-                    <option value="custom">Custom X/Y</option>
-                  </select>
-                </div>
-
-                {settings.watermarkPositionMode === 'preset' ? (
-                  <div className="space-y-1.5">
-                    <label htmlFor="watermark-position" className="form-label">Position</label>
-                    <select
-                      id="watermark-position"
-                      value={settings.watermarkPosition}
-                      onChange={(e) => set('watermarkPosition', e.target.value as any)}
-                      className="form-select"
-                      disabled={!watermarkActive}
-                    >
-                      <option value="top_left">Top Left</option>
-                      <option value="top_right">Top Right</option>
-                      <option value="bottom_left">Bottom Left</option>
-                      <option value="bottom_right">Bottom Right</option>
-                      <option value="center">Center</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label htmlFor="watermark-x" className="form-label">X Position</label>
-                      <input
-                        id="watermark-x"
-                        type="number"
-                        min={0}
-                        value={settings.watermarkX}
-                        onChange={(e) => set('watermarkX', Math.max(0, parseInt(e.target.value) || 0))}
-                        className="form-input"
-                        disabled={!watermarkActive}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="watermark-y" className="form-label">Y Position</label>
-                      <input
-                        id="watermark-y"
-                        type="number"
-                        min={0}
-                        value={settings.watermarkY}
-                        onChange={(e) => set('watermarkY', Math.max(0, parseInt(e.target.value) || 0))}
-                        className="form-input"
-                        disabled={!watermarkActive}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <PercentSlider
-                  id="watermark-size-slider"
-                  label="Size"
-                  value={settings.watermarkSize}
-                  min={1}
-                  onChange={(v) => set('watermarkSize', v)}
-                  disabled={!watermarkActive}
-                />
-                <PercentSlider
-                  id="watermark-opacity-slider"
-                  label="Opacity"
-                  value={settings.watermarkOpacity}
-                  min={10}
-                  onChange={(v) => set('watermarkOpacity', v)}
-                  disabled={!watermarkActive}
-                />
-              </div>
-
-              {settings.watermarkPositionMode === 'preset' && (
-                <PxSlider
-                  id="watermark-margin-slider"
-                  label="Edge Margin"
-                  value={settings.watermarkMargin}
-                  min={10}
-                  max={100}
-                  onChange={(v) => set('watermarkMargin', v)}
-                  disabled={!watermarkActive}
-                />
-              )}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

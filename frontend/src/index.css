@@ -29,14 +29,14 @@
 
 /* Light mode — activated by adding class="light" (or removing "dark") on <html> */
 html:not(.dark) {
-  --color-surface-bg: #f4f6fb;
-  --color-surface-card: rgba(255, 255, 255, 0.92);
-  --color-surface-card-border: rgba(148, 163, 184, 0.35);
+  --color-surface-bg: #f1f5f9;
+  --color-surface-card: rgba(255, 255, 255, 1);
+  --color-surface-card-border: rgba(148, 163, 184, 0.4);
   --color-surface-input: #f8fafc;
   --color-surface-input-border: #cbd5e1;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #334155;
-  --color-text-muted: #64748b;
+  --color-text-primary: #020617;
+  --color-text-secondary: #1e293b;
+  --color-text-muted: #475569;
   --color-text-placeholder: #94a3b8;
   --color-scrollbar-track: #e2e8f0;
   --color-scrollbar-thumb: #94a3b8;

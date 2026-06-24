@@ -306,15 +306,15 @@ def make_zoom_clip(
 
 
 # ---------------------------------------------------------------------------
-# Outro video helper
+# Media video helper (intro / outro)
 # ---------------------------------------------------------------------------
 
-def _load_outro_clip(outro_path: str, target_w: int, target_h: int) -> VideoFileClip:
+def _load_media_clip(media_path: str, target_w: int, target_h: int) -> VideoFileClip:
     """
-    Load and cover-crop outro video to exactly (target_w × target_h).
-    Preserves outro audio if present.
+    Load and cover-crop media video to exactly (target_w × target_h).
+    Preserves audio if present.
     """
-    clip = VideoFileClip(outro_path, audio=True)
+    clip = VideoFileClip(media_path, audio=True)
     src_w, src_h = clip.size
 
     scale   = max(target_w / src_w, target_h / src_h)
@@ -397,7 +397,8 @@ def generate_video(
     watermark_opacity: float = 0.65,
     watermark_size: int = 20,
     watermark_margin: int = 36,
-    # Batch 2 — optional features
+    # Batch 2/6 — optional features
+    intro_path: Optional[str] = None,
     outro_path: Optional[str] = None,
     bg_music_path: Optional[str] = None,
     enable_bg_music: bool = False,
@@ -437,6 +438,7 @@ def generate_video(
     watermark_margin   = max(5, min(watermark_margin, 200))
 
     # ── Feature flags ────────────────────────────────────────────────────────
+    use_intro     = intro_path is not None and os.path.isfile(intro_path)
     use_outro     = outro_path is not None and os.path.isfile(outro_path)
     use_music     = enable_bg_music and bg_music_path is not None and os.path.isfile(bg_music_path)
     use_watermark = enable_watermark and bool(watermark_text.strip())
@@ -640,6 +642,7 @@ def generate_video(
     # ------------------------------------------------------------------
     # 8. Watermark (optional)
     # ------------------------------------------------------------------
+    intro_clip = None
     outro_clip = None
     if use_watermark:
         _progress(78, "Applying watermark")
@@ -664,22 +667,57 @@ def generate_video(
         _check_cancel()
 
     # ------------------------------------------------------------------
-    # 9. Append outro video (optional)
+    # 9. Append intro/outro videos (optional)
     # ------------------------------------------------------------------
-    if use_outro:
-        _progress(82, "Appending outro video")
+    clips_to_concat = []
+
+    if use_intro:
+        _progress(80, "Adding intro video")
         try:
-            outro_clip = _load_outro_clip(outro_path, target_w, target_h)
-            video = concatenate_videoclips([video, outro_clip], method="compose")
+            intro_clip = _load_media_clip(intro_path, target_w, target_h)
+            clips_to_concat.append(intro_clip)
         except GenerationCancelled:
             raise
         except Exception as e:
-            errors.append(f"Failed to append outro video: {e}")
+            errors.append(f"Failed to load intro video: {e}")
+            if intro_clip is not None:
+                try:
+                    intro_clip.close()
+                except Exception:
+                    pass
+            return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+
+    clips_to_concat.append(video)
+
+    if use_outro:
+        _progress(82, "Appending outro video")
+        try:
+            outro_clip = _load_media_clip(outro_path, target_w, target_h)
+            clips_to_concat.append(outro_clip)
+        except GenerationCancelled:
+            raise
+        except Exception as e:
+            errors.append(f"Failed to load outro video: {e}")
+            if intro_clip is not None:
+                try:
+                    intro_clip.close()
+                except Exception:
+                    pass
             if outro_clip is not None:
                 try:
                     outro_clip.close()
                 except Exception:
                     pass
+            return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+
+    if len(clips_to_concat) > 1:
+        _progress(85, "Concatenating videos")
+        try:
+            video = concatenate_videoclips(clips_to_concat, method="compose")
+        except GenerationCancelled:
+            raise
+        except Exception as e:
+            errors.append(f"Failed to concatenate videos: {e}")
             return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
     _check_cancel()
@@ -713,6 +751,11 @@ def generate_video(
         for c in clips:
             try:
                 c.close()
+            except Exception:
+                pass
+        if intro_clip is not None:
+            try:
+                intro_clip.close()
             except Exception:
                 pass
         if outro_clip is not None:

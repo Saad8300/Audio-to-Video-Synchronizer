@@ -96,7 +96,8 @@ export default function App() {
   const [imagesZip, setImagesZip] = useState<File | null>(null)
   const [csvFile, setCsvFile] = useState<File | null>(null)
 
-  // ── Optional file state (Batch 2) ─────────────────────────────────────────
+  // ── Optional file state (Batch 2/6) ───────────────────────────────────────
+  const [introFile, setIntroFile] = useState<File | null>(null)
   const [outroFile, setOutroFile] = useState<File | null>(null)
   const [bgMusicFile, setBgMusicFile] = useState<File | null>(null)
 
@@ -139,6 +140,7 @@ export default function App() {
         imagesZip,
         csvFile,
         settings,
+        introFile,
         outroFile,
         bgMusicFile,
       )
@@ -235,42 +237,54 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Logo / title */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center shadow-lg shadow-brand-900/50">
-              <IconSparkles size={16} className="text-white" />
+            <div className="relative w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-brand-900/20 border border-brand-500/20 shadow-lg shadow-brand-900/50">
+              <img 
+                src="/automist-labs-logo.png" 
+                alt="Automist Labs"
+                className="w-full h-full object-contain p-1"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.querySelector('svg')?.classList.remove('hidden');
+                }}
+              />
+              <IconSparkles size={16} className="text-brand-400 hidden" />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-sm font-bold text-primary leading-none">
+            <div className="hidden sm:flex sm:flex-col sm:justify-center">
+              <h1 className="text-base font-bold text-primary leading-tight tracking-tight">
                 SyncFrame Studio
               </h1>
-              <p className="text-xs text-muted mt-0.5 leading-none">
-                by <span className="text-brand-300 font-medium">Atomis Labs</span>
+              <p className="text-[11px] text-muted leading-tight font-medium">
+                by Automist Labs
               </p>
             </div>
-            <h1 className="sm:hidden text-sm font-bold text-primary">
+            <h1 className="sm:hidden text-sm font-bold text-primary tracking-tight">
               SyncFrame
             </h1>
           </div>
 
           {/* Right side: health indicator + theme toggle */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {/* Health indicator */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-black/10 px-2.5 py-1.5 rounded-md border" style={{ borderColor: 'var(--color-surface-card-border)' }}>
               {healthOk === null && (
-                <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <IconLoader size={12} />
-                  Connecting…
+                <span className="flex items-center gap-1.5 text-xs text-muted font-medium">
+                  <IconLoader size={12} className="animate-spin" />
+                  Connecting
                 </span>
               )}
               {healthOk === true && (
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
-                  Backend online
+                <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  Online
                 </span>
               )}
               {healthOk === false && (
-                <span className="flex items-center gap-1.5 text-xs text-red-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                  Backend offline
+                <span className="flex items-center gap-1.5 text-xs text-red-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  Offline
                 </span>
               )}
             </div>
@@ -296,33 +310,30 @@ export default function App() {
       {/* Hero section                                                        */}
       {/* ------------------------------------------------------------------ */}
       <section className="relative overflow-hidden border-b" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-900/20 via-transparent to-violet-900/10 pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 relative">
-          <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-medium">
-              <IconZap size={12} />
-              Powered by MoviePy · FFmpeg · FastAPI
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-primary leading-tight">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-900/10 via-transparent to-transparent pointer-events-none" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 relative">
+          <div className="text-center space-y-5 max-w-3xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-primary leading-tight tracking-tight">
               Create perfectly timed <span className="text-gradient">videos</span>
             </h2>
-            <p className="text-secondary text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+            <p className="text-secondary text-sm sm:text-lg leading-relaxed max-w-2xl mx-auto">
               Upload audio, ordered images, and timestamps — then export polished videos with music, outro, watermark, and quality controls.
             </p>
-            <div className="flex flex-wrap justify-center items-center gap-2 pt-2">
+            <div className="flex flex-wrap justify-center items-center gap-3 pt-4">
               {[
-                'Localhost',
-                'No paid APIs',
-                'Music + Outro',
-                'Watermark',
-                '720p–4K',
+                { label: 'Localhost', icon: <IconZap size={12} /> },
+                { label: 'No paid APIs', icon: <IconSparkles size={12} /> },
+                { label: 'Music + Outro', icon: <IconMusic size={12} /> },
+                { label: 'Watermark', icon: <IconImage size={12} /> },
+                { label: '720p–4K', icon: <IconFileText size={12} /> },
               ].map((chip) => (
-                <span
-                  key={chip}
-                  className="px-2.5 py-1 rounded-md bg-brand-500/5 border border-brand-500/20 text-[11px] font-medium text-brand-300"
+                <div
+                  key={chip.label}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs font-semibold text-brand-300 shadow-sm"
                 >
-                  {chip}
-                </span>
+                  {chip.icon}
+                  {chip.label}
+                </div>
               ))}
             </div>
           </div>
@@ -332,7 +343,7 @@ export default function App() {
       {/* ------------------------------------------------------------------ */}
       {/* Main content (Responsive Grid)                                       */}
       {/* ------------------------------------------------------------------ */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
 
         {/* Backend offline banner */}
         {healthOk === false && (
@@ -360,63 +371,161 @@ export default function App() {
           </div>
         )}
 
-        {/* Row 1: Responsive 12-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Row 1: Responsive 2-column balanced layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
           
           {/* ── LEFT COLUMN (Uploads, Generate, Results) ── */}
-          <div className="lg:col-span-7 space-y-6">
-          {/* Upload panel */}
-          <div className="card-glow p-6 space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                <IconImage size={18} />
+          <div className="space-y-8 flex flex-col">
+            {/* Upload panel */}
+            <div className="card-glow p-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <IconImage size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-primary">Upload Files</h2>
+                  <p className="text-xs text-muted">Three files are required to generate a video</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-semibold text-primary">Upload Files</h2>
-                <p className="text-xs text-muted">Three files are required to generate a video</p>
+
+              <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
+
+              <div className="space-y-4">
+                <FileDropZone
+                  id="audio-upload"
+                  label="Audio File"
+                  description="MP3, WAV, M4A supported"
+                  accept="audio/*,.mp3,.wav,.m4a,.aac"
+                  icon={<IconMusic size={20} />}
+                  file={audioFile}
+                  onChange={setAudioFile}
+                  disabled={isLoading}
+                />
+
+                <FileDropZone
+                  id="images-upload"
+                  label="Images ZIP"
+                  description="ZIP containing 1.jpg, 2.jpg, 3.jpg…"
+                  accept=".zip,application/zip"
+                  icon={<IconImage size={20} />}
+                  file={imagesZip}
+                  onChange={setImagesZip}
+                  disabled={isLoading}
+                />
+
+                <FileDropZone
+                  id="csv-upload"
+                  label="Timestamp CSV"
+                  description="CSV with image, start, end columns"
+                  accept=".csv,text/csv"
+                  icon={<IconFileText size={20} />}
+                  file={csvFile}
+                  onChange={setCsvFile}
+                  disabled={isLoading}
+                />
               </div>
             </div>
 
-            <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
+            {/* ── Generate button ── */}
+            <div className="card p-6 flex flex-col items-center gap-5 text-center">
+              {/* File checklist and Settings Summary */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-4 text-xs flex-wrap justify-center">
+                  {[
+                    { label: 'Audio', file: audioFile },
+                    { label: 'Images', file: imagesZip },
+                    { label: 'CSV', file: csvFile },
+                  ].map(({ label, file }) => (
+                    <div
+                      key={label}
+                      className={`flex items-center gap-1.5 ${file ? 'text-emerald-400' : 'text-muted'}`}
+                    >
+                      <span
+                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border ${
+                          file
+                            ? 'border-emerald-500/40 bg-emerald-500/10'
+                            : 'border-slate-600 bg-slate-800'
+                        }`}
+                      >
+                        {file ? '✓' : '○'}
+                      </span>
+                      {label}
+                    </div>
+                  ))}
 
-            <FileDropZone
-              id="audio-upload"
-              label="Audio File"
-              description="MP3, WAV, M4A supported"
-              accept="audio/*,.mp3,.wav,.m4a,.aac"
-              icon={<IconMusic size={20} />}
-              file={audioFile}
-              onChange={setAudioFile}
-              disabled={isLoading}
-            />
+                  <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
 
-            <FileDropZone
-              id="images-upload"
-              label="Images ZIP"
-              description="ZIP containing 1.jpg, 2.jpg, 3.jpg…"
-              accept=".zip,application/zip"
-              icon={<IconImage size={20} />}
-              file={imagesZip}
-              onChange={setImagesZip}
-              disabled={isLoading}
-            />
+                  <div className="flex items-center gap-2 text-muted hidden sm:flex">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.exportResolution}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.aspectRatio}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.renderProfile.replace('_', ' ')}</span>
+                  </div>
 
-            <FileDropZone
-              id="csv-upload"
-              label="Timestamp CSV"
-              description="CSV with image, start, end columns"
-              accept=".csv,text/csv"
-              icon={<IconFileText size={20} />}
-              file={csvFile}
-              onChange={setCsvFile}
-              disabled={isLoading}
-            />
-          </div>
+                  {/* Optional enhancements indicator */}
+                  {(introFile || outroFile || bgMusicFile || (settings.enableWatermark && settings.watermarkText.trim())) && (
+                    <>
+                      <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
+                      <div className="flex items-center gap-1.5 text-violet-400">
+                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border border-violet-500/40 bg-violet-500/10">
+                          ✦
+                        </span>
+                        {[
+                          bgMusicFile && 'Music',
+                          introFile && 'Intro',
+                          outroFile && 'Outro',
+                          (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
+                        ].filter(Boolean).join(' + ')}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
 
+              <button
+                id="generate-btn"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className={`btn-primary text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-xl w-full max-w-sm font-semibold shadow-xl transition-all ${
+                  canGenerate 
+                    ? 'shadow-brand-900/50 hover:scale-[1.02] active:scale-[0.98]' 
+                    : 'opacity-50 cursor-not-allowed shadow-none'
+                }`}
+                aria-label="Generate video"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <IconLoader size={20} className="animate-spin" />
+                    Generating…
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <IconZap size={20} />
+                    Generate Video
+                  </span>
+                )}
+              </button>
+
+              {!canGenerate && !isLoading ? (
+                <p className="text-[11px] sm:text-xs text-amber-400/80">
+                  Upload all three required files above to enable generation.
+                </p>
+              ) : canGenerate && !isLoading ? (
+                <p className="text-[11px] sm:text-xs text-emerald-400/80">
+                  Ready to generate your video.
+                </p>
+              ) : null}
+            </div>
+
+            {/* ── Results ── */}
+            {result && (
+              <div className="animate-fade-in">
+                <ResultsPanel result={result} settings={settings} />
+              </div>
+            )}
           </div>
 
           {/* ── RIGHT COLUMN (Guide, Settings, Enhancements) ── */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="space-y-8">
             <CsvGuide />
 
             <SettingsPanel
@@ -428,6 +537,8 @@ export default function App() {
             <EnhancementsPanel
               settings={settings}
               onSettingsChange={setSettings}
+              introFile={introFile}
+              onIntroChange={setIntroFile}
               outroFile={outroFile}
               onOutroChange={setOutroFile}
               bgMusicFile={bgMusicFile}
@@ -436,101 +547,15 @@ export default function App() {
             />
           </div>
         </div>
-
-        {/* ── Generate button & Results ── */}
-        <div className="max-w-3xl mx-auto space-y-6">
-          <div className="flex flex-col items-center gap-4 py-2">
-            {/* File checklist and Settings Summary */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-4 text-xs flex-wrap justify-center">
-                {[
-                  { label: 'Audio', file: audioFile },
-                  { label: 'Images', file: imagesZip },
-                  { label: 'CSV', file: csvFile },
-                ].map(({ label, file }) => (
-                  <div
-                    key={label}
-                    className={`flex items-center gap-1.5 ${file ? 'text-emerald-400' : 'text-muted'}`}
-                  >
-                    <span
-                      className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border ${
-                        file
-                          ? 'border-emerald-500/40 bg-emerald-500/10'
-                          : 'border-slate-600 bg-slate-800'
-                      }`}
-                    >
-                      {file ? '✓' : '○'}
-                    </span>
-                    {label}
-                  </div>
-                ))}
-
-                <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
-
-                <div className="flex items-center gap-2 text-muted hidden sm:flex">
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.exportResolution}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.aspectRatio}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.renderProfile.replace('_', ' ')}</span>
-                </div>
-
-                {/* Optional enhancements indicator */}
-                {(outroFile || bgMusicFile || (settings.enableWatermark && settings.watermarkText.trim())) && (
-                  <>
-                    <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
-                    <div className="flex items-center gap-1.5 text-violet-400">
-                      <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border border-violet-500/40 bg-violet-500/10">
-                        ✦
-                      </span>
-                      {[
-                        bgMusicFile && 'Music',
-                        outroFile && 'Outro',
-                        (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
-                      ].filter(Boolean).join(' + ')}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <button
-              id="generate-btn"
-              onClick={handleGenerate}
-              disabled={!canGenerate}
-              className="btn-primary text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-2xl shadow-2xl shadow-brand-900/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              aria-label="Generate video"
-            >
-              {isLoading ? (
-                <>
-                  <IconLoader size={20} />
-                  Generating…
-                </>
-              ) : (
-                <>
-                  <IconZap size={20} />
-                  Generate Video
-                </>
-              )}
-            </button>
-
-            {!canGenerate && !isLoading && (
-              <p className="text-[11px] sm:text-xs text-muted">
-                Upload all three required files above to enable generation.
-              </p>
-            )}
-          </div>
-
-          {/* Row 5: Results */}
-          {result && <ResultsPanel result={result} settings={settings} />}
-        </div>
       </main>
 
       {/* ------------------------------------------------------------------ */}
       {/* Footer                                                              */}
       {/* ------------------------------------------------------------------ */}
       <footer className="border-t mt-auto" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between gap-4">
-          <p className="text-xs text-muted">
-            SyncFrame Studio by Atomis Labs · Runs fully on localhost
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4">
+          <p className="text-xs text-muted font-medium">
+            SyncFrame Studio by <span className="text-secondary">Automist Labs</span> · Runs fully on localhost
           </p>
           <p className="text-xs text-muted opacity-60">v1.3.0</p>
         </div>
