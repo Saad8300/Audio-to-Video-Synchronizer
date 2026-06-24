@@ -184,3 +184,22 @@ export const IconXCircle = icon(
     <path d="m9 9 6 6" />
   </>,
 )
+
+/** Type / text cursor — used for watermark / branding section */
+export const IconType = icon(
+  <>
+    <polyline points="4 7 4 4 20 4 20 7" />
+    <line x1="9" x2="15" y1="20" y2="20" />
+    <line x1="12" x2="12" y1="4" y2="20" />
+  </>,
+)
+
+/** Monitor / display — used for export resolution section */
+export const IconMonitor = icon(
+  <>
+    <rect width="20" height="14" x="2" y="3" rx="2" />
+    <line x1="8" x2="16" y1="21" y2="21" />
+    <line x1="12" x2="12" y1="17" y2="21" />
+  </>,
+)
+

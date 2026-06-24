@@ -1,6 +1,7 @@
 """
 utils.py - Utility functions for Audio Image Sync Studio
 Handles CSV validation, time parsing, ZIP extraction, and image preprocessing.
+Batch 3: RESOLUTION_MAP for aspect ratio × export resolution combinations.
 """
 
 import os
@@ -53,6 +54,45 @@ def seconds_to_mmss(seconds: float) -> str:
     m = int(seconds // 60)
     s = seconds - m * 60
     return f"{m:02d}:{s:06.3f}"
+
+
+# ---------------------------------------------------------------------------
+# Resolution system (Batch 3)
+# ---------------------------------------------------------------------------
+
+# Full resolution lookup: (aspect_ratio, export_resolution) → (width, height)
+RESOLUTION_MAP: dict[tuple[str, str], tuple[int, int]] = {
+    # 16:9 landscape
+    ("16:9", "720p"):  (1280,  720),
+    ("16:9", "1080p"): (1920, 1080),
+    ("16:9", "2K"):    (2560, 1440),
+    ("16:9", "4K"):    (3840, 2160),
+    # 9:16 portrait (Shorts / Reels / TikTok)
+    ("9:16", "720p"):  ( 720, 1280),
+    ("9:16", "1080p"): (1080, 1920),
+    ("9:16", "2K"):    (1440, 2560),
+    ("9:16", "4K"):    (2160, 3840),
+    # 1:1 square
+    ("1:1",  "720p"):  ( 720,  720),
+    ("1:1",  "1080p"): (1080, 1080),
+    ("1:1",  "2K"):    (1440, 1440),
+    ("1:1",  "4K"):    (2160, 2160),
+}
+
+# Legacy alias: maps old video_format strings to 1080p dimensions.
+# Used only by the legacy /api/generate endpoint for backward compatibility.
+FORMAT_DIMENSIONS: dict[str, tuple[int, int]] = {
+    ar: RESOLUTION_MAP[(ar, "1080p")]
+    for ar in ("16:9", "9:16", "1:1")
+}
+
+
+def get_resolution(aspect_ratio: str, export_resolution: str) -> tuple[int, int]:
+    """
+    Return (width, height) for the given aspect_ratio + export_resolution combo.
+    Falls back to 1080p 16:9 if the combination is unknown.
+    """
+    return RESOLUTION_MAP.get((aspect_ratio, export_resolution), (1920, 1080))
 
 
 # ---------------------------------------------------------------------------
@@ -189,29 +229,19 @@ def extract_zip_safely(zip_path: str, extract_to: str) -> tuple[set[str], list[s
 # Image preprocessing
 # ---------------------------------------------------------------------------
 
-# Format -> (width, height)
-FORMAT_DIMENSIONS: dict[str, tuple[int, int]] = {
-    "9:16": (1080, 1920),
-    "16:9": (1920, 1080),
-    "1:1": (1080, 1080),
-}
-
-
 def preprocess_image(
     image_path: str,
     output_path: str,
-    video_format: str = "16:9",
+    target_w: int,
+    target_h: int,
     fit_mode: str = "cover",
 ) -> None:
     """
-    Resize/crop an image to match the target video dimensions.
+    Resize/crop an image to match the exact target dimensions (target_w × target_h).
 
     fit_mode='cover'   -> fill canvas, crop center
     fit_mode='contain' -> fit inside canvas with blurred background
     """
-    dimensions = FORMAT_DIMENSIONS.get(video_format, (1920, 1080))
-    target_w, target_h = dimensions
-
     img = Image.open(image_path).convert("RGB")
     src_w, src_h = img.size
 

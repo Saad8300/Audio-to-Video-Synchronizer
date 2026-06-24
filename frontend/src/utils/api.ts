@@ -25,33 +25,45 @@ export async function checkHealth(): Promise<boolean> {
  * @param bgMusicFile Optional background music (mp3/wav/m4a/aac)
  */
 export async function startJob(
-  audioFile: File,
-  imagesZip: File,
+  audioFile:    File,
+  imagesZip:    File,
   timestampCsv: File,
-  settings: GenerateSettings,
-  outroFile?: File | null,
+  settings:     GenerateSettings,
+  outroFile?:   File | null,
   bgMusicFile?: File | null,
 ): Promise<{ job_id: string }> {
   const form = new FormData()
 
-  // Required fields
-  form.append('audio_file', audioFile)
-  form.append('images_zip', imagesZip)
-  form.append('timestamp_csv', timestampCsv)
-  form.append('video_format', settings.videoFormat)
-  form.append('fit_mode', settings.fitMode)
-  form.append('transition', settings.transition)
-  form.append('zoom_effect', settings.zoomEffect)
-  form.append('output_name', settings.outputName || 'video')
+  // Required
+  form.append('audio_file',     audioFile)
+  form.append('images_zip',     imagesZip)
+  form.append('timestamp_csv',  timestampCsv)
 
-  // Batch 2 — background music
+  // Core video settings (Batch 3)
+  form.append('aspect_ratio',      settings.aspectRatio)
+  form.append('export_resolution', settings.exportResolution)
+  form.append('fit_mode',          settings.fitMode)
+  form.append('transition',        settings.transition)
+  form.append('zoom_effect',       settings.zoomEffect)
+  form.append('render_profile',    settings.renderProfile)
+  form.append('output_name',       settings.outputName || 'video')
+
+  // Watermark (Batch 3)
+  form.append('enable_watermark',   settings.enableWatermark ? 'true' : 'false')
+  form.append('watermark_text',     settings.watermarkText)
+  form.append('watermark_position', settings.watermarkPosition)
+  form.append('watermark_opacity',  (settings.watermarkOpacity / 100).toFixed(4))
+  form.append('watermark_size',     settings.watermarkSize)
+  form.append('watermark_margin',   String(settings.watermarkMargin))
+
+  // Background music (Batch 2)
   form.append('enable_bg_music', settings.enableBgMusic ? 'true' : 'false')
-  form.append('music_volume', (settings.musicVolume / 100).toFixed(4))
-  form.append('music_fade', settings.musicFade ? 'true' : 'false')
+  form.append('music_volume',    (settings.musicVolume / 100).toFixed(4))
+  form.append('music_fade',      settings.musicFade ? 'true' : 'false')
 
-  // Batch 2 — optional file uploads
-  if (outroFile) form.append('outro_file', outroFile)
-  if (bgMusicFile) form.append('bg_music_file', bgMusicFile)
+  // Optional file uploads (Batch 2)
+  if (outroFile)   form.append('outro_file',     outroFile)
+  if (bgMusicFile) form.append('bg_music_file',  bgMusicFile)
 
   const res = await fetch(`${BASE_URL}/api/jobs/start`, {
     method: 'POST',
@@ -95,20 +107,20 @@ export async function cancelJob(jobId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function generateVideo(
-  audioFile: File,
-  imagesZip: File,
+  audioFile:    File,
+  imagesZip:    File,
   timestampCsv: File,
-  settings: GenerateSettings,
+  settings:     GenerateSettings,
 ): Promise<GenerateResponse> {
   const form = new FormData()
-  form.append('audio_file', audioFile)
-  form.append('images_zip', imagesZip)
+  form.append('audio_file',    audioFile)
+  form.append('images_zip',    imagesZip)
   form.append('timestamp_csv', timestampCsv)
-  form.append('video_format', settings.videoFormat)
-  form.append('fit_mode', settings.fitMode)
-  form.append('transition', settings.transition)
-  form.append('zoom_effect', settings.zoomEffect)
-  form.append('output_name', settings.outputName || 'video')
+  form.append('video_format',  settings.aspectRatio)
+  form.append('fit_mode',      settings.fitMode)
+  form.append('transition',    settings.transition)
+  form.append('zoom_effect',   settings.zoomEffect)
+  form.append('output_name',   settings.outputName || 'video')
 
   const res = await fetch(`${BASE_URL}/api/generate`, {
     method: 'POST',

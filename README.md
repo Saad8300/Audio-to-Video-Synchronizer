@@ -152,16 +152,93 @@ images.zip
 
 ## 🎛️ Video Settings
 
+### Aspect Ratio
+
+| Option | Use Case |
+|--------|-----------|
+| **9:16** Shorts / Reels / TikTok | Vertical (portrait) content — default |
+| **16:9** YouTube / Landscape | Standard widescreen |
+| **1:1** Square | Instagram feed |
+
+### Export Resolution
+
+| Resolution | 9:16 | 16:9 | 1:1 | When to use |
+|------------|------|------|-----|-------------|
+| **720p** | 720×1280 | 1280×720 | 720×720 | Fast testing and preview |
+| **1080p** | 1080×1920 | 1920×1080 | 1080×1080 | Standard HD — recommended |
+| **2K** | 1440×2560 | 2560×1440 | 1440×1440 | High-res presentations |
+| **4K** | 2160×3840 | 3840×2160 | 2160×2160 | Maximum quality, slow |
+
+> ⚠️ **2K / 4K Warning:** Higher resolutions take significantly longer to encode, especially with Slow Zoom In, Fade transitions, background music, outro, and watermark enabled.
+
+### Render Profile
+
+| Profile | FPS | FFmpeg Preset | When to use |
+|---------|-----|--------------|-------------|
+| **Fast Preview** | 24 | ultrafast | Quick timing checks — fastest export |
+| **Balanced** | 30 | medium | Recommended for most exports |
+| **High Quality** | 30 | slow | Final deliverables — best output |
+
+### Recommended Settings
+
+| Goal | Aspect Ratio | Resolution | Render Profile |
+|------|--------------|------------|----------------|
+| Testing timing | Any | 720p | Fast Preview |
+| Normal Shorts/Reels | 9:16 | 1080p | Balanced |
+| YouTube video | 16:9 | 1080p | Balanced |
+| Final high-quality | Any | 1080p or 2K | High Quality |
+| Maximum quality | Any | 4K | High Quality |
+
+> **Note:** 4K + High Quality + Slow Zoom In is an extremely demanding combination. Only use it when you genuinely need 4K output and have time to wait.
+
+### Other Settings
+
 | Setting | Options |
 |---------|---------|
-| **Video Format** | 16:9 YouTube (1920×1080) · 9:16 Shorts/TikTok (1080×1920) · 1:1 Square |
-| **Image Fit Mode** | Cover/Crop (fills screen) · Contain/Fit (shows full image with blurred background) |
+| **Image Fit Mode** | Cover/Crop (fills screen) · Contain/Fit (blurred background) |
 | **Transition** | None (direct cut) · Fade |
 | **Zoom Effect** | None (static) · Slow Zoom In (Ken Burns effect) |
 
 ---
 
 ## ✨ Optional Enhancements
+
+### 🎵 Background Music
+
+Upload any MP3, WAV, M4A, or AAC file.
+
+- Music is **automatically looped** if shorter than the video, or **trimmed** if longer
+- Adjust the **Volume** slider (recommended: 10–15% for subtle background)
+- Enable **Fade In / Fade Out** for a smooth opening and ending
+- If the voice track is hard to hear, lower the music volume further
+
+### 🎬 Outro / Ending Video
+
+Upload any MP4, MOV, or WEBM file to be **appended** at the end of your generated video.
+
+- The outro is automatically resized and cover-cropped to match your selected aspect ratio and resolution
+- The outro's original audio is preserved
+- If the outro has a different frame rate, it is matched to the main video
+
+### 🔡 Watermark / Branding
+
+Add a subtle text label over the entire video.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Watermark Text | *(empty)* | e.g. `@YourChannel`, `Atomis Labs`, `Follow for more` |
+| Position | Bottom Right | Top Left · Top Right · Bottom Left · Bottom Right · Center |
+| Size | Small | Small · Medium · Large (scales with resolution) |
+| Opacity | 65% | 10–100% — lower is more subtle |
+| Edge Margin | 36px | Distance from the edge of the frame |
+
+**Tips:**
+- Keep **Small** size and **65% opacity** for a professional, unobtrusive look
+- The watermark uses a semi-transparent dark pill background for readability on both bright and dark images
+- Watermark appears on the main video **and** the outro if an outro is attached
+- No ImageMagick required — rendered entirely with Pillow (Python)
+
+---
 
 These features are optional — your video generates normally without them.
 Click **Optional Enhancements** on the app to expand this section.
@@ -257,6 +334,28 @@ cd backend && source .venv/bin/activate && uvicorn main:app --host 127.0.0.1 --p
 
 ### Background music cuts off abruptly
 → Enable **Fade In / Fade Out** in the Optional Enhancements panel for a smoother ending
+
+### Generation takes too long (4K / High Quality)
+→ Select **720p + Fast Preview** for timing checks — only use 4K for final exports
+→ Avoid combining **4K + High Quality + Slow Zoom In** — this is the most demanding combination
+→ Use **Balanced** render profile instead of High Quality for most exports
+→ Slow Zoom In adds per-frame Python processing — use it only when needed
+
+### Watermark is not visible
+→ Make sure you entered text AND enabled the **Enable Watermark** toggle
+→ Increase the **Opacity** slider (try 80–100% if the watermark is invisible on bright images)
+→ Change the **Position** to one that doesn't overlap with bright white or transparent areas
+→ Try **Medium** or **Large** size if the text is too small for your resolution
+
+### Watermark text looks blurry or pixelated
+→ This can happen with the PIL default bitmap font if no system font is found
+→ On macOS, the app uses `/System/Library/Fonts/Helvetica.ttc` — this is normally available
+→ If the font looks wrong, try re-running the app after a system update
+
+### Output file is too large
+→ Use **Balanced** instead of **High Quality** render profile
+→ Use **1080p** instead of **2K** or **4K**
+→ **Fast Preview** produces the smallest files (ultrafast encoding, 0.55× bitrate)
 
 ---
 

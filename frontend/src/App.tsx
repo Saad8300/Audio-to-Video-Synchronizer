@@ -21,15 +21,25 @@ import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } fr
 import { checkHealth, startJob } from './utils/api'
 
 const DEFAULT_SETTINGS: GenerateSettings = {
-  videoFormat: '16:9',
-  fitMode: 'cover',
-  transition: 'none',
-  zoomEffect: 'none',
-  outputName: 'my_video',
-  // Batch 2 defaults
+  // Core video (Batch 3)
+  aspectRatio:      '9:16',
+  exportResolution: '1080p',
+  fitMode:          'cover',
+  transition:       'none',
+  zoomEffect:       'none',
+  renderProfile:    'balanced',
+  outputName:       'my_video',
+  // Batch 2 — background music
   enableBgMusic: false,
-  musicVolume: 12,
-  musicFade: true,
+  musicVolume:   12,
+  musicFade:     true,
+  // Batch 3 — watermark
+  enableWatermark:   false,
+  watermarkText:     '',
+  watermarkPosition: 'bottom_right',
+  watermarkOpacity:  65,
+  watermarkSize:     'small',
+  watermarkMargin:   36,
 }
 
 // ── Theme helpers ──────────────────────────────────────────────────────────
@@ -430,13 +440,17 @@ export default function App() {
                 {label}
               </div>
             ))}
-            {/* Optional enhancements indicator */}
-            {(outroFile || bgMusicFile) && (
+                      {/* Optional enhancements indicator */}
+            {(outroFile || bgMusicFile || (settings.enableWatermark && settings.watermarkText.trim())) && (
               <div className="flex items-center gap-1.5 text-violet-400">
                 <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] border border-violet-500/40 bg-violet-500/10">
                   ✦
                 </span>
-                {[bgMusicFile && 'Music', outroFile && 'Outro'].filter(Boolean).join(' + ')}
+                {[
+                  bgMusicFile && 'Music',
+                  outroFile && 'Outro',
+                  (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
+                ].filter(Boolean).join(' + ')}
               </div>
             )}
           </div>
@@ -480,7 +494,7 @@ export default function App() {
           <p className="text-xs text-muted">
             Audio Image Sync Studio · Runs fully on localhost · No internet required
           </p>
-          <p className="text-xs text-muted opacity-60">v1.2.0</p>
+          <p className="text-xs text-muted opacity-60">v1.3.0</p>
         </div>
       </footer>
     </div>
