@@ -1,13 +1,14 @@
 // components/EnhancementsPanel.tsx
-// "Optional Enhancements" modules — Intro, Outro, Background Music, and Watermark
+// Optional enhancements: Intro, Music, Outro, Watermark
 
-import React from 'react'
+import React, { useState } from 'react'
 import FileDropZone from './FileDropZone'
 import {
   IconMusic,
   IconVideo,
   IconType,
   IconInfo,
+  IconCheck,
 } from './icons'
 import type { GenerateSettings } from '../types'
 
@@ -23,178 +24,178 @@ interface EnhancementsPanelProps {
   disabled?:        boolean
 }
 
-// ── Small reusable toggle ───────────────────────────────────────────────────
+// ── Collapsible module ──────────────────────────────────────────────────────
 
-interface ToggleProps {
-  id:           string
-  checked:      boolean
-  onChange:     (v: boolean) => void
-  disabled?:    boolean
-  label:        string
-  description?: string
+function Module({
+  id,
+  icon,
+  title,
+  description,
+  active,
+  activeLabel,
+  children,
+}: {
+  id: string
+  icon: React.ReactNode
+  title: string
+  description: string
+  active: boolean
+  activeLabel?: string
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden transition-all"
+      style={{ border: `1px solid ${active ? 'var(--accent-border)' : 'var(--border-subtle)'}`, background: 'var(--bg-card)' }}
+    >
+      {/* Header / toggle */}
+      <button
+        id={`enhance-${id}-toggle`}
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+        style={{ background: open ? 'var(--accent-subtle)' : 'transparent' }}
+        aria-expanded={open}
+      >
+        <div
+          className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
+          style={{
+            background: active ? 'var(--accent-subtle)' : 'var(--bg-input)',
+            border: `1px solid ${active ? 'var(--accent-border)' : 'var(--border-input)'}`,
+            color: active ? 'var(--accent-primary)' : 'var(--text-muted)',
+          }}
+        >
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</span>
+            {active && activeLabel && (
+              <span
+                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)' }}
+              >
+                <IconCheck size={8} />
+                {activeLabel}
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{description}</p>
+        </div>
+        <span
+          className="text-[10px] font-semibold transition-transform duration-200 shrink-0"
+          style={{
+            color: 'var(--text-muted)',
+            transform: open ? 'rotate(180deg)' : 'none',
+          }}
+        >
+          ▾
+        </span>
+      </button>
+
+      {/* Body */}
+      {open && (
+        <div
+          className="px-4 pb-4 pt-1 space-y-4 animate-fade-in"
+          style={{ borderTop: '1px solid var(--border-subtle)' }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  )
 }
 
-function Toggle({ id, checked, onChange, disabled, label, description }: ToggleProps) {
+// ── Slider ──────────────────────────────────────────────────────────────────
+
+function Slider({
+  id, label, value, min = 0, max = 100, unit = '%', hint, onChange, disabled,
+}: {
+  id: string; label: string; value: number; min?: number; max?: number;
+  unit?: string; hint?: string; onChange: (v: number) => void; disabled?: boolean;
+}) {
+  const pct = max !== min ? ((value - min) / (max - min)) * 100 : value
   return (
-    <div className="flex items-start gap-3">
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <label htmlFor={id} className="form-label mb-0" style={{ opacity: disabled ? 0.5 : 1 }}>{label}</label>
+        <span
+          className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded"
+          style={{
+            background: 'var(--accent-subtle)',
+            border: '1px solid var(--accent-border)',
+            color: 'var(--accent-primary)',
+            opacity: disabled ? 0.5 : 1,
+          }}
+        >
+          {value}{unit}
+        </span>
+      </div>
+      <input
+        id={id} type="range" min={min} max={max} step={unit === 'px' ? 2 : 1} value={value}
+        disabled={disabled}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full h-1 rounded-full appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{
+          background: disabled
+            ? 'var(--border-subtle)'
+            : `linear-gradient(to right, var(--accent-primary) ${pct}%, var(--border-default) ${pct}%)`,
+        }}
+        aria-label={`${label}: ${value}${unit}`}
+      />
+      {hint && <p className="text-[9px] leading-tight" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
+    </div>
+  )
+}
+
+// ── Toggle ──────────────────────────────────────────────────────────────────
+
+function Toggle({ id, checked, onChange, disabled, label }: {
+  id: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
       <button
         id={id}
         role="switch"
         aria-checked={checked}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
-        className={`
-          relative inline-flex h-5 w-9 shrink-0 items-center rounded-full
-          transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50 mt-0.5
-          ${checked && !disabled ? 'bg-brand-600' : ''}
-          ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-        `}
+        className="relative inline-flex h-4.5 w-8 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none"
         style={{
-          backgroundColor: checked && !disabled ? undefined : 'var(--color-surface-input-border)',
+          width: '32px',
+          height: '18px',
+          backgroundColor: checked && !disabled ? 'var(--accent-primary)' : 'var(--border-default)',
+          opacity: disabled ? 0.5 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
         }}
       >
         <span
-          className={`
-            inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm
-            transform transition-transform duration-200
-            ${checked ? 'translate-x-4' : 'translate-x-0.5'}
-          `}
+          className="inline-block rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ width: '13px', height: '13px', transform: checked ? 'translateX(16px)' : 'translateX(2px)' }}
         />
       </button>
-      <div className="flex-1 min-w-0">
-        <label
-          htmlFor={id}
-          className={`text-sm font-medium select-none ${disabled ? 'opacity-40' : 'cursor-pointer text-primary'}`}
-          onClick={() => !disabled && onChange(!checked)}
-        >
-          {label}
-        </label>
-        {description && <p className="text-[10px] text-muted mt-0.5">{description}</p>}
-      </div>
+      <label
+        htmlFor={id}
+        className="text-xs font-medium select-none"
+        style={{ color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: disabled ? 'not-allowed' : 'pointer' }}
+        onClick={() => !disabled && onChange(!checked)}
+      >
+        {label}
+      </label>
     </div>
   )
 }
 
-// ── Percentage slider ───────────────────────────────────────────────────────
+// ── Tip ─────────────────────────────────────────────────────────────────────
 
-interface PercentSliderProps {
-  id:       string
-  label:    string
-  value:    number        // 0–100
-  min?:     number
-  onChange: (v: number) => void
-  disabled?: boolean
-  hint?:    string
-}
-
-function PercentSlider({ id, label, value, min = 0, onChange, disabled, hint }: PercentSliderProps) {
+function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label htmlFor={id} className={`form-label mb-0 ${disabled ? 'opacity-40' : ''}`}>
-          {label}
-        </label>
-        <span
-          className={`text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded ${disabled ? 'opacity-40' : 'text-brand-300'}`}
-          style={{ backgroundColor: 'rgba(99,102,241,0.1)' }}
-        >
-          {value}%
-        </span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={100}
-        step={1}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{
-          background: disabled
-            ? 'var(--color-surface-input-border)'
-            : `linear-gradient(to right, #6366f1 ${value}%, var(--color-surface-input-border) ${value}%)`,
-          accentColor: '#6366f1',
-        }}
-        aria-label={`${label}: ${value}%`}
-      />
-      {hint && (
-        <p className="text-[10px] text-muted leading-tight mt-1">{hint}</p>
-      )}
-    </div>
-  )
-}
-
-// ── Pixel slider (for margin) ───────────────────────────────────────────────
-
-interface PxSliderProps {
-  id:       string
-  label:    string
-  value:    number
-  min:      number
-  max:      number
-  onChange: (v: number) => void
-  disabled?: boolean
-}
-
-function PxSlider({ id, label, value, min, max, onChange, disabled }: PxSliderProps) {
-  const pct = ((value - min) / (max - min)) * 100
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label htmlFor={id} className={`form-label mb-0 ${disabled ? 'opacity-40' : ''}`}>
-          {label}
-        </label>
-        <span
-          className={`text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded ${disabled ? 'opacity-40' : 'text-brand-300'}`}
-          style={{ backgroundColor: 'rgba(99,102,241,0.1)' }}
-        >
-          {value}px
-        </span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={2}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{
-          background: disabled
-            ? 'var(--color-surface-input-border)'
-            : `linear-gradient(to right, #6366f1 ${pct}%, var(--color-surface-input-border) ${pct}%)`,
-          accentColor: '#6366f1',
-        }}
-        aria-label={`${label}: ${value}px`}
-      />
-      <div className="flex justify-between text-[10px] text-muted">
-        <span>{min}px</span>
-        <span>{max}px</span>
-      </div>
-    </div>
-  )
-}
-
-// ── Info tip ────────────────────────────────────────────────────────────────
-
-function InfoTip({ children, color = 'brand' }: { children: React.ReactNode; color?: 'brand' | 'emerald' | 'amber' }) {
-  const styles = {
-    brand:   { bg: 'rgba(99,102,241,0.06)',  border: 'rgba(99,102,241,0.12)',  icon: 'text-brand-400' },
-    emerald: { bg: 'rgba(16,185,129,0.06)',  border: 'rgba(16,185,129,0.15)',  icon: 'text-emerald-400' },
-    amber:   { bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.25)',  icon: 'text-amber-400' },
-  }
-  const s = styles[color]
-  return (
-    <div
-      className="flex items-start gap-2 rounded-lg px-3 py-2 text-[11px]"
-      style={{ backgroundColor: s.bg, border: `1px solid ${s.border}` }}
-    >
-      <IconInfo size={12} className={`${s.icon} shrink-0 mt-0.5`} />
-      <span className="text-muted leading-relaxed">{children}</span>
+    <div className="alert-info">
+      <IconInfo size={11} className="shrink-0 mt-0.5" style={{ color: 'var(--accent-primary)' }} />
+      <span className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{children}</span>
     </div>
   )
 }
@@ -202,128 +203,139 @@ function InfoTip({ children, color = 'brand' }: { children: React.ReactNode; col
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function EnhancementsPanel({
-  settings,
-  onSettingsChange,
-  introFile,
-  onIntroChange,
-  outroFile,
-  onOutroChange,
-  bgMusicFile,
-  onBgMusicChange,
+  settings, onSettingsChange,
+  introFile, onIntroChange,
+  outroFile, onOutroChange,
+  bgMusicFile, onBgMusicChange,
   disabled,
 }: EnhancementsPanelProps) {
-
   const set = <K extends keyof GenerateSettings>(key: K, val: GenerateSettings[K]) =>
     onSettingsChange({ ...settings, [key]: val })
 
-  const musicActive    = bgMusicFile !== null && !disabled
-  const watermarkActive = settings.watermarkText.trim() !== '' && !disabled
+  const musicActive     = bgMusicFile !== null
+  const watermarkActive = settings.watermarkText.trim() !== ''
+  const introActive     = introFile !== null
+  const outroActive     = outroFile !== null
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 pl-1">
-        <h2 className="text-sm font-semibold text-primary uppercase tracking-widest opacity-80">Optional Enhancements</h2>
-      </div>
+    <div className="space-y-2">
 
-      {/* ── MODULE: MEDIA (Intro, Outro, Music) ── */}
-      <div className="card-glow p-5 space-y-5">
-        <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-          <IconVideo size={14} className="text-emerald-400" />
-          <span className="text-xs font-bold text-primary tracking-wide">Additional Media</span>
-        </div>
+      {/* Intro Video */}
+      <Module
+        id="intro"
+        icon={<IconVideo size={14} />}
+        title="Intro Video"
+        description="Prepend a video clip to the beginning"
+        active={introActive}
+        activeLabel="Active"
+      >
+        <FileDropZone
+          id="intro-upload"
+          label="Intro Video"
+          description="MP4, MOV, WEBM · auto-resized to export resolution"
+          accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+          icon={<IconVideo size={14} />}
+          file={introFile}
+          onChange={onIntroChange}
+          disabled={disabled}
+          compact
+        />
+      </Module>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FileDropZone
-            id="intro-upload"
-            label="Intro Video"
-            description="MP4, MOV, WEBM"
-            accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-            icon={<IconVideo size={16} />}
-            file={introFile}
-            onChange={onIntroChange}
-            disabled={disabled}
+      {/* Background Music */}
+      <Module
+        id="music"
+        icon={<IconMusic size={14} />}
+        title="Background Music"
+        description="Mix ambient audio under your main track"
+        active={musicActive}
+        activeLabel="Active"
+      >
+        <FileDropZone
+          id="bg-music-upload"
+          label="Music File"
+          description="MP3, WAV, M4A, AAC · loops to fit video length"
+          accept=".mp3,.wav,.m4a,.aac,audio/*"
+          icon={<IconMusic size={14} />}
+          file={bgMusicFile}
+          onChange={onBgMusicChange}
+          disabled={disabled}
+          compact
+        />
+        <div className={`space-y-3 transition-opacity ${!musicActive ? 'opacity-40 pointer-events-none' : ''}`}>
+          <Slider
+            id="music-volume-slider"
+            label="Volume"
+            value={settings.musicVolume}
+            min={0} max={100} unit="%"
+            hint="Keep at 10–15% for voice clarity"
+            onChange={v => set('musicVolume', v)}
+            disabled={!musicActive}
           />
-          <FileDropZone
-            id="outro-upload"
-            label="Outro Video"
-            description="MP4, MOV, WEBM"
-            accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
-            icon={<IconVideo size={16} />}
-            file={outroFile}
-            onChange={onOutroChange}
-            disabled={disabled}
+          <Toggle
+            id="music-fade-toggle"
+            checked={settings.musicFade}
+            onChange={v => set('musicFade', v)}
+            disabled={!musicActive}
+            label="Fade in / Fade out"
           />
         </div>
+      </Module>
 
-        {(introFile || outroFile) && (
-           <InfoTip color="emerald">Intro and outro clips are automatically resized to match your export resolution.</InfoTip>
-        )}
+      {/* Outro Video */}
+      <Module
+        id="outro"
+        icon={<IconVideo size={14} />}
+        title="Outro Video"
+        description="Append a video clip to the end"
+        active={outroActive}
+        activeLabel="Active"
+      >
+        <FileDropZone
+          id="outro-upload"
+          label="Outro Video"
+          description="MP4, MOV, WEBM · auto-resized to export resolution"
+          accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+          icon={<IconVideo size={14} />}
+          file={outroFile}
+          onChange={onOutroChange}
+          disabled={disabled}
+          compact
+        />
+      </Module>
 
-        <div className="pt-2">
-          <FileDropZone
-            id="bg-music-upload"
-            label="Background Music"
-            description="MP3, WAV, M4A, AAC"
-            accept=".mp3,.wav,.m4a,.aac,audio/*"
-            icon={<IconMusic size={16} />}
-            file={bgMusicFile}
-            onChange={onBgMusicChange}
-            disabled={disabled}
-          />
-        </div>
-
-        <div className={`space-y-3 pt-1 transition-opacity ${!musicActive ? 'opacity-50 pointer-events-none' : ''}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-            <PercentSlider
-              id="music-volume-slider"
-              label="Music Volume"
-              value={settings.musicVolume}
-              onChange={(v) => set('musicVolume', v)}
-              disabled={!musicActive}
-              hint="Keep at 10-15% for voice clarity"
-            />
-            <div className="pb-1 px-1">
-              <Toggle
-                id="music-fade-toggle"
-                checked={settings.musicFade}
-                onChange={(v) => set('musicFade', v)}
-                disabled={!musicActive}
-                label="Fade In / Out"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── MODULE: WATERMARK ── */}
-      <div className="card-glow p-5 space-y-5">
-        <div className="flex items-center gap-2 border-b pb-2" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-          <IconType size={14} className="text-amber-400" />
-          <span className="text-xs font-bold text-primary tracking-wide">Watermark</span>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="watermark-text" className="form-label">Watermark Text (Leave empty to disable)</label>
+      {/* Watermark */}
+      <Module
+        id="watermark"
+        icon={<IconType size={14} />}
+        title="Watermark"
+        description="Add a text overlay to every frame"
+        active={watermarkActive}
+        activeLabel="Active"
+      >
+        <div className="space-y-1">
+          <label htmlFor="watermark-text" className="form-label">Text <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>(leave empty to disable)</span></label>
           <input
             id="watermark-text"
             type="text"
             value={settings.watermarkText}
-            onChange={(e) => set('watermarkText', e.target.value.slice(0, 60))}
-            placeholder="@YourChannel, Automist Labs"
+            onChange={e => set('watermarkText', e.target.value.slice(0, 60))}
+            placeholder="@YourChannel or brand name"
             className="form-input"
             disabled={disabled}
             maxLength={60}
           />
         </div>
 
-        <div className={`space-y-5 transition-opacity ${!watermarkActive ? 'opacity-50 pointer-events-none' : ''}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="watermark-position-mode" className="form-label">Position Mode</label>
+        <div className={`space-y-4 transition-opacity ${!watermarkActive ? 'opacity-40 pointer-events-none' : ''}`}>
+          {/* Position mode + position */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label htmlFor="watermark-position-mode" className="form-label">Mode</label>
               <select
                 id="watermark-position-mode"
                 value={settings.watermarkPositionMode}
-                onChange={(e) => set('watermarkPositionMode', e.target.value as any)}
+                onChange={e => set('watermarkPositionMode', e.target.value as any)}
                 className="form-select"
                 disabled={!watermarkActive}
               >
@@ -333,12 +345,12 @@ export default function EnhancementsPanel({
             </div>
 
             {settings.watermarkPositionMode === 'preset' ? (
-              <div className="space-y-1.5 animate-fade-in">
+              <div className="space-y-1 animate-fade-in">
                 <label htmlFor="watermark-position" className="form-label">Position</label>
                 <select
                   id="watermark-position"
                   value={settings.watermarkPosition}
-                  onChange={(e) => set('watermarkPosition', e.target.value as any)}
+                  onChange={e => set('watermarkPosition', e.target.value as any)}
                   className="form-select"
                   disabled={!watermarkActive}
                 >
@@ -350,25 +362,25 @@ export default function EnhancementsPanel({
                 </select>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 animate-fade-in">
-                <div className="space-y-1.5">
-                  <label htmlFor="watermark-x" className="form-label">X Position</label>
+              <div className="grid grid-cols-2 gap-2 animate-fade-in col-span-1">
+                <div className="space-y-1">
+                  <label htmlFor="watermark-x" className="form-label">X px</label>
                   <input
                     id="watermark-x"
                     type="number"
                     value={settings.watermarkX}
-                    onChange={(e) => set('watermarkX', parseInt(e.target.value) || 0)}
+                    onChange={e => set('watermarkX', parseInt(e.target.value) || 0)}
                     className="form-input"
                     disabled={!watermarkActive}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="watermark-y" className="form-label">Y Position</label>
+                <div className="space-y-1">
+                  <label htmlFor="watermark-y" className="form-label">Y px</label>
                   <input
                     id="watermark-y"
                     type="number"
                     value={settings.watermarkY}
-                    onChange={(e) => set('watermarkY', parseInt(e.target.value) || 0)}
+                    onChange={e => set('watermarkY', parseInt(e.target.value) || 0)}
                     className="form-input"
                     disabled={!watermarkActive}
                   />
@@ -377,40 +389,43 @@ export default function EnhancementsPanel({
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <PercentSlider
+          {/* Size & Opacity */}
+          <div className="grid grid-cols-2 gap-3">
+            <Slider
               id="watermark-size-slider"
               label="Size"
               value={settings.watermarkSize}
-              min={1}
-              onChange={(v) => set('watermarkSize', v)}
+              min={1} max={100} unit="%"
+              onChange={v => set('watermarkSize', v)}
               disabled={!watermarkActive}
             />
-            <PercentSlider
+            <Slider
               id="watermark-opacity-slider"
               label="Opacity"
               value={settings.watermarkOpacity}
-              min={10}
-              onChange={(v) => set('watermarkOpacity', v)}
+              min={10} max={100} unit="%"
+              onChange={v => set('watermarkOpacity', v)}
               disabled={!watermarkActive}
             />
           </div>
 
+          {/* Margin (only for preset mode) */}
           {settings.watermarkPositionMode === 'preset' && (
-            <div className="animate-fade-in">
-              <PxSlider
-                id="watermark-margin-slider"
-                label="Edge Margin"
-                value={settings.watermarkMargin}
-                min={10}
-                max={100}
-                onChange={(v) => set('watermarkMargin', v)}
-                disabled={!watermarkActive}
-              />
-            </div>
+            <Slider
+              id="watermark-margin-slider"
+              label="Edge Margin"
+              value={settings.watermarkMargin}
+              min={10} max={100} unit="px"
+              onChange={v => set('watermarkMargin', v)}
+              disabled={!watermarkActive}
+            />
           )}
         </div>
-      </div>
+      </Module>
+
+      {(introActive || outroActive) && (
+        <Tip>Intro and outro clips are automatically resized to your export resolution.</Tip>
+      )}
     </div>
   )
 }

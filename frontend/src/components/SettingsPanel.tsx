@@ -1,7 +1,7 @@
-// components/SettingsPanel.tsx – Video generation settings (Batch 3)
+// components/SettingsPanel.tsx – Project inspector panel
 
 import React from 'react'
-import { IconSettings, IconMonitor, IconAlertTriangle } from './icons'
+import { IconAlertTriangle } from './icons'
 import type {
   GenerateSettings,
   AspectRatio,
@@ -18,104 +18,61 @@ interface SettingsPanelProps {
   disabled?: boolean
 }
 
-// ── Reusable select field ───────────────────────────────────────────────────
+// ── Reusable select ─────────────────────────────────────────────────────────
 
-interface SelectFieldProps {
-  id:       string
-  label:    string
-  value:    string
-  options:  { value: string; label: string }[]
-  onChange: (v: string) => void
-  disabled?: boolean
-}
-
-function SelectField({ id, label, value, options, onChange, disabled }: SelectFieldProps) {
+function Sel({
+  id, label, value, options, onChange, disabled,
+}: {
+  id: string; label: string; value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void; disabled?: boolean;
+}) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <label htmlFor={id} className="form-label">{label}</label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="form-select"
-        disabled={disabled}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
+      <select id={id} value={value} onChange={e => onChange(e.target.value)} className="form-select" disabled={disabled}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
   )
 }
 
-// ── Render Profile card picker ──────────────────────────────────────────────
+// ── Render Profile picker ───────────────────────────────────────────────────
 
-const PROFILE_OPTIONS: { value: RenderProfile; label: string; description: string; badge?: string }[] = [
-  {
-    value:       'fast_preview',
-    label:       'Fast Preview',
-    description: '24fps · Fastest export for timing checks',
-  },
-  {
-    value:       'balanced',
-    label:       'Balanced',
-    description: '30fps · Recommended for most exports',
-    badge:       'Recommended',
-  },
-  {
-    value:       'high_quality',
-    label:       'High Quality',
-    description: '30fps · Best output, slower rendering',
-  },
+const PROFILES: { value: RenderProfile; label: string; desc: string; badge?: string }[] = [
+  { value: 'fast_preview', label: 'Preview',  desc: '24fps · ultrafast'  },
+  { value: 'balanced',     label: 'Balanced', desc: '30fps · medium', badge: '★' },
+  { value: 'high_quality', label: 'HQ',       desc: '30fps · slow'   },
 ]
 
-interface RenderProfilePickerProps {
-  value:    RenderProfile
-  onChange: (v: RenderProfile) => void
-  disabled?: boolean
-}
-
-function RenderProfilePicker({ value, onChange, disabled }: RenderProfilePickerProps) {
+function ProfilePicker({ value, onChange, disabled }: { value: RenderProfile; onChange: (v: RenderProfile) => void; disabled?: boolean }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <label className="form-label">Render Profile</label>
-      <div className="grid grid-cols-3 gap-2">
-        {PROFILE_OPTIONS.map((opt) => {
-          const active = value === opt.value
+      <div className="grid grid-cols-3 gap-1.5">
+        {PROFILES.map(p => {
+          const active = value === p.value
           return (
             <button
-              key={opt.value}
-              id={`render-profile-${opt.value}`}
+              key={p.value}
+              id={`render-profile-${p.value}`}
               type="button"
               disabled={disabled}
-              onClick={() => !disabled && onChange(opt.value)}
-              className={`
-                relative flex flex-col items-start gap-1 rounded-xl px-3 py-2.5 text-left
-                border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500/50
-                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-              `}
+              onClick={() => !disabled && onChange(p.value)}
+              className="relative flex flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
               style={{
-                backgroundColor: active
-                  ? 'rgba(99,102,241,0.12)'
-                  : 'var(--color-surface-input)',
-                borderColor: active
-                  ? 'rgba(99,102,241,0.45)'
-                  : 'var(--color-surface-card-border)',
+                background: active ? 'var(--accent-subtle)' : 'var(--bg-input)',
+                border: `1px solid ${active ? 'var(--accent-border)' : 'var(--border-input)'}`,
+                opacity: disabled ? 0.5 : 1,
+                cursor: disabled ? 'not-allowed' : 'pointer',
               }}
               aria-pressed={active}
             >
-              {opt.badge && (
-                <span
-                  className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-brand-300"
-                  style={{ backgroundColor: 'rgba(99,102,241,0.2)' }}
-                >
-                  {opt.badge}
-                </span>
+              {p.badge && (
+                <span className="absolute top-1 right-1.5 text-[9px] font-bold" style={{ color: 'var(--accent-primary)' }}>{p.badge}</span>
               )}
-              <span className={`text-xs font-semibold ${active ? 'text-brand-300' : 'text-primary'}`}>
-                {opt.label}
-              </span>
-              <span className="text-[10px] leading-tight text-muted">{opt.description}</span>
+              <span className="text-[11px] font-semibold" style={{ color: active ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{p.label}</span>
+              <span className="text-[9px] leading-tight" style={{ color: 'var(--text-muted)' }}>{p.desc}</span>
             </button>
           )
         })}
@@ -124,16 +81,24 @@ function RenderProfilePicker({ value, onChange, disabled }: RenderProfilePickerP
   )
 }
 
-// ── Inline warning banner ───────────────────────────────────────────────────
+// ── Section header ──────────────────────────────────────────────────────────
 
-function InlineWarning({ message }: { message: string }) {
+function SectionHead({ label }: { label: string }) {
   return (
-    <div
-      className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs animate-fade-in"
-      style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}
-    >
-      <IconAlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-      <span className="text-amber-300 leading-relaxed">{message}</span>
+    <div className="flex items-center gap-2 pt-1">
+      <span className="section-label">{label}</span>
+      <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+    </div>
+  )
+}
+
+// ── Inline warning ──────────────────────────────────────────────────────────
+
+function Warn({ msg }: { msg: string }) {
+  return (
+    <div className="alert-warning animate-fade-in">
+      <IconAlertTriangle size={12} className="shrink-0 mt-0.5" />
+      <span className="leading-relaxed">{msg}</span>
     </div>
   )
 }
@@ -144,148 +109,101 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
   const set = <K extends keyof GenerateSettings>(key: K, val: GenerateSettings[K]) =>
     onChange({ ...settings, [key]: val })
 
-  // Inline warnings
-  const isHighRes = settings.exportResolution === '2K' || settings.exportResolution === '4K'
-  const is4kHQZoom =
-    settings.exportResolution === '4K' &&
-    settings.renderProfile === 'high_quality' &&
-    settings.zoomEffect === 'slow_zoom_in'
-  const isHighResWarn = isHighRes && !is4kHQZoom
+  const isHighRes   = settings.exportResolution === '2K' || settings.exportResolution === '4K'
+  const is4kHQZoom  = settings.exportResolution === '4K' && settings.renderProfile === 'high_quality' && settings.zoomEffect === 'slow_zoom_in'
+  const isSlowZoom  = settings.zoomEffect === 'slow_zoom_in'
 
   return (
-    <div className="card-glow p-5 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
-          <IconSettings size={16} />
+    <div className="space-y-5">
+
+      {/* OUTPUT */}
+      <div className="space-y-3">
+        <SectionHead label="Output" />
+        <div className="grid grid-cols-2 gap-2">
+          <Sel
+            id="aspect-ratio" label="Aspect Ratio" value={settings.aspectRatio}
+            onChange={v => set('aspectRatio', v as AspectRatio)} disabled={disabled}
+            options={[
+              { value: '9:16', label: '9:16 — Shorts' },
+              { value: '16:9', label: '16:9 — YouTube' },
+              { value: '1:1',  label: '1:1  — Square' },
+            ]}
+          />
+          <Sel
+            id="export-resolution" label="Resolution" value={settings.exportResolution}
+            onChange={v => set('exportResolution', v as ExportResolution)} disabled={disabled}
+            options={[
+              { value: '720p',  label: '720p' },
+              { value: '1080p', label: '1080p' },
+              { value: '2K',    label: '2K' },
+              { value: '4K',    label: '4K' },
+            ]}
+          />
         </div>
-        <div>
-          <h2 className="text-sm font-semibold text-primary leading-none">Settings</h2>
-          <p className="text-[11px] text-muted mt-1 leading-none">Configure output and effects</p>
-        </div>
+        <ProfilePicker value={settings.renderProfile} onChange={v => set('renderProfile', v)} disabled={disabled} />
+        {is4kHQZoom && <Warn msg="4K + HQ + Slow Zoom is very demanding — may take a long time." />}
+        {!is4kHQZoom && isHighRes && <Warn msg={`${settings.exportResolution} will increase render time.`} />}
+        {!is4kHQZoom && isSlowZoom && !isHighRes && <Warn msg="Slow Zoom In adds render time for each clip." />}
+        <p className="text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>
+          <span className="font-semibold" style={{ color: 'var(--color-warning)' }}>Tip:</span>{' '}
+          Use 720p Fast Preview to check timing before your final export.
+        </p>
       </div>
 
-      {/* ── GROUP 1: OUTPUT ─────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 border-b pb-1.5" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-          <IconMonitor size={12} className="text-muted" />
-          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Output</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SelectField
-            id="aspect-ratio"
-            label="Aspect Ratio"
-            value={settings.aspectRatio}
-            onChange={(v) => set('aspectRatio', v as AspectRatio)}
-            disabled={disabled}
+      {/* MOTION & FIT */}
+      <div className="space-y-3">
+        <SectionHead label="Motion & Fit" />
+        <div className="grid grid-cols-3 gap-2">
+          <Sel
+            id="fit-mode" label="Fit Mode" value={settings.fitMode}
+            onChange={v => set('fitMode', v as FitMode)} disabled={disabled}
             options={[
-              { value: '9:16',  label: '9:16  Shorts / Reels' },
-              { value: '16:9',  label: '16:9  YouTube' },
-              { value: '1:1',   label: '1:1   Square' },
+              { value: 'cover',   label: 'Cover' },
+              { value: 'contain', label: 'Contain' },
             ]}
           />
-          <SelectField
-            id="export-resolution"
-            label="Resolution"
-            value={settings.exportResolution}
-            onChange={(v) => set('exportResolution', v as ExportResolution)}
-            disabled={disabled}
-            options={[
-              { value: '720p',  label: '720p — Fast' },
-              { value: '1080p', label: '1080p — Standard' },
-              { value: '2K',    label: '2K — High' },
-              { value: '4K',    label: '4K — Ultra HD' },
-            ]}
-          />
-        </div>
-
-        <RenderProfilePicker
-          value={settings.renderProfile}
-          onChange={(v) => set('renderProfile', v)}
-          disabled={disabled}
-        />
-
-        <div className="text-[11px] text-muted leading-tight mt-2 px-1">
-          <span className="font-semibold text-amber-400/80">Tip:</span> For long videos, use <strong className="text-primary">720p Fast Preview</strong> first to check timing. Slow Zoom In and 4K can take significantly longer.
-        </div>
-
-        {is4kHQZoom && (
-          <InlineWarning message="4K + HQ + Zoom is very demanding." />
-        )}
-        {isHighResWarn && (
-          <InlineWarning message={`${settings.exportResolution} resolution will increase render time.`} />
-        )}
-      </div>
-
-      {/* ── GROUP 2: MOTION ─────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 border-b pb-1.5" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Motion & Fit</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <SelectField
-            id="fit-mode"
-            label="Fit Mode"
-            value={settings.fitMode}
-            onChange={(v) => set('fitMode', v as FitMode)}
-            disabled={disabled}
-            options={[
-              { value: 'cover',   label: 'Cover / Crop' },
-              { value: 'contain', label: 'Contain / Fit' },
-            ]}
-          />
-          <SelectField
-            id="transition"
-            label="Transition"
-            value={settings.transition}
-            onChange={(v) => set('transition', v as Transition)}
-            disabled={disabled}
+          <Sel
+            id="transition" label="Transition" value={settings.transition}
+            onChange={v => set('transition', v as Transition)} disabled={disabled}
             options={[
               { value: 'none', label: 'None' },
               { value: 'fade', label: 'Fade' },
             ]}
           />
-          <SelectField
-            id="zoom-effect"
-            label="Zoom Effect"
-            value={settings.zoomEffect}
-            onChange={(v) => set('zoomEffect', v as ZoomEffect)}
-            disabled={disabled}
+          <Sel
+            id="zoom-effect" label="Zoom" value={settings.zoomEffect}
+            onChange={v => set('zoomEffect', v as ZoomEffect)} disabled={disabled}
             options={[
               { value: 'none',         label: 'None' },
-              { value: 'slow_zoom_in', label: 'Slow Zoom' },
+              { value: 'slow_zoom_in', label: 'Slow In' },
             ]}
           />
         </div>
       </div>
 
-      {/* ── GROUP 3: FILE ───────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 border-b pb-1.5" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">File</span>
-        </div>
-
-        <div className="space-y-1.5">
-          <label htmlFor="output-name" className="form-label">Output Filename</label>
+      {/* FILE */}
+      <div className="space-y-3">
+        <SectionHead label="Output File" />
+        <div className="space-y-1">
+          <label htmlFor="output-name" className="form-label">Filename</label>
           <div className="flex items-center gap-2">
             <input
               id="output-name"
               type="text"
               value={settings.outputName}
-              onChange={(e) => set('outputName', e.target.value)}
+              onChange={e => set('outputName', e.target.value)}
               placeholder="my_video"
               className="form-input flex-1"
               disabled={disabled}
               maxLength={80}
             />
-            <span className="text-xs text-muted font-mono bg-black/20 px-2 py-1.5 rounded-md">
+            <span className="text-[10px] font-mono shrink-0 px-2 py-1.5 rounded-md" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
               _YYYYMMDD.mp4
             </span>
           </div>
         </div>
       </div>
+
     </div>
   )
 }

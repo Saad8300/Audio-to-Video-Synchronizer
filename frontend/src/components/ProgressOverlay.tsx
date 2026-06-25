@@ -1,14 +1,14 @@
-// components/ProgressOverlay.tsx – Professional progress modal with real job polling and cancel
+// components/ProgressOverlay.tsx – Professional generation progress modal
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
-import { IconLoader, IconZap, IconClock, IconXCircle } from './icons'
+import { IconZap, IconClock, IconXCircle } from './icons'
 import type { JobStatus } from '../types'
 import { getJobStatus, cancelJob } from '../utils/api'
 
 interface ProgressOverlayProps {
-  jobId: string | null
+  jobId:         string | null
   onJobComplete: (status: JobStatus) => void
-  onCancelled: () => void
+  onCancelled:   () => void
 }
 
 function formatTime(seconds: number): string {
@@ -19,217 +19,210 @@ function formatTime(seconds: number): string {
 }
 
 export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: ProgressOverlayProps) {
-  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null)
-  const [pollError, setPollError] = useState<string | null>(null)
+  const [jobStatus,   setJobStatus]   = useState<JobStatus | null>(null)
+  const [pollError,   setPollError]   = useState<string | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [cancelling, setCancelling] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [cancelling,  setCancelling]  = useState(false)
+  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
   const completedRef = useRef(false)
 
   const stopPolling = useCallback(() => {
-    if (pollRef.current !== null) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
+    if (pollRef.current !== null) { clearInterval(pollRef.current); pollRef.current = null }
   }, [])
 
   useEffect(() => {
     if (!jobId) return
     completedRef.current = false
-    setPollError(null)
-    setJobStatus(null)
-    setShowConfirm(false)
-    setCancelling(false)
+    setPollError(null); setJobStatus(null); setShowConfirm(false); setCancelling(false)
 
     const poll = async () => {
       if (completedRef.current) return
       try {
         const status = await getJobStatus(jobId)
-        setJobStatus(status)
-        setPollError(null)
-
+        setJobStatus(status); setPollError(null)
         if (status.status === 'completed' || status.status === 'failed') {
-          completedRef.current = true
-          stopPolling()
-          onJobComplete(status)
+          completedRef.current = true; stopPolling(); onJobComplete(status)
         } else if (status.status === 'cancelled') {
-          completedRef.current = true
-          stopPolling()
-          onCancelled()
+          completedRef.current = true; stopPolling(); onCancelled()
         }
-      } catch (err) {
-        setPollError(String(err))
-      }
+      } catch (err) { setPollError(String(err)) }
     }
 
-    // Poll immediately, then every 1.5 s
     poll()
     pollRef.current = setInterval(poll, 1500)
-
     return () => stopPolling()
   }, [jobId, onJobComplete, onCancelled, stopPolling])
 
-  const handleCancelClick = () => setShowConfirm(true)
+  const handleCancelClick   = () => setShowConfirm(true)
   const handleCancelDismiss = () => setShowConfirm(false)
-
   const handleCancelConfirm = async () => {
     if (!jobId) return
-    setCancelling(true)
-    setShowConfirm(false)
-    try {
-      await cancelJob(jobId)
-    } catch {
-      // Cancel request may fail if job already ended — that's fine, polling will catch it
-    }
+    setCancelling(true); setShowConfirm(false)
+    try { await cancelJob(jobId) } catch { /* polling will catch terminal state */ }
   }
 
-  const progress = jobStatus?.progress ?? 0
-  const step = cancelling
-    ? 'Cancelling…'
-    : (jobStatus?.current_step ?? (jobId ? 'Connecting to server…' : 'Starting…'))
-  const elapsed = jobStatus?.elapsed_seconds ?? 0
-  const remaining = jobStatus?.estimated_remaining_seconds ?? null
+  const progress   = jobStatus?.progress ?? 0
+  const step       = cancelling ? 'Cancelling…' : (jobStatus?.current_step ?? (jobId ? 'Connecting…' : 'Starting…'))
+  const elapsed    = jobStatus?.elapsed_seconds ?? 0
+  const remaining  = jobStatus?.estimated_remaining_seconds ?? null
   const isTerminal = jobStatus?.status === 'completed' || jobStatus?.status === 'failed' || jobStatus?.status === 'cancelled'
 
+  const etaLabel = (remaining !== null && (remaining > 0 || progress > 5)) ? formatTime(remaining) : 'Calculating…'
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}>
+
       <div
-        className="relative overflow-hidden rounded-2xl p-8 w-[440px] max-w-[95vw] space-y-6 shadow-2xl border"
-        style={{ backgroundColor: 'var(--color-surface-card)', borderColor: 'rgba(99,102,241,0.2)' }}
+        className="relative w-[400px] max-w-[93vw] rounded-2xl shadow-2xl overflow-hidden animate-slide-up"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
         role="dialog"
         aria-modal="true"
         aria-label="Generating Video"
       >
-        {/* Subtle background glow */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-500/20 blur-[80px] rounded-full pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-violet-500/20 blur-[80px] rounded-full pointer-events-none" />
+        {/* Top accent line */}
+        <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, var(--accent-primary), #8b5cf6)` }} />
 
-        <div className="relative">
-          {/* Animated icon */}
-          <div className="flex justify-center mb-6">
-            <div className="relative w-20 h-20">
+        <div className="p-8 space-y-6">
+          {/* Icon + title */}
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div
+              className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+            >
               {!isTerminal && (
-                <>
-                  <div className="absolute inset-0 rounded-full bg-brand-gradient opacity-20 animate-ping" style={{ animationDuration: '2s' }} />
-                  <div className="absolute inset-0 rounded-full bg-brand-500/20 animate-pulse-slow" />
-                </>
+                <div
+                  className="absolute inset-0 rounded-2xl animate-pulse-slow"
+                  style={{ background: 'var(--accent-subtle)' }}
+                />
               )}
-              <div className="relative w-20 h-20 rounded-full bg-surface-card border flex items-center justify-center shadow-inner" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-                {cancelling ? (
-                  <IconXCircle size={32} className="text-red-400" />
-                ) : progress === 100 ? (
-                  <span className="text-3xl text-emerald-400">✓</span>
-                ) : (
-                  <IconZap size={32} className="text-brand-400" />
-                )}
+              <div className="relative">
+                {cancelling
+                  ? <IconXCircle size={26} style={{ color: 'var(--color-error)' }} />
+                  : progress === 100
+                  ? <span className="text-2xl" style={{ color: 'var(--color-success)' }}>✓</span>
+                  : <IconZap size={26} style={{ color: 'var(--accent-primary)' }} />
+                }
               </div>
             </div>
-          </div>
 
-          {/* Title + step */}
-          <div className="text-center space-y-2">
-            <h3 className="text-2xl font-extrabold text-primary tracking-tight">
-              {cancelling ? 'Cancelling…' : 'Generating Video'}
-            </h3>
-            <p
-              className="text-sm font-medium text-brand-300 min-h-[20px] transition-all duration-300"
-              aria-live="polite"
-            >
-              {step}
-            </p>
-          </div>
-
-          {/* Progress percentage */}
-          <div className="mt-8 text-center">
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="text-4xl font-black text-gradient tabular-nums tracking-tighter">
-                {progress}
-              </span>
-              <span className="text-lg font-bold text-muted">%</span>
+            <div>
+              <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                {cancelling ? 'Cancelling…' : 'Generating Video'}
+              </h3>
+              <p
+                className="text-sm mt-0.5 min-h-[20px] transition-all duration-300"
+                style={{ color: 'var(--accent-primary)' }}
+                aria-live="polite"
+              >
+                {step}
+              </p>
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="mt-4 w-full h-2.5 rounded-full overflow-hidden shadow-inner bg-surface-input border" style={{ borderColor: 'var(--color-surface-card-border)' }}>
+          {/* Percentage + bar */}
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <span className="text-3xl font-black tabular-nums tracking-tight text-gradient">{progress}</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>%</span>
+            </div>
             <div
-              className="h-full bg-gradient-to-r from-brand-500 via-violet-500 to-brand-400 rounded-full transition-all duration-300 ease-out relative"
-              style={{ width: `${progress}%` }}
+              className="w-full h-1.5 rounded-full overflow-hidden"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)' }}
             >
-              <div className="absolute top-0 right-0 bottom-0 left-0 bg-white/20 animate-pulse-slow" />
+              <div
+                className="h-full rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  background: 'linear-gradient(90deg, var(--accent-primary), #8b5cf6)',
+                }}
+              />
             </div>
           </div>
 
-          {/* Timing row */}
-          <div className="mt-5 flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted">
+          {/* Timing */}
+          <div className="flex items-center justify-between text-[11px]" style={{ color: 'var(--text-muted)' }}>
             <span className="flex items-center gap-1.5">
-              <IconClock size={12} />
-              Elapsed: <strong className="text-secondary tabular-nums font-bold">{formatTime(elapsed)}</strong>
+              <IconClock size={11} />
+              Elapsed <strong className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>{formatTime(elapsed)}</strong>
             </span>
             <span className="flex items-center gap-1.5">
-              <IconClock size={12} />
-              Remaining: <strong className="text-secondary tabular-nums font-bold">
-                {remaining !== null && (remaining > 0 || progress > 5) ? formatTime(remaining) : 'Calculating…'}
-              </strong>
+              <IconClock size={11} />
+              Remaining <strong className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>{etaLabel}</strong>
             </span>
           </div>
 
-          <div className="mt-4 text-center">
-            <p className="text-[10px] text-muted italic">
-              Long videos may take several minutes depending on resolution, zoom, and your computer.
-            </p>
-          </div>
+          {/* Long video note */}
+          <p className="text-[10px] text-center italic" style={{ color: 'var(--text-muted)' }}>
+            Long videos may take several minutes depending on resolution, zoom, and your computer.
+          </p>
 
-          {/* Poll error notice */}
+          {/* Poll error */}
           {pollError && (
-            <div className="mt-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 text-center animate-fade-in">
-              <span className="font-semibold">⚠ Connection lost</span> — retrying…
+            <div className="alert-error animate-fade-in text-xs text-center">
+              ⚠ Connection lost — retrying…
             </div>
           )}
 
-          {/* Cancel button */}
+          {/* Cancel */}
           {!isTerminal && !cancelling && (
-            <div className="mt-8 flex justify-center">
+            <div className="flex justify-center">
               <button
                 id="cancel-generation-btn"
                 onClick={handleCancelClick}
-                className="group flex items-center gap-1.5 text-xs font-medium text-muted hover:text-red-400 transition-colors"
+                className="group flex items-center gap-1.5 text-xs transition-colors"
+                style={{ color: 'var(--text-muted)' }}
                 aria-label="Cancel video generation"
               >
-                <IconXCircle size={14} className="opacity-70 group-hover:opacity-100" />
-                Abort
+                <IconXCircle size={13} className="opacity-60 group-hover:opacity-100" />
+                <span className="group-hover:underline" style={{ /* hover handled inline: */ }}>Abort generation</span>
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Confirmation dialog */}
+      {/* Cancel confirmation dialog */}
       {showConfirm && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="card p-6 w-[340px] max-w-[92vw] space-y-5 shadow-2xl text-center border-amber-500/30">
-            <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 text-xl">
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center animate-fade-in"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+        >
+          <div
+            className="w-[320px] max-w-[92vw] rounded-xl p-6 space-y-5 shadow-2xl text-center animate-slide-up"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+          >
+            <div
+              className="w-11 h-11 mx-auto rounded-xl flex items-center justify-center text-lg"
+              style={{ background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)', color: 'var(--color-warning)' }}
+            >
               ⚠
             </div>
-            <div className="space-y-2">
-              <h4 className="text-lg font-bold text-primary tracking-tight">Cancel Generation?</h4>
-              <p className="text-sm text-secondary leading-relaxed">
-                Are you sure you want to cancel? All current progress will be lost.
+            <div className="space-y-1.5">
+              <h4 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Cancel generation?</h4>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                All current progress will be lost.
               </p>
             </div>
-            <div className="flex gap-3 justify-center pt-2">
+            <div className="flex gap-2">
               <button
                 id="cancel-confirm-no-btn"
                 onClick={handleCancelDismiss}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-surface-input border border-surface-card-border text-primary hover:bg-surface-card transition-colors"
+                className="btn-secondary flex-1 py-2.5"
               >
-                Keep Going
+                Keep going
               </button>
               <button
                 id="cancel-confirm-yes-btn"
                 onClick={handleCancelConfirm}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors"
+                style={{
+                  background: 'var(--color-error-bg)',
+                  border: '1px solid var(--color-error-border)',
+                  color: 'var(--color-error)',
+                }}
               >
-                Yes, Cancel
+                Yes, cancel
               </button>
             </div>
           </div>

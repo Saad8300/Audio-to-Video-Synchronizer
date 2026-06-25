@@ -1,56 +1,45 @@
-// components/ResultsPanel.tsx – Shows the generated video, timeline, warnings, and errors
+// components/ResultsPanel.tsx – Export results and video preview
 
 import React, { useState } from 'react'
 import {
-  IconVideo,
   IconDownload,
   IconCheck,
   IconAlertTriangle,
   IconX,
-  IconPlayCircle,
+  IconVideo,
 } from './icons'
 import type { GenerateResponse, TimelineRow, GenerateSettings } from '../types'
 
 interface ResultsPanelProps {
-  result: GenerateResponse
+  result:   GenerateResponse
   settings: GenerateSettings
 }
 
 function StatusBadge({ status }: { status: TimelineRow['status'] }) {
-  if (status === 'ok')
-    return <span className="badge-ok">✓ OK</span>
-  if (status === 'missing')
-    return <span className="badge-missing">⚠ Missing</span>
+  if (status === 'ok')      return <span className="badge-ok">✓ OK</span>
+  if (status === 'missing') return <span className="badge-missing">⚠ Missing</span>
   return <span className="badge-error">✗ Error</span>
 }
 
-function MessageList({
-  items,
-  type,
-}: {
-  items: string[]
-  type: 'warning' | 'error'
-}) {
+function MessageList({ items, type }: { items: string[]; type: 'warning' | 'error' }) {
   if (!items.length) return null
-
-  const isWarning = type === 'warning'
-
+  const isWarn = type === 'warning'
   return (
     <div
-      className={`rounded-xl border p-4 space-y-2 ${
-        isWarning
-          ? 'bg-amber-500/5 border-amber-500/20'
-          : 'bg-red-500/5 border-red-500/20'
-      }`}
+      className="rounded-lg p-3.5 space-y-2"
+      style={{
+        background: isWarn ? 'var(--color-warning-bg)' : 'var(--color-error-bg)',
+        border: `1px solid ${isWarn ? 'var(--color-warning-border)' : 'var(--color-error-border)'}`,
+      }}
     >
-      <div className={`flex items-center gap-2 text-xs font-semibold ${isWarning ? 'text-amber-400' : 'text-red-400'}`}>
-        {isWarning ? <IconAlertTriangle size={14} /> : <IconX size={14} />}
-        {isWarning ? `${items.length} Warning${items.length > 1 ? 's' : ''}` : `${items.length} Error${items.length > 1 ? 's' : ''}`}
+      <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)' }}>
+        {isWarn ? <IconAlertTriangle size={13} /> : <IconX size={13} />}
+        {items.length} {isWarn ? 'Warning' : 'Error'}{items.length > 1 ? 's' : ''}
       </div>
       <ul className="space-y-1">
         {items.map((msg, i) => (
-          <li key={i} className={`text-xs flex items-start gap-1.5 ${isWarning ? 'text-amber-200/80' : 'text-red-200/80'}`}>
-            <span className="mt-0.5 shrink-0">·</span>
+          <li key={i} className="text-xs flex items-start gap-1.5" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)', opacity: 0.85 }}>
+            <span className="shrink-0 mt-0.5">·</span>
             <span>{msg}</span>
           </li>
         ))}
@@ -60,147 +49,132 @@ function MessageList({
 }
 
 export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
-  const [timelineExpanded, setTimelineExpanded] = useState(false)
+  const [timelineOpen, setTimelineOpen] = useState(false)
 
-  const videoUrl = result.output_video_url
-  const hasVideo = result.success && videoUrl
-
-  // Compute timeline stats
-  const totalItems = result.timeline_report.length
-  const totalWarnings = result.warnings.length
-  const lastItem = result.timeline_report[result.timeline_report.length - 1]
-  const totalDuration = lastItem ? lastItem.end : '00:00'
-  const hasErrors = result.timeline_report.some(r => r.status !== 'ok')
+  const videoUrl     = result.output_video_url
+  const hasVideo     = result.success && videoUrl
+  const totalItems   = result.timeline_report.length
+  const totalWarns   = result.warnings.length
+  const lastItem     = result.timeline_report[result.timeline_report.length - 1]
+  const totalDuration = lastItem ? lastItem.end : '0:00'
+  const hasIssues    = result.timeline_report.some(r => r.status !== 'ok')
 
   return (
-    <div className="card-glow p-6 space-y-6 animate-slide-up">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+    <div className="space-y-4 animate-slide-up">
+
+      {/* Status header */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-xl"
+        style={{
+          background: result.success ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
+          border: `1px solid ${result.success ? 'var(--color-success-border)' : 'var(--color-error-border)'}`,
+        }}
+      >
         <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-            result.success
-              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-              : 'bg-red-500/10 border border-red-500/20 text-red-400'
-          }`}
+          className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
+          style={{
+            background: result.success ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
+            border: `1px solid ${result.success ? 'var(--color-success-border)' : 'var(--color-error-border)'}`,
+            color: result.success ? 'var(--color-success)' : 'var(--color-error)',
+          }}
         >
-          {result.success ? <IconCheck size={18} /> : <IconX size={18} />}
+          {result.success ? <IconCheck size={16} /> : <IconX size={16} />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center flex-wrap gap-2.5">
-            <h2 className="text-base font-semibold text-primary">
-              {result.success ? 'Video Generated Successfully' : 'Generation Failed'}
-            </h2>
-            {result.success && (
-              <div className="flex gap-1.5">
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-muted border border-white/10">
-                  {settings.exportResolution}
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-muted border border-white/10">
-                  {settings.aspectRatio}
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-muted border border-white/10 hidden sm:inline-block">
-                  {settings.renderProfile.replace('_', ' ')}
-                </span>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-muted mt-0.5">
+          <p className="text-sm font-semibold" style={{ color: result.success ? 'var(--color-success)' : 'var(--color-error)' }}>
+            {result.success ? 'Video generated successfully' : 'Generation failed'}
+          </p>
+          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
             {result.elapsed_seconds != null
               ? `Completed in ${result.elapsed_seconds}s`
-              : result.success
-              ? 'Your video is ready'
-              : 'See errors below'}
+              : result.success ? 'Your video is ready' : 'See errors below'}
           </p>
         </div>
+        {result.success && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {[settings.exportResolution, settings.aspectRatio].map(chip => (
+              <span
+                key={chip}
+                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded"
+                style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)' }}
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
-
-      {/* Warnings & errors */}
-      {result.errors.length > 0 && (
-        <MessageList items={result.errors} type="error" />
-      )}
-      {result.warnings.length > 0 && (
-        <MessageList items={result.warnings} type="warning" />
-      )}
+      {/* Messages */}
+      {result.errors.length > 0 && <MessageList items={result.errors} type="error" />}
+      {result.warnings.length > 0 && <MessageList items={result.warnings} type="warning" />}
 
       {/* Video preview + download */}
       {hasVideo && (
-        <div className="space-y-4">
-          <div className="rounded-xl overflow-hidden bg-black border border-slate-700/50 relative group">
+        <div className="space-y-3">
+          <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center" style={{ border: '1px solid var(--border-default)' }}>
             <video
               src={videoUrl!}
               controls
-              className="w-full max-h-[480px] object-contain"
+              className="w-full h-full object-contain"
               aria-label="Generated video preview"
             />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-0">
-              <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center text-white">
-                <IconPlayCircle size={36} />
-              </div>
-            </div>
           </div>
-
           <a
             href={videoUrl!}
             download={result.output_filename ?? 'video.mp4'}
-            className="btn-primary w-full"
+            className="btn-primary w-full py-3"
             aria-label={`Download ${result.output_filename ?? 'video.mp4'}`}
           >
-            <IconDownload size={18} />
-            Download MP4 — {result.output_filename ?? 'video.mp4'}
+            <IconDownload size={16} />
+            Download — {result.output_filename ?? 'video.mp4'}
           </a>
         </div>
       )}
 
       {/* Timeline report */}
       {result.timeline_report.length > 0 && (
-        <div className="card-glow overflow-hidden">
-          {/* Collapsible header */}
+        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}>
           <button
-            onClick={() => setTimelineExpanded(!timelineExpanded)}
-            className="w-full flex items-center justify-between gap-4 p-5 text-left transition-colors"
-            style={{ backgroundColor: timelineExpanded ? 'rgba(99,102,241,0.04)' : 'transparent' }}
-            aria-expanded={timelineExpanded}
+            onClick={() => setTimelineOpen(v => !v)}
+            className="w-full flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors"
+            style={{ background: timelineOpen ? 'var(--accent-subtle)' : 'transparent' }}
+            aria-expanded={timelineOpen}
           >
-            <div>
-              <h3 className="text-sm font-semibold text-primary">Timeline Report</h3>
-              <div className="flex items-center gap-2 mt-1 text-xs text-muted flex-wrap">
-                <span className="font-semibold text-brand-400">{totalItems} items</span>
-                <span>•</span>
-                <span>{totalDuration} duration</span>
-                <span>•</span>
-                {hasErrors ? (
-                  <span className="text-red-400">Issues found</span>
-                ) : totalWarnings > 0 ? (
-                  <span className="text-amber-400">{totalWarnings} warnings</span>
-                ) : (
-                  <span className="text-emerald-400">All clips OK</span>
-                )}
+            <div className="flex items-center gap-2.5">
+              <IconVideo size={14} style={{ color: 'var(--text-muted)' }} />
+              <div>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>Timeline Report</span>
+                <div className="flex items-center gap-1.5 mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{totalItems} clips</span>
+                  <span>·</span>
+                  <span>{totalDuration}</span>
+                  <span>·</span>
+                  {hasIssues
+                    ? <span style={{ color: 'var(--color-error)' }}>Issues found</span>
+                    : totalWarns > 0
+                    ? <span style={{ color: 'var(--color-warning)' }}>{totalWarns} warnings</span>
+                    : <span style={{ color: 'var(--color-success)' }}>All clips OK</span>
+                  }
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-brand-300 bg-brand-500/10 px-2 py-1 rounded-md">
-                {timelineExpanded ? 'Hide Details' : 'Show Details'}
-              </span>
-              <span className={`text-muted transition-transform duration-200 text-sm shrink-0 ${timelineExpanded ? 'rotate-180' : ''}`}>
-                ▼
-              </span>
-            </div>
+            <span
+              className="text-[10px] font-bold transition-transform duration-200 shrink-0"
+              style={{ color: 'var(--text-muted)', transform: timelineOpen ? 'rotate(180deg)' : 'none' }}
+            >
+              ▾
+            </span>
           </button>
 
-          {/* Expanded content */}
-          {timelineExpanded && (
-            <div className="px-5 pb-5">
-              <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--color-surface-card-border)' }}>
+          {timelineOpen && (
+            <div className="px-4 pb-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <div className="overflow-x-auto rounded-lg mt-3" style={{ border: '1px solid var(--border-subtle)' }}>
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b" style={{ backgroundColor: 'var(--color-surface-input)', borderColor: 'var(--color-surface-card-border)' }}>
-                      {['Image', 'Start', 'End', 'Duration', 'Text', 'Status'].map((h) => (
-                        <th
-                          key={h}
-                          className="px-4 py-3 text-left font-semibold text-muted uppercase tracking-wider"
-                        >
+                    <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-subtle)' }}>
+                      {['Image', 'Start', 'End', 'Duration', 'Text', 'Status'].map(h => (
+                        <th key={h} className="px-3 py-2.5 text-left font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontSize: '9px' }}>
                           {h}
                         </th>
                       ))}
@@ -210,27 +184,27 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
                     {result.timeline_report.slice(0, 100).map((row, i) => (
                       <tr
                         key={i}
-                        className={`transition-colors border-b ${
-                          row.status !== 'ok' ? 'bg-red-900/10' : ''
-                        }`}
-                        style={{ borderColor: 'var(--color-surface-card-border)' }}
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                          background: row.status !== 'ok' ? 'var(--color-error-bg)' : 'transparent',
+                        }}
                       >
-                        <td className="px-4 py-2.5 font-mono text-secondary">{row.image}</td>
-                        <td className="px-4 py-2.5 font-mono text-muted">{row.start}</td>
-                        <td className="px-4 py-2.5 font-mono text-muted">{row.end}</td>
-                        <td className="px-4 py-2.5 font-mono text-muted">{row.duration}</td>
-                        <td className="px-4 py-2.5 text-muted max-w-[200px] truncate">
-                          {row.text || <span className="opacity-40 italic">—</span>}
+                        <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-secondary)' }}>{row.image}</td>
+                        <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-muted)' }}>{row.start}</td>
+                        <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-muted)' }}>{row.end}</td>
+                        <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-muted)' }}>{row.duration}</td>
+                        <td className="px-3 py-2 max-w-[160px] truncate" style={{ color: 'var(--text-muted)' }}>
+                          {row.text || <span style={{ opacity: 0.4, fontStyle: 'italic' }}>—</span>}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-3 py-2">
                           <StatusBadge status={row.status} />
                         </td>
                       </tr>
                     ))}
                     {result.timeline_report.length > 100 && (
-                      <tr className="bg-surface-input border-b" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-                        <td colSpan={6} className="px-4 py-3 text-center text-xs font-semibold text-muted italic">
-                          + {result.timeline_report.length - 100} more items hidden to improve performance.
+                      <tr style={{ background: 'var(--bg-input)' }}>
+                        <td colSpan={6} className="px-3 py-3 text-center text-[10px] italic" style={{ color: 'var(--text-muted)' }}>
+                          + {result.timeline_report.length - 100} more items hidden for performance.
                         </td>
                       </tr>
                     )}

@@ -1,4 +1,4 @@
-// App.tsx – Main application layout for Audio Image Sync Studio
+// App.tsx – SyncFrame Studio — Professional creator dashboard
 
 import React, { useState, useEffect, useCallback } from 'react'
 import FileDropZone from './components/FileDropZone'
@@ -11,17 +11,18 @@ import {
   IconMusic,
   IconImage,
   IconFileText,
-  IconZap,
-  IconSparkles,
   IconLoader,
   IconSun,
   IconMoon,
+  IconZap,
+  IconSparkles,
 } from './components/icons'
 import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } from './types'
 import { checkHealth, startJob } from './utils/api'
 
+// ── Default settings ────────────────────────────────────────────────────────
+
 const DEFAULT_SETTINGS: GenerateSettings = {
-  // Core video (Batch 3)
   aspectRatio:      '9:16',
   exportResolution: '1080p',
   fitMode:          'cover',
@@ -29,11 +30,9 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   zoomEffect:       'none',
   renderProfile:    'balanced',
   outputName:       'my_video',
-  // Batch 2 — background music
-  enableBgMusic: false,
-  musicVolume:   12,
-  musicFade:     true,
-  // Batch 3 — watermark
+  enableBgMusic:    false,
+  musicVolume:      12,
+  musicFade:        true,
   enableWatermark:       false,
   watermarkText:         '',
   watermarkPositionMode: 'preset',
@@ -45,138 +44,207 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   watermarkMargin:       36,
 }
 
-// ── Theme helpers ──────────────────────────────────────────────────────────
+// ── Theme helpers ───────────────────────────────────────────────────────────
 
 function getInitialDark(): boolean {
   try {
     const saved = localStorage.getItem('theme')
     if (saved === 'light') return false
-    if (saved === 'dark') return true
-  } catch {
-    // localStorage unavailable
-  }
-  return true // default dark
+    if (saved === 'dark')  return true
+  } catch { /* noop */ }
+  return true
 }
 
 function applyTheme(dark: boolean) {
   const root = document.documentElement
-  if (dark) {
-    root.classList.add('dark')
-    root.classList.remove('light')
-  } else {
-    root.classList.remove('dark')
-    root.classList.add('light')
-  }
-  try {
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  } catch {
-    // ignore
-  }
+  if (dark) { root.classList.add('dark'); root.classList.remove('light') }
+  else       { root.classList.remove('dark'); root.classList.add('light') }
+  try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch { /* noop */ }
 }
 
-// ── App ────────────────────────────────────────────────────────────────────
+// ── Workflow step indicator ─────────────────────────────────────────────────
+
+type WorkflowStep = 1 | 2 | 3 | 4 | 5
+
+const STEPS = [
+  { n: 1, label: 'Upload'    },
+  { n: 2, label: 'Configure' },
+  { n: 3, label: 'Enhance'   },
+  { n: 4, label: 'Generate'  },
+  { n: 5, label: 'Export'    },
+]
+
+function WorkflowBar({ step }: { step: WorkflowStep }) {
+  return (
+    <div className="flex items-center gap-1">
+      {STEPS.map((s, i) => {
+        const done    = s.n < step
+        const current = s.n === step
+        return (
+          <React.Fragment key={s.n}>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black transition-all"
+                style={{
+                  background: done    ? 'var(--color-success)'
+                             : current ? 'var(--accent-primary)'
+                             : 'var(--border-default)',
+                  color: (done || current) ? '#fff' : 'var(--text-muted)',
+                }}
+              >
+                {done ? '✓' : s.n}
+              </div>
+              <span
+                className="text-[10px] font-semibold hidden sm:inline"
+                style={{ color: current ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              >
+                {s.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div
+                className="hidden sm:block h-px flex-1 min-w-[12px]"
+                style={{ background: done ? 'var(--color-success)' : 'var(--border-subtle)' }}
+              />
+            )}
+          </React.Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Status dot ──────────────────────────────────────────────────────────────
+
+function StatusDot({ ok }: { ok: boolean | null }) {
+  if (ok === null) return (
+    <span className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+      <IconLoader size={11} className="animate-spin" />
+      Connecting
+    </span>
+  )
+  if (ok) return (
+    <span className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: 'var(--color-success)' }}>
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--color-success)' }} />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--color-success)' }} />
+      </span>
+      Backend live
+    </span>
+  )
+  return (
+    <span className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: 'var(--color-error)' }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-error)' }} />
+      Offline
+    </span>
+  )
+}
+
+// ── Summary chip row ────────────────────────────────────────────────────────
+
+function SummaryChip({ label, value, active }: { label: string; value: string; active: boolean }) {
+  return (
+    <div
+      className="flex items-center gap-1 px-2 py-1 rounded text-[10px]"
+      style={{
+        background: active ? 'var(--accent-subtle)' : 'var(--bg-input)',
+        border: `1px solid ${active ? 'var(--accent-border)' : 'var(--border-subtle)'}`,
+        color: active ? 'var(--accent-primary)' : 'var(--text-muted)',
+        opacity: active ? 1 : 0.7,
+      }}
+    >
+      <span className="font-semibold">{label}</span>
+      <span className="opacity-70">·</span>
+      <span>{value}</span>
+    </div>
+  )
+}
+
+// ── File requirement indicator ──────────────────────────────────────────────
+
+function FileReq({ label, file }: { label: string; file: File | null }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px]" style={{ color: file ? 'var(--color-success)' : 'var(--text-muted)' }}>
+      <span
+        className="w-3.5 h-3.5 rounded flex items-center justify-center text-[8px] font-bold shrink-0"
+        style={{
+          background: file ? 'var(--color-success-bg)' : 'var(--bg-input)',
+          border: `1px solid ${file ? 'var(--color-success-border)' : 'var(--border-default)'}`,
+        }}
+      >
+        {file ? '✓' : '○'}
+      </span>
+      {label}
+    </div>
+  )
+}
+
+// ── App ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  // ── Theme ────────────────────────────────────────────────────────────────
+  // Theme
   const [isDark, setIsDark] = useState<boolean>(getInitialDark)
+  useEffect(() => { applyTheme(isDark) }, [isDark])
+  useEffect(() => { applyTheme(getInitialDark()) }, [])
+  const toggleTheme = () => setIsDark(d => !d)
 
-  useEffect(() => {
-    applyTheme(isDark)
-  }, [isDark])
-
-  // Apply theme on first mount (before any state updates)
-  useEffect(() => {
-    applyTheme(getInitialDark())
-  }, [])
-
-  const toggleTheme = () => setIsDark((d) => !d)
-
-  // ── Required file state ───────────────────────────────────────────────────
-  const [audioFile, setAudioFile] = useState<File | null>(null)
+  // Required files
+  const [audioFile, setAudioFile]   = useState<File | null>(null)
+  const [imagesZip, setImagesZip]   = useState<File | null>(null)
+  const [csvFile,   setCsvFile]     = useState<File | null>(null)
   const [audioDuration, setAudioDuration] = useState<number | null>(null)
-  const [imagesZip, setImagesZip] = useState<File | null>(null)
-  const [csvFile, setCsvFile] = useState<File | null>(null)
 
-  // ── Optional file state (Batch 2/6) ───────────────────────────────────────
-  const [introFile, setIntroFile] = useState<File | null>(null)
-  const [outroFile, setOutroFile] = useState<File | null>(null)
-  const [bgMusicFile, setBgMusicFile] = useState<File | null>(null)
+  // Optional files
+  const [introFile,    setIntroFile]    = useState<File | null>(null)
+  const [outroFile,    setOutroFile]    = useState<File | null>(null)
+  const [bgMusicFile,  setBgMusicFile]  = useState<File | null>(null)
 
-  // ── Settings ─────────────────────────────────────────────────────────────
+  // Settings
   const [settings, setSettings] = useState<GenerateSettings>(DEFAULT_SETTINGS)
 
-  // ── Generation state ─────────────────────────────────────────────────────
-  const [status, setStatus] = useState<GenerateStatus>('idle')
-  const [currentJobId, setCurrentJobId] = useState<string | null>(null)
-  const [result, setResult] = useState<GenerateResponse | null>(null)
-  const [healthOk, setHealthOk] = useState<boolean | null>(null)
-  const [cancelledMessage, setCancelledMessage] = useState<string | null>(null)
+  // Generation state
+  const [status,          setStatus]          = useState<GenerateStatus>('idle')
+  const [currentJobId,    setCurrentJobId]    = useState<string | null>(null)
+  const [result,          setResult]          = useState<GenerateResponse | null>(null)
+  const [healthOk,        setHealthOk]        = useState<boolean | null>(null)
+  const [cancelledMsg,    setCancelledMsg]    = useState<string | null>(null)
 
-  // ── Parse audio duration ──────────────────────────────────────────────────
+  // Health check
+  useEffect(() => { checkHealth().then(setHealthOk) }, [])
+
+  // Audio duration detection
   useEffect(() => {
-    if (!audioFile) {
-      setAudioDuration(null)
-      return
-    }
-    const url = URL.createObjectURL(audioFile)
+    if (!audioFile) { setAudioDuration(null); return }
+    const url   = URL.createObjectURL(audioFile)
     const audio = new Audio(url)
-    audio.onloadedmetadata = () => {
-      setAudioDuration(audio.duration)
-      URL.revokeObjectURL(url)
-    }
-    audio.onerror = () => {
-      setAudioDuration(null)
-      URL.revokeObjectURL(url)
-    }
+    audio.onloadedmetadata = () => { setAudioDuration(audio.duration); URL.revokeObjectURL(url) }
+    audio.onerror          = () => { setAudioDuration(null);           URL.revokeObjectURL(url) }
   }, [audioFile])
 
-  // ── Health check on mount ─────────────────────────────────────────────────
-  useEffect(() => {
-    checkHealth().then(setHealthOk)
-  }, [])
+  const canGenerate = audioFile !== null && imagesZip !== null && csvFile !== null
+    && status !== 'uploading' && status !== 'generating' && status !== 'cancelling'
+  const isLoading   = status === 'uploading' || status === 'generating' || status === 'cancelling'
 
-  const canGenerate =
-    audioFile !== null &&
-    imagesZip !== null &&
-    csvFile !== null &&
-    status !== 'uploading' &&
-    status !== 'generating' &&
-    status !== 'cancelling'
+  // Determine current workflow step
+  const workflowStep: WorkflowStep =
+    result     ? 5 :
+    isLoading  ? 4 :
+    canGenerate? 4 :
+    audioFile || imagesZip || csvFile ? 2 : 1
 
-  const isLoading = status === 'uploading' || status === 'generating' || status === 'cancelling'
-
-  // ── Start generation ──────────────────────────────────────────────────────
+  // Generate
   const handleGenerate = async () => {
     if (!audioFile || !imagesZip || !csvFile) return
-
-    setResult(null)
-    setCancelledMessage(null)
-    setStatus('uploading')
-
+    setResult(null); setCancelledMsg(null); setStatus('uploading')
     try {
-      const { job_id } = await startJob(
-        audioFile,
-        imagesZip,
-        csvFile,
-        settings,
-        introFile,
-        outroFile,
-        bgMusicFile,
-      )
-      setCurrentJobId(job_id)
-      setStatus('generating')
+      const { job_id } = await startJob(audioFile, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
+      setCurrentJobId(job_id); setStatus('generating')
     } catch (err) {
-      setResult({
-        success: false,
-        errors: [String(err)],
-        warnings: [],
-        timeline_report: [],
-      })
+      setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
       setStatus('error')
     }
   }
 
-  // ── Job completed callback (from ProgressOverlay polling) ─────────────────
   const handleJobComplete = useCallback((jobStatus: JobStatus) => {
     setCurrentJobId(null)
     if (jobStatus.status === 'completed') {
@@ -188,13 +256,13 @@ export default function App() {
         output_filename: jobStatus.output_filename ?? undefined,
         timeline_report: jobStatus.timeline_report,
         warnings: jobStatus.warnings,
-        errors: jobStatus.errors,
+        errors:   jobStatus.errors,
       })
       setStatus('done')
     } else {
       setResult({
         success: false,
-        errors: jobStatus.errors.length ? jobStatus.errors : ['Video generation failed.'],
+        errors:  jobStatus.errors.length ? jobStatus.errors : ['Video generation failed.'],
         warnings: jobStatus.warnings,
         timeline_report: jobStatus.timeline_report,
       })
@@ -202,45 +270,46 @@ export default function App() {
     }
   }, [])
 
-  // ── Job cancelled callback ────────────────────────────────────────────────
   const handleCancelled = useCallback(() => {
-    setCurrentJobId(null)
-    setStatus('idle')
-    setCancelledMessage('Generation cancelled.')
-    // Clear the cancelled message after 4 s
-    setTimeout(() => setCancelledMessage(null), 4000)
+    setCurrentJobId(null); setStatus('idle')
+    setCancelledMsg('Generation cancelled.')
+    setTimeout(() => setCancelledMsg(null), 4000)
   }, [])
+
+  // Derived
+  const hasEnhancements = introFile || outroFile || bgMusicFile || settings.watermarkText.trim()
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Progress overlay — shown while generating */}
+
+      {/* ── Progress overlay ── */}
       {isLoading && currentJobId && (
-        <ProgressOverlay
-          jobId={currentJobId}
-          onJobComplete={handleJobComplete}
-          onCancelled={handleCancelled}
-        />
+        <ProgressOverlay jobId={currentJobId} onJobComplete={handleJobComplete} onCancelled={handleCancelled} />
       )}
 
-      {/* Upload-only overlay (before job_id is available) */}
+      {/* ── Upload-only overlay ── */}
       {status === 'uploading' && !currentJobId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="card p-8 w-72 text-center space-y-4 shadow-2xl">
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-brand-gradient/10 border border-brand-500/30 flex items-center justify-center">
-                <IconLoader size={28} className="text-brand-400" />
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+          <div
+            className="w-72 text-center space-y-4 p-8 rounded-2xl"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+          >
+            <div
+              className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center"
+              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+            >
+              <IconLoader size={22} className="animate-spin" style={{ color: 'var(--accent-primary)' }} />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-primary">Uploading Files…</h3>
-              <p className="text-sm text-secondary mt-1">Sending files to server…</p>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Uploading files…</h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Sending to server</p>
             </div>
-            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(99,102,241,0.12)' }}>
-              <div className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full animate-[progress_2s_ease-in-out_infinite]" />
+            <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--bg-input)' }}>
+              <div className="h-full rounded-full" style={{ background: 'var(--accent-primary)', animation: 'progressIndeterminate 1.8s ease-in-out infinite' }} />
             </div>
           </div>
           <style>{`
-            @keyframes progress {
+            @keyframes progressIndeterminate {
               0%   { width: 0%;   margin-left: 0%; }
               50%  { width: 60%;  margin-left: 20%; }
               100% { width: 0%;   margin-left: 100%; }
@@ -249,350 +318,303 @@ export default function App() {
         </div>
       )}
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Header                                                              */}
-      {/* ------------------------------------------------------------------ */}
-      <header className="sticky top-0 z-40 border-b header-surface" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          {/* Logo / title */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-brand-900/20 border border-brand-500/20 shadow-lg shadow-brand-900/50">
-              <img 
-                src="/automist-labs-logo.png" 
+      {/* ════════════════════════════════════════════════════════════
+          HEADER
+      ════════════════════════════════════════════════════════════ */}
+      <header className="sticky top-0 z-40 header-bar">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-6">
+
+          {/* Logo + branding */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div
+              className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
+              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+            >
+              <img
+                src="/automist-labs-logo.png"
                 alt="Automist Labs"
                 className="w-full h-full object-contain p-1"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement?.querySelector('svg')?.classList.remove('hidden');
+                onError={e => {
+                  e.currentTarget.style.display = 'none'
+                  const sib = e.currentTarget.nextElementSibling as HTMLElement | null
+                  if (sib) sib.classList.remove('hidden')
                 }}
               />
-              <IconSparkles size={16} className="text-brand-400 hidden" />
+              <IconSparkles size={14} className="hidden" style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="hidden sm:flex sm:flex-col sm:justify-center">
-              <h1 className="text-base font-bold text-primary leading-tight tracking-tight">
+            <div className="leading-tight">
+              <h1 className="text-sm font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 SyncFrame Studio
               </h1>
-              <p className="text-[11px] text-muted leading-tight font-medium">
+              <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
                 by Automist Labs
               </p>
             </div>
-            <h1 className="sm:hidden text-sm font-bold text-primary tracking-tight">
-              SyncFrame
-            </h1>
           </div>
 
-          {/* Right side: health indicator + theme toggle */}
-          <div className="flex items-center gap-4">
-            {/* Health indicator */}
-            <div className="flex items-center gap-2 bg-black/10 px-2.5 py-1.5 rounded-md border" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-              {healthOk === null && (
-                <span className="flex items-center gap-1.5 text-xs text-muted font-medium">
-                  <IconLoader size={12} className="animate-spin" />
-                  Connecting
-                </span>
-              )}
-              {healthOk === true && (
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  Online
-                </span>
-              )}
-              {healthOk === false && (
-                <span className="flex items-center gap-1.5 text-xs text-red-400 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  Offline
-                </span>
-              )}
-            </div>
+          {/* Centre: workflow bar */}
+          <div className="hidden md:block flex-1 max-w-md">
+            <WorkflowBar step={workflowStep} />
+          </div>
 
-            {/* Light/Dark toggle */}
+          {/* Right: status + theme */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div
+              className="hidden sm:flex items-center px-2.5 py-1.5 rounded-lg"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)' }}
+            >
+              <StatusDot ok={healthOk} />
+            </div>
             <button
               id="theme-toggle-btn"
               onClick={toggleTheme}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-muted hover:text-secondary"
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
               style={{
-                backgroundColor: 'var(--color-surface-input)',
-                border: '1px solid var(--color-surface-card-border)',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
               }}
             >
-              {isDark ? <IconSun size={15} /> : <IconMoon size={15} />}
+              {isDark ? <IconSun size={14} /> : <IconMoon size={14} />}
             </button>
           </div>
+
         </div>
       </header>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Hero section                                                        */}
-      {/* ------------------------------------------------------------------ */}
-      <section className="relative overflow-hidden border-b" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-900/10 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 relative">
-          <div className="text-center space-y-5 max-w-3xl mx-auto">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-primary leading-tight tracking-tight">
-              Create perfectly timed <span className="text-gradient">videos</span>
-            </h2>
-            <p className="text-secondary text-sm sm:text-lg leading-relaxed max-w-2xl mx-auto">
-              Upload audio, ordered images, and timestamps — then export polished videos with music, outro, watermark, and quality controls.
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-3 pt-4">
-              {[
-                { label: 'Localhost', icon: <IconZap size={12} /> },
-                { label: 'No paid APIs', icon: <IconSparkles size={12} /> },
-                { label: 'Music + Outro', icon: <IconMusic size={12} /> },
-                { label: 'Watermark', icon: <IconImage size={12} /> },
-                { label: '720p–4K', icon: <IconFileText size={12} /> },
-              ].map((chip) => (
-                <div
-                  key={chip.label}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-xs font-semibold text-brand-300 shadow-sm"
-                >
-                  {chip.icon}
-                  {chip.label}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Main content (Responsive Grid)                                       */}
-      {/* ------------------------------------------------------------------ */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
-
-        {/* Backend offline banner */}
-        {healthOk === false && (
-          <div className="rounded-xl border px-5 py-4 flex items-start gap-3"
-            style={{ backgroundColor: 'rgba(127,29,29,0.15)', borderColor: 'rgba(239,68,68,0.25)' }}>
-            <span className="text-red-400 mt-0.5">⚠</span>
-            <div className="text-sm">
-              <p className="font-semibold text-red-300">Backend server is not running</p>
-              <p className="text-red-400/80 mt-0.5">
-                Double-click <strong>start_app.command</strong> to start the app, or run:{' '}
-                <code className="text-xs rounded px-1.5 py-0.5" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+      {/* ════════════════════════════════════════════════════════════
+          ALERTS
+      ════════════════════════════════════════════════════════════ */}
+      {healthOk === false && (
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-4">
+          <div className="alert-error">
+            <span className="text-sm">⚠</span>
+            <div className="text-xs">
+              <p className="font-semibold">Backend server is not running</p>
+              <p className="mt-0.5 opacity-80">
+                Double-click <strong>start_app.command</strong> or run:{' '}
+                <code className="text-[10px] rounded px-1 py-0.5" style={{ background: 'rgba(0,0,0,0.2)' }}>
                   uvicorn main:app --reload --host 127.0.0.1 --port 8000
                 </code>
               </p>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Cancelled message */}
-        {cancelledMessage && (
-          <div className="rounded-xl border px-5 py-3 flex items-center gap-3 animate-fade-in"
-            style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderColor: 'rgba(245,158,11,0.25)' }}>
-            <span className="text-amber-400">ℹ</span>
-            <p className="text-sm text-amber-300">{cancelledMessage}</p>
+      {cancelledMsg && (
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-4">
+          <div className="alert-warning animate-fade-in">
+            <span>ℹ</span>
+            <p className="text-xs">{cancelledMsg}</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Row 1: Responsive 2-column balanced layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-          
-          {/* ── LEFT COLUMN (Uploads, Generate, Results) ── */}
-          <div className="space-y-8 flex flex-col">
-            {/* Upload panel */}
-            <div className="card-glow p-6 space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                  <IconImage size={18} />
-                </div>
+      {/* ════════════════════════════════════════════════════════════
+          MAIN WORKSPACE
+      ════════════════════════════════════════════════════════════ */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
+
+          {/* ── LEFT: Upload + Generate + Results ── */}
+          <div className="flex-1 min-w-0 space-y-5">
+
+            {/* Upload workspace */}
+            <div className="card p-5 space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-primary">Upload Files</h2>
-                  <p className="text-xs text-muted">Three files are required to generate a video</p>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Source Files</h2>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Three files are required to generate a video</p>
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <FileReq label="Audio"  file={audioFile} />
+                  <span style={{ color: 'var(--border-default)' }}>·</span>
+                  <FileReq label="Images" file={imagesZip} />
+                  <span style={{ color: 'var(--border-default)' }}>·</span>
+                  <FileReq label="CSV"    file={csvFile} />
                 </div>
               </div>
 
-              <div className="h-px" style={{ backgroundColor: 'var(--color-surface-card-border)' }} />
-
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <FileDropZone
                   id="audio-upload"
-                  label="Audio File"
-                  description="MP3, WAV, M4A supported"
+                  label="Audio"
+                  description="MP3, WAV, M4A, AAC"
                   accept="audio/*,.mp3,.wav,.m4a,.aac"
-                  icon={<IconMusic size={20} />}
+                  icon={<IconMusic size={14} />}
                   file={audioFile}
                   onChange={setAudioFile}
                   disabled={isLoading}
+                  required
                 />
-
                 <FileDropZone
                   id="images-upload"
                   label="Images ZIP"
-                  description="ZIP containing 1.jpg, 2.jpg, 3.jpg…"
+                  description="1.jpg, 2.jpg…"
                   accept=".zip,application/zip"
-                  icon={<IconImage size={20} />}
+                  icon={<IconImage size={14} />}
                   file={imagesZip}
                   onChange={setImagesZip}
                   disabled={isLoading}
+                  required
                 />
-
                 <FileDropZone
                   id="csv-upload"
                   label="Timestamp CSV"
-                  description="CSV with image, start, end columns"
+                  description="image, start, end columns"
                   accept=".csv,text/csv"
-                  icon={<IconFileText size={20} />}
+                  icon={<IconFileText size={14} />}
                   file={csvFile}
                   onChange={setCsvFile}
                   disabled={isLoading}
+                  required
                 />
               </div>
+
+              <CsvGuide />
             </div>
 
-            {/* ── Generate button ── */}
-            <div className="card p-6 flex flex-col items-center gap-5 text-center">
-              {/* File checklist and Settings Summary */}
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex items-center gap-4 text-xs flex-wrap justify-center">
-                  {[
-                    { label: 'Audio', file: audioFile },
-                    { label: 'Images', file: imagesZip },
-                    { label: 'CSV', file: csvFile },
-                  ].map(({ label, file }) => (
-                    <div
-                      key={label}
-                      className={`flex items-center gap-1.5 ${file ? 'text-emerald-400' : 'text-muted'}`}
-                    >
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border ${
-                          file
-                            ? 'border-emerald-500/40 bg-emerald-500/10'
-                            : 'border-slate-600 bg-slate-800'
-                        }`}
-                      >
-                        {file ? '✓' : '○'}
-                      </span>
-                      {label}
-                    </div>
-                  ))}
+            {/* Audio duration warning */}
+            {audioDuration !== null && audioDuration > 600 && (
+              <div className="alert-warning animate-fade-in">
+                <span>⚠</span>
+                <p className="text-xs">
+                  {audioDuration > 1200
+                    ? 'This audio is very long (>20 min). Generation may take a long time depending on your settings and computer.'
+                    : 'Long audio detected (>10 min). Use 720p Fast Preview to check timing before your final 1080p export.'}
+                </p>
+              </div>
+            )}
 
-                  <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
-
-                  <div className="flex items-center gap-2 text-muted hidden sm:flex">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.exportResolution}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.aspectRatio}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 border border-white/10">{settings.renderProfile.replace('_', ' ')}</span>
-                  </div>
-
-                  {/* Optional enhancements indicator */}
-                  {(introFile || outroFile || bgMusicFile || (settings.enableWatermark && settings.watermarkText.trim())) && (
-                    <>
-                      <div className="w-px h-3 bg-white/10 mx-1 hidden sm:block" />
-                      <div className="flex items-center gap-1.5 text-violet-400">
-                        <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] border border-violet-500/40 bg-violet-500/10">
-                          ✦
-                        </span>
-                        {[
-                          bgMusicFile && 'Music',
-                          introFile && 'Intro',
-                          outroFile && 'Outro',
-                          (settings.enableWatermark && settings.watermarkText.trim()) && 'Watermark',
-                        ].filter(Boolean).join(' + ')}
-                      </div>
-                    </>
-                  )}
+            {/* Generate panel */}
+            <div className="card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Generate</h2>
+                  <p className="text-[11px] mt-0.5" style={{ color: canGenerate ? 'var(--color-success)' : 'var(--text-muted)' }}>
+                    {canGenerate ? 'Ready to generate your video.' : 'Upload the required files to continue.'}
+                  </p>
+                </div>
+                {/* Summary chips */}
+                <div className="hidden sm:flex items-center gap-1 flex-wrap justify-end">
+                  <SummaryChip label="Res"     value={settings.exportResolution} active />
+                  <SummaryChip label="Ratio"   value={settings.aspectRatio}      active />
+                  <SummaryChip label="Profile" value={settings.renderProfile.replace('_', ' ')} active />
+                  {bgMusicFile  && <SummaryChip label="Music"  value="On" active />}
+                  {introFile    && <SummaryChip label="Intro"  value="On" active />}
+                  {outroFile    && <SummaryChip label="Outro"  value="On" active />}
+                  {settings.watermarkText.trim() && <SummaryChip label="Watermark" value="On" active />}
                 </div>
               </div>
-
-              {/* Duration warnings */}
-              {audioDuration !== null && audioDuration > 600 && (
-                <div className="text-left w-full max-w-sm mx-auto animate-fade-in" style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '0.5rem', padding: '0.5rem 0.75rem' }}>
-                  <div className="flex items-start gap-2 text-xs">
-                    <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
-                    <span className="text-amber-300 leading-relaxed">
-                      {audioDuration > 1200 
-                        ? 'This video is longer than the recommended tested range. It may take more time depending on your computer.'
-                        : 'Long video detected. For faster testing, use 720p + Fast Preview. 1080p Balanced is recommended for final normal export.'}
-                    </span>
-                  </div>
-                </div>
-              )}
 
               <button
                 id="generate-btn"
                 onClick={handleGenerate}
                 disabled={!canGenerate}
-                className={`btn-primary text-base sm:text-lg px-8 sm:px-10 py-3 sm:py-4 rounded-xl w-full max-w-sm font-semibold shadow-xl transition-all ${
-                  canGenerate 
-                    ? 'shadow-brand-900/50 hover:scale-[1.02] active:scale-[0.98]' 
-                    : 'opacity-50 cursor-not-allowed shadow-none'
+                className={`btn-primary w-full py-3 text-base font-bold rounded-xl transition-all ${
+                  canGenerate ? 'shadow-lg hover:scale-[1.01] active:scale-[0.99]' : ''
                 }`}
+                style={{
+                  boxShadow: canGenerate ? '0 8px 24px rgba(79,70,229,0.35)' : 'none',
+                  fontSize: '15px',
+                }}
                 aria-label="Generate video"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <IconLoader size={20} className="animate-spin" />
+                    <IconLoader size={18} className="animate-spin" />
                     Generating…
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    <IconZap size={20} />
+                    <IconZap size={18} />
                     Generate Video
                   </span>
                 )}
               </button>
 
-              {!canGenerate && !isLoading ? (
-                <p className="text-[11px] sm:text-xs text-amber-400/80">
-                  Upload all three required files above to enable generation.
-                </p>
-              ) : canGenerate && !isLoading ? (
-                <p className="text-[11px] sm:text-xs text-emerald-400/80">
-                  Ready to generate your video.
-                </p>
-              ) : null}
+              {/* Missing files indicator */}
+              {!canGenerate && !isLoading && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  {[
+                    { label: 'Audio',     file: audioFile },
+                    { label: 'Images',    file: imagesZip },
+                    { label: 'CSV',       file: csvFile   },
+                  ].filter(f => !f.file).map(f => (
+                    <span
+                      key={f.label}
+                      className="flex items-center gap-1 text-[10px]"
+                      style={{ color: 'var(--color-error)' }}
+                    >
+                      <span style={{ color: 'var(--color-error-border)' }}>✗</span>
+                      {f.label} missing
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* ── Results ── */}
-            {result && (
-              <div className="animate-fade-in">
-                <ResultsPanel result={result} settings={settings} />
-              </div>
-            )}
+            {/* Results */}
+            {result && <ResultsPanel result={result} settings={settings} />}
           </div>
 
-          {/* ── RIGHT COLUMN (Guide, Settings, Enhancements) ── */}
-          <div className="space-y-8">
-            <CsvGuide />
+          {/* ── RIGHT: Inspector panel ── */}
+          <div
+            className="w-full xl:w-[340px] shrink-0 space-y-4"
+          >
+            {/* Settings */}
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Project Settings</h2>
+                <span
+                  className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded"
+                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)' }}
+                >
+                  Inspector
+                </span>
+              </div>
+              <SettingsPanel settings={settings} onChange={setSettings} disabled={isLoading} />
+            </div>
 
-            <SettingsPanel
-              settings={settings}
-              onChange={setSettings}
-              disabled={isLoading}
-            />
+            {/* Enhancements */}
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Enhancements</h2>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>All optional — expand to configure</p>
+                </div>
+                {hasEnhancements && (
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                    style={{ background: 'var(--color-success-bg)', border: '1px solid var(--color-success-border)', color: 'var(--color-success)' }}
+                  >
+                    ✓ Active
+                  </span>
+                )}
+              </div>
+              <EnhancementsPanel
+                settings={settings}
+                onSettingsChange={setSettings}
+                introFile={introFile}     onIntroChange={setIntroFile}
+                outroFile={outroFile}     onOutroChange={setOutroFile}
+                bgMusicFile={bgMusicFile} onBgMusicChange={setBgMusicFile}
+                disabled={isLoading}
+              />
+            </div>
 
-            <EnhancementsPanel
-              settings={settings}
-              onSettingsChange={setSettings}
-              introFile={introFile}
-              onIntroChange={setIntroFile}
-              outroFile={outroFile}
-              onOutroChange={setOutroFile}
-              bgMusicFile={bgMusicFile}
-              onBgMusicChange={setBgMusicFile}
-              disabled={isLoading}
-            />
           </div>
         </div>
       </main>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Footer                                                              */}
-      {/* ------------------------------------------------------------------ */}
-      <footer className="border-t mt-auto" style={{ borderColor: 'var(--color-surface-card-border)' }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between gap-4">
-          <p className="text-xs text-muted font-medium">
-            SyncFrame Studio by <span className="text-secondary">Automist Labs</span> · Runs fully on localhost
-          </p>
-          <p className="text-xs text-muted opacity-60">v1.3.0</p>
-        </div>
+      {/* ── Footer ── */}
+      <footer className="py-4 text-center" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+          SyncFrame Studio · by Automist Labs · Runs locally, no data leaves your machine
+        </p>
       </footer>
+
     </div>
   )
 }
