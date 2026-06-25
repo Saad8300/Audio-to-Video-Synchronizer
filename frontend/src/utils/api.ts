@@ -20,10 +20,6 @@ export async function checkHealth(): Promise<boolean> {
 /**
  * Start a background generation job.
  * Returns immediately with a job_id; poll getJobStatus() for updates.
- *
- * @param introFile   Optional intro video to prepend (mp4/mov/webm)
- * @param outroFile   Optional outro video to append (mp4/mov/webm)
- * @param bgMusicFile Optional background music (mp3/wav/m4a/aac)
  */
 export async function startJob(
   audioFile:    File,
@@ -41,17 +37,23 @@ export async function startJob(
   form.append('images_zip',     imagesZip)
   form.append('timestamp_csv',  timestampCsv)
 
-  // Core video settings (Batch 3)
+  // Core video settings
   form.append('aspect_ratio',      settings.aspectRatio)
   form.append('export_resolution', settings.exportResolution)
   form.append('fit_mode',          settings.fitMode)
   form.append('transition',        settings.transition)
-  form.append('zoom_effect',       settings.zoomEffect)
+  form.append('transition_duration', settings.transitionDuration)
   form.append('render_profile',    settings.renderProfile)
   form.append('output_name',       settings.outputName || 'video')
 
+  // Batch 9A — motion & style
+  form.append('motion_effect',    settings.motionEffect)
+  form.append('motion_intensity', settings.motionIntensity)
+  form.append('visual_effect',    settings.visualEffect)
+  form.append('effect_strength',  settings.effectStrength)
+  form.append('style_preset',     settings.stylePreset)
+
   // Watermark (Batch 3)
-  // Determine if it should be enabled based on text length (Batch 6)
   const watermarkActive = settings.watermarkText.trim().length > 0
   form.append('enable_watermark',        watermarkActive ? 'true' : 'false')
   form.append('watermark_text',          settings.watermarkText)
@@ -64,16 +66,15 @@ export async function startJob(
   form.append('watermark_margin',        String(settings.watermarkMargin))
 
   // Background music (Batch 2)
-  // Determine if it should be enabled based on file presence (Batch 6)
   const musicActive = !!bgMusicFile
   form.append('enable_bg_music', musicActive ? 'true' : 'false')
   form.append('music_volume',    (settings.musicVolume / 100).toFixed(4))
   form.append('music_fade',      settings.musicFade ? 'true' : 'false')
 
-  // Optional file uploads (Batch 2/6)
-  if (introFile)   form.append('intro_file',     introFile)
-  if (outroFile)   form.append('outro_file',     outroFile)
-  if (bgMusicFile) form.append('bg_music_file',  bgMusicFile)
+  // Optional file uploads
+  if (introFile)   form.append('intro_file',    introFile)
+  if (outroFile)   form.append('outro_file',    outroFile)
+  if (bgMusicFile) form.append('bg_music_file', bgMusicFile)
 
   const res = await fetch(`${BASE_URL}/api/jobs/start`, {
     method: 'POST',

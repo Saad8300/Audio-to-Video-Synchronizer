@@ -132,14 +132,21 @@ async def jobs_start(
     audio_file:      UploadFile = File(...),
     images_zip:      UploadFile = File(...),
     timestamp_csv:   UploadFile = File(...),
-    # Core video settings (Batch 3 — replaces video_format)
+    # Core video settings
     aspect_ratio:      str   = Form("9:16"),
     export_resolution: str   = Form("1080p"),
     fit_mode:          str   = Form("cover"),
-    transition:        str   = Form("none"),
+    transition:        str   = Form("fade"),
+    transition_duration: float = Form(0.5),
     zoom_effect:       str   = Form("none"),
     render_profile:    str   = Form("balanced"),
     output_name:       Optional[str] = Form(None),
+    # Batch 9A — motion & style
+    motion_effect:    str = Form("slow_zoom_in"),
+    motion_intensity: str = Form("medium"),
+    visual_effect:    str = Form("none"),
+    effect_strength:  str = Form("medium"),
+    style_preset:     str = Form("clean_default"),
     # Watermark (Batch 3)
     enable_watermark:        str   = Form("false"),
     watermark_text:          str   = Form(""),
@@ -164,13 +171,25 @@ async def jobs_start(
     Client polls GET /api/jobs/{job_id}/status for progress.
     """
 
-    # ── Validate core settings ───────────────────────────────────────────────
+    # ── Validate core settings ────────────────────────────────────
     if aspect_ratio not in VALID_ASPECT_RATIOS:
         raise HTTPException(400, f"Invalid aspect_ratio '{aspect_ratio}'. Valid: {sorted(VALID_ASPECT_RATIOS)}")
     if export_resolution not in VALID_EXPORT_RESOLUTIONS:
         raise HTTPException(400, f"Invalid export_resolution '{export_resolution}'. Valid: {sorted(VALID_EXPORT_RESOLUTIONS)}")
     if render_profile not in VALID_RENDER_PROFILES:
         raise HTTPException(400, f"Invalid render_profile '{render_profile}'. Valid: {sorted(VALID_RENDER_PROFILES)}")
+
+    # ── Normalise Batch 9A params ─────────────────────────────────
+    valid_motion_effects   = {"none","slow_zoom_in","slow_zoom_out","ken_burns","pan_left","pan_right","pan_up","pan_down","subtle_random","dynamic_shorts"}
+    valid_motion_intensity = {"low", "medium", "high"}
+    valid_visual_effects   = {"none","cinematic","warm","high_contrast","black_and_white","clean_bright"}
+    valid_effect_strength  = {"low", "medium", "high"}
+
+    motion_effect_safe    = motion_effect    if motion_effect    in valid_motion_effects   else "slow_zoom_in"
+    motion_intensity_safe = motion_intensity if motion_intensity in valid_motion_intensity else "medium"
+    visual_effect_safe    = visual_effect    if visual_effect    in valid_visual_effects   else "none"
+    effect_strength_safe  = effect_strength  if effect_strength  in valid_effect_strength  else "medium"
+    transition_dur_safe   = max(0.1, min(float(transition_duration), 2.0))
 
     # ── Validate optional file types ────────────────────────────────────────
     if intro_file is not None and intro_file.filename:
@@ -282,13 +301,20 @@ async def jobs_start(
                 csv_path=csv_path,
                 output_path=output_path,
                 temp_dir=str(job_temp),
-                # Batch 3
+                # Core
                 aspect_ratio=aspect_ratio,
                 export_resolution=export_resolution,
                 fit_mode=fit_mode,
                 transition=transition,
+                transition_duration=transition_dur_safe,
                 zoom_effect=zoom_effect,
                 render_profile=render_profile,
+                # Batch 9A
+                motion_effect=motion_effect_safe,
+                motion_intensity=motion_intensity_safe,
+                visual_effect=visual_effect_safe,
+                effect_strength=effect_strength_safe,
+                # Watermark
                 enable_watermark=wm_enabled,
                 watermark_text=wm_text,
                 watermark_position_mode=wm_mode,

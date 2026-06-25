@@ -1,4 +1,4 @@
-// components/SettingsPanel.tsx – Project inspector panel
+// components/SettingsPanel.tsx – Project inspector panel (Batch 9A)
 
 import React from 'react'
 import { IconAlertTriangle } from './icons'
@@ -8,14 +8,68 @@ import type {
   ExportResolution,
   FitMode,
   Transition,
-  ZoomEffect,
   RenderProfile,
+  StylePreset,
+  MotionEffect,
+  MotionIntensity,
+  TransitionDuration,
+  VisualEffect,
+  EffectStrength,
 } from '../types'
 
 interface SettingsPanelProps {
   settings:  GenerateSettings
   onChange:  (s: GenerateSettings) => void
   disabled?: boolean
+}
+
+// ── Style preset configuration ───────────────────────────────────────────────
+
+interface PresetConfig {
+  motionEffect:       MotionEffect
+  motionIntensity:    MotionIntensity
+  transition:         Transition
+  transitionDuration: TransitionDuration
+  visualEffect:       VisualEffect
+  effectStrength:     EffectStrength
+}
+
+const PRESET_MAP: Record<StylePreset, PresetConfig> = {
+  clean_default: {
+    motionEffect: 'slow_zoom_in', motionIntensity: 'medium',
+    transition: 'fade', transitionDuration: '0.5',
+    visualEffect: 'none', effectStrength: 'medium',
+  },
+  youtube_documentary: {
+    motionEffect: 'ken_burns', motionIntensity: 'medium',
+    transition: 'fade', transitionDuration: '0.5',
+    visualEffect: 'cinematic', effectStrength: 'medium',
+  },
+  tiktok_reels: {
+    motionEffect: 'dynamic_shorts', motionIntensity: 'high',
+    transition: 'fade', transitionDuration: '0.2',
+    visualEffect: 'high_contrast', effectStrength: 'medium',
+  },
+  cinematic_story: {
+    motionEffect: 'ken_burns', motionIntensity: 'medium',
+    transition: 'fade', transitionDuration: '0.8',
+    visualEffect: 'cinematic', effectStrength: 'medium',
+  },
+  news_report: {
+    motionEffect: 'pan_left', motionIntensity: 'low',
+    transition: 'fade', transitionDuration: '0.5',
+    visualEffect: 'clean_bright', effectStrength: 'low',
+  },
+  calm_educational: {
+    motionEffect: 'slow_zoom_in', motionIntensity: 'low',
+    transition: 'fade', transitionDuration: '0.5',
+    visualEffect: 'clean_bright', effectStrength: 'low',
+  },
+  dramatic_shorts: {
+    motionEffect: 'dynamic_shorts', motionIntensity: 'high',
+    transition: 'fade', transitionDuration: '0.5',
+    visualEffect: 'high_contrast', effectStrength: 'high',
+  },
 }
 
 // ── Reusable select ─────────────────────────────────────────────────────────
@@ -59,7 +113,7 @@ function ProfilePicker({ value, onChange, disabled }: { value: RenderProfile; on
               type="button"
               disabled={disabled}
               onClick={() => !disabled && onChange(p.value)}
-              className="relative flex flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+              className="relative flex flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left transition-all duration-100 focus:outline-none"
               style={{
                 background: active ? 'var(--accent-subtle)' : 'var(--bg-input)',
                 border: `1px solid ${active ? 'var(--accent-border)' : 'var(--border-input)'}`,
@@ -109,14 +163,34 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
   const set = <K extends keyof GenerateSettings>(key: K, val: GenerateSettings[K]) =>
     onChange({ ...settings, [key]: val })
 
-  const isHighRes   = settings.exportResolution === '2K' || settings.exportResolution === '4K'
-  const is4kHQZoom  = settings.exportResolution === '4K' && settings.renderProfile === 'high_quality' && settings.zoomEffect === 'slow_zoom_in'
-  const isSlowZoom  = settings.zoomEffect === 'slow_zoom_in'
+  // Apply a style preset — sets matching fields, does not lock them
+  const applyPreset = (preset: StylePreset) => {
+    const cfg = PRESET_MAP[preset]
+    onChange({
+      ...settings,
+      stylePreset:        preset,
+      motionEffect:       cfg.motionEffect,
+      motionIntensity:    cfg.motionIntensity,
+      transition:         cfg.transition,
+      transitionDuration: cfg.transitionDuration,
+      visualEffect:       cfg.visualEffect,
+      effectStrength:     cfg.effectStrength,
+      // Keep zoomEffect in sync for backward compat
+      zoomEffect: cfg.motionEffect === 'slow_zoom_in' ? 'slow_zoom_in' : 'none',
+    })
+  }
+
+  // Derived warning flags
+  const isHighRes      = settings.exportResolution === '2K' || settings.exportResolution === '4K'
+  const is4K           = settings.exportResolution === '4K'
+  const isHQ           = settings.renderProfile === 'high_quality'
+  const isHeavyMotion  = settings.motionEffect === 'ken_burns' || settings.motionEffect === 'dynamic_shorts'
+  const is4kHQHeavy    = is4K && isHQ && isHeavyMotion
 
   return (
     <div className="space-y-5">
 
-      {/* OUTPUT */}
+      {/* ── OUTPUT ──────────────────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionHead label="Output" />
         <div className="grid grid-cols-2 gap-2">
@@ -141,27 +215,86 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
           />
         </div>
         <ProfilePicker value={settings.renderProfile} onChange={v => set('renderProfile', v)} disabled={disabled} />
-        {is4kHQZoom && <Warn msg="4K + HQ + Slow Zoom is very demanding — may take a long time." />}
-        {!is4kHQZoom && isHighRes && <Warn msg={`${settings.exportResolution} will increase render time.`} />}
-        {!is4kHQZoom && isSlowZoom && !isHighRes && <Warn msg="Slow Zoom In adds render time for each clip." />}
+        {isHighRes && !is4kHQHeavy && (
+          <Warn msg={`${settings.exportResolution} will increase render time.`} />
+        )}
+        {is4kHQHeavy && (
+          <Warn msg="4K + HQ + heavy motion effect is very demanding — may take a long time. Use 720p Fast Preview first." />
+        )}
         <p className="text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>
           <span className="font-semibold" style={{ color: 'var(--color-warning)' }}>Tip:</span>{' '}
           Use 720p Fast Preview to check timing before your final export.
         </p>
       </div>
 
-      {/* MOTION & FIT */}
+      {/* ── MOTION & TRANSITIONS ────────────────────────────────────────── */}
       <div className="space-y-3">
-        <SectionHead label="Motion & Fit" />
-        <div className="grid grid-cols-3 gap-2">
+        <SectionHead label="Motion & Transitions" />
+
+        {/* Style Preset */}
+        <div className="space-y-1">
+          <label htmlFor="style-preset" className="form-label">Style Preset</label>
+          <select
+            id="style-preset"
+            value={settings.stylePreset}
+            onChange={e => applyPreset(e.target.value as StylePreset)}
+            className="form-select"
+            disabled={disabled}
+          >
+            <option value="clean_default">Clean Default</option>
+            <option value="youtube_documentary">YouTube Documentary</option>
+            <option value="tiktok_reels">TikTok / Reels Dynamic</option>
+            <option value="cinematic_story">Cinematic Story</option>
+            <option value="news_report">News / Report Style</option>
+            <option value="calm_educational">Calm Educational</option>
+            <option value="dramatic_shorts">Dramatic Shorts</option>
+          </select>
+          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            Preset fills in motion + style — you can still adjust manually.
+          </p>
+        </div>
+
+        {/* Motion Effect + Intensity */}
+        <div className="grid grid-cols-2 gap-2">
           <Sel
-            id="fit-mode" label="Fit Mode" value={settings.fitMode}
-            onChange={v => set('fitMode', v as FitMode)} disabled={disabled}
+            id="motion-effect" label="Motion Effect" value={settings.motionEffect}
+            onChange={v => {
+              const me = v as MotionEffect
+              set('motionEffect', me)
+              // keep legacy zoomEffect in sync
+              onChange({
+                ...settings,
+                motionEffect: me,
+                zoomEffect: me === 'slow_zoom_in' ? 'slow_zoom_in' : 'none',
+              })
+            }}
+            disabled={disabled}
             options={[
-              { value: 'cover',   label: 'Cover' },
-              { value: 'contain', label: 'Contain' },
+              { value: 'none',           label: 'None' },
+              { value: 'slow_zoom_in',   label: 'Slow Zoom In' },
+              { value: 'slow_zoom_out',  label: 'Slow Zoom Out' },
+              { value: 'ken_burns',      label: 'Ken Burns' },
+              { value: 'pan_left',       label: 'Pan Left' },
+              { value: 'pan_right',      label: 'Pan Right' },
+              { value: 'pan_up',         label: 'Pan Up' },
+              { value: 'pan_down',       label: 'Pan Down' },
+              { value: 'subtle_random',  label: 'Subtle Random' },
+              { value: 'dynamic_shorts', label: 'Dynamic Shorts' },
             ]}
           />
+          <Sel
+            id="motion-intensity" label="Intensity" value={settings.motionIntensity}
+            onChange={v => set('motionIntensity', v as MotionIntensity)} disabled={disabled}
+            options={[
+              { value: 'low',    label: 'Low' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'high',   label: 'High' },
+            ]}
+          />
+        </div>
+
+        {/* Transition + Duration */}
+        <div className="grid grid-cols-2 gap-2">
           <Sel
             id="transition" label="Transition" value={settings.transition}
             onChange={v => set('transition', v as Transition)} disabled={disabled}
@@ -171,17 +304,73 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
             ]}
           />
           <Sel
-            id="zoom-effect" label="Zoom" value={settings.zoomEffect}
-            onChange={v => set('zoomEffect', v as ZoomEffect)} disabled={disabled}
+            id="transition-duration" label="Duration" value={settings.transitionDuration}
+            onChange={v => set('transitionDuration', v as TransitionDuration)} disabled={disabled}
             options={[
-              { value: 'none',         label: 'None' },
-              { value: 'slow_zoom_in', label: 'Slow In' },
+              { value: '0.2', label: '0.2s' },
+              { value: '0.5', label: '0.5s' },
+              { value: '0.8', label: '0.8s' },
+              { value: '1.0', label: '1.0s' },
             ]}
           />
         </div>
+
+        {/* Fit mode */}
+        <Sel
+          id="fit-mode" label="Fit Mode" value={settings.fitMode}
+          onChange={v => set('fitMode', v as FitMode)} disabled={disabled}
+          options={[
+            { value: 'cover',   label: 'Cover (crop to fill)' },
+            { value: 'contain', label: 'Contain (letterbox)' },
+          ]}
+        />
+
+        {/* Performance warnings for heavy motion */}
+        {(settings.motionEffect === 'ken_burns' || settings.motionEffect === 'dynamic_shorts') && (
+          <Warn msg="Motion effects add render time for long videos. Use 720p Fast Preview for a quick check." />
+        )}
+        {settings.motionEffect === 'subtle_random' && (
+          <Warn msg="Subtle Random motion varies per clip. Preview at 720p first to confirm the result." />
+        )}
+        {is4K && settings.motionEffect !== 'none' && (
+          <Warn msg="4K + motion effects is demanding. Fast Preview at 720p first is strongly recommended." />
+        )}
       </div>
 
-      {/* FILE */}
+      {/* ── VISUAL STYLE ────────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <SectionHead label="Visual Style" />
+        <div className="grid grid-cols-2 gap-2">
+          <Sel
+            id="visual-effect" label="Visual Style" value={settings.visualEffect}
+            onChange={v => set('visualEffect', v as VisualEffect)} disabled={disabled}
+            options={[
+              { value: 'none',           label: 'None' },
+              { value: 'cinematic',      label: 'Cinematic' },
+              { value: 'warm',           label: 'Warm' },
+              { value: 'high_contrast',  label: 'High Contrast' },
+              { value: 'black_and_white',label: 'Black & White' },
+              { value: 'clean_bright',   label: 'Clean Bright' },
+            ]}
+          />
+          <Sel
+            id="effect-strength" label="Strength" value={settings.effectStrength}
+            onChange={v => set('effectStrength', v as EffectStrength)} disabled={disabled}
+            options={[
+              { value: 'low',    label: 'Low' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'high',   label: 'High' },
+            ]}
+          />
+        </div>
+        {settings.visualEffect !== 'none' && (
+          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            Visual effects are applied during render. Full implementation coming in next batch.
+          </p>
+        )}
+      </div>
+
+      {/* ── FILE ────────────────────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionHead label="Output File" />
         <div className="space-y-1">

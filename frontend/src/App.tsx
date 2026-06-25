@@ -26,13 +26,22 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   aspectRatio:      '9:16',
   exportResolution: '1080p',
   fitMode:          'cover',
-  transition:       'none',
-  zoomEffect:       'none',
+  transition:       'fade',
+  zoomEffect:       'slow_zoom_in',
   renderProfile:    'balanced',
   outputName:       'my_video',
+  // Batch 9A — motion & style
+  stylePreset:         'clean_default',
+  motionEffect:        'slow_zoom_in',
+  motionIntensity:     'medium',
+  transitionDuration:  '0.5',
+  visualEffect:        'none',
+  effectStrength:      'medium',
+  // Batch 2 — background music
   enableBgMusic:    false,
   musicVolume:      12,
   musicFade:        true,
+  // Batch 3 — watermark
   enableWatermark:       false,
   watermarkText:         '',
   watermarkPositionMode: 'preset',
@@ -284,7 +293,15 @@ export default function App() {
 
       {/* ── Progress overlay ── */}
       {isLoading && currentJobId && (
-        <ProgressOverlay jobId={currentJobId} onJobComplete={handleJobComplete} onCancelled={handleCancelled} />
+        <ProgressOverlay
+          jobId={currentJobId}
+          onJobComplete={handleJobComplete}
+          onCancelled={handleCancelled}
+          renderSpec={{
+            resolution:    settings.exportResolution,
+            renderProfile: settings.renderProfile,
+          }}
+        />
       )}
 
       {/* ── Upload-only overlay ── */}

@@ -3,10 +3,12 @@ video_generator.py - Core video generation engine for Audio Image Sync Studio
 Uses MoviePy 1.0.3 to assemble image clips, apply effects, and mux audio.
 Batch 2: optional outro video and optional background music.
 Batch 3: export resolution, render profiles, Pillow-based watermark.
+Batch 9: new motion effects (zoom out, ken burns, pans, random, dynamic shorts).
 """
 
 import os
 import platform
+import random
 import time
 import logging
 import threading
@@ -17,11 +19,6 @@ from PIL import Image, ImageDraw, ImageFont
 
 # ---------------------------------------------------------------------------
 # Pillow compatibility shim — must come BEFORE MoviePy imports.
-#
-# MoviePy 1.0.3 internally references PIL.Image.ANTIALIAS during video resize
-# operations (e.g. VideoFileClip.resize).  Pillow >= 10.0.0 removed that
-# attribute in favour of Image.Resampling.LANCZOS.  We patch it back so
-# MoviePy never encounters the AttributeError.
 # ---------------------------------------------------------------------------
 if not hasattr(Image, 'ANTIALIAS'):
     try:
@@ -61,7 +58,6 @@ logger = logging.getLogger(__name__)
 # Render profile constants
 # ---------------------------------------------------------------------------
 
-# Base video bitrates (Kbps) per resolution tier — used with bitrate_factor
 BASE_VIDEO_BITRATES: dict[str, int] = {
     "720p":  2500,
     "1080p": 5000,
@@ -69,7 +65,6 @@ BASE_VIDEO_BITRATES: dict[str, int] = {
     "4K":    20000,
 }
 
-# Profile definitions
 RENDER_PROFILES: dict[str, dict] = {
     "fast_preview": {
         "fps":            24,
@@ -102,16 +97,258 @@ class GenerationCancelled(Exception):
 
 
 # ---------------------------------------------------------------------------
+# Motion intensity multipliers
+# ---------------------------------------------------------------------------
+
+INTENSITY_FACTOR: dict[str, float] = {
+    "low":    0.6,
+    "medium": 1.0,
+    "high":   1.5,
+}
+
+
+# ---------------------------------------------------------------------------
+# Motion effect clip builders
+# ---------------------------------------------------------------------------
+
+def _load_image_padded(image_path: str, padded_w: int, padded_h: int) -> np.ndarray:
+    """Load and resize image to padded dimensions. Returns (H, W, 3) ndarray."""
+    img = Image.open(image_path).convert("RGB")
+    img = img.resize((padded_w, padded_h), Image.LANCZOS)
+    return np.array(img)
+
+
+def make_zoom_in_clip(
+    image_path: str, duration: float, target_w: int, target_h: int,
+    intensity: str = "medium",
+) -> VideoClip:
+    """Slow zoom-in: start normal, end slightly zoomed. No black edges."""
+    factor = 1.0 + 0.08 * INTENSITY_FACTOR.get(intensity, 1.0)
+    padded_w = int(target_w * factor)
+    padded_h = int(target_h * factor)
+    img_array = _load_image_padded(image_path, padded_w, padded_h)
+
+    def make_frame(t: float) -> np.ndarray:
+        progress = min(t / max(duration, 0.001), 1.0)
+        scale    = 1.0 + (factor - 1.0) * progress
+        crop_w   = min(int(padded_w / scale), padded_w)
+        crop_h   = min(int(padded_h / scale), padded_h)
+        x0 = max((padded_w - crop_w) // 2, 0)
+        y0 = max((padded_h - crop_h) // 2, 0)
+        cropped = img_array[y0:y0 + crop_h, x0:x0 + crop_w]
+        return np.array(Image.fromarray(cropped).resize((target_w, target_h), Image.BILINEAR))
+
+    return VideoClip(make_frame, duration=duration).set_fps(30)
+
+
+def make_zoom_out_clip(
+    image_path: str, duration: float, target_w: int, target_h: int,
+    intensity: str = "medium",
+) -> VideoClip:
+    """Slow zoom-out: start zoomed in, gradually reveal full image. No black edges."""
+    factor = 1.0 + 0.08 * INTENSITY_FACTOR.get(intensity, 1.0)
+    padded_w = int(target_w * factor)
+    padded_h = int(target_h * factor)
+    img_array = _load_image_padded(image_path, padded_w, padded_h)
+
+    def make_frame(t: float) -> np.ndarray:
+        progress = min(t / max(duration, 0.001), 1.0)
+        # Zoom starts at factor and reduces to 1.0
+        scale    = factor - (factor - 1.0) * progress
+        crop_w   = min(int(padded_w / scale), padded_w)
+        crop_h   = min(int(padded_h / scale), padded_h)
+        x0 = max((padded_w - crop_w) // 2, 0)
+        y0 = max((padded_h - crop_h) // 2, 0)
+        cropped = img_array[y0:y0 + crop_h, x0:x0 + crop_w]
+        return np.array(Image.fromarray(cropped).resize((target_w, target_h), Image.BILINEAR))
+
+    return VideoClip(make_frame, duration=duration).set_fps(30)
+
+
+def make_ken_burns_clip(
+    image_path: str, duration: float, target_w: int, target_h: int,
+    intensity: str = "medium", seed: int = 0,
+) -> VideoClip:
+    """Ken Burns: smooth pan + zoom together, documentary style."""
+    rng = random.Random(seed)
+    factor = 1.0 + 0.10 * INTENSITY_FACTOR.get(intensity, 1.0)
+    padded_w = int(target_w * factor)
+    padded_h = int(target_h * factor)
+    img_array = _load_image_padded(image_path, padded_w, padded_h)
+
+    # Random start and end crop positions (top-left corners)
+    max_x = padded_w - target_w
+    max_y = padded_h - target_h
+    start_x = rng.randint(0, max(max_x, 0))
+    start_y = rng.randint(0, max(max_y, 0))
+    # End slightly different from start
+    end_x   = rng.randint(0, max(max_x, 0))
+    end_y   = rng.randint(0, max(max_y, 0))
+
+    def make_frame(t: float) -> np.ndarray:
+        progress = min(t / max(duration, 0.001), 1.0)
+        # Smooth easing
+        eased = progress * progress * (3 - 2 * progress)
+        # Interpolate crop position
+        cx = int(start_x + (end_x - start_x) * eased)
+        cy = int(start_y + (end_y - start_y) * eased)
+        cx = max(0, min(cx, max_x))
+        cy = max(0, min(cy, max_y))
+        cropped = img_array[cy:cy + target_h, cx:cx + target_w]
+        if cropped.shape[0] != target_h or cropped.shape[1] != target_w:
+            cropped = np.array(Image.fromarray(cropped).resize((target_w, target_h), Image.BILINEAR))
+        return cropped
+
+    return VideoClip(make_frame, duration=duration).set_fps(30)
+
+
+def _make_pan_clip(
+    image_path: str, duration: float, target_w: int, target_h: int,
+    direction: str, intensity: str = "medium",
+) -> VideoClip:
+    """
+    Generic pan: moves image in the given direction.
+    direction: 'left' | 'right' | 'up' | 'down'
+    Pads image in pan axis to allow movement without black edges.
+    """
+    pad_factor = 1.0 + 0.15 * INTENSITY_FACTOR.get(intensity, 1.0)
+
+    if direction in ("left", "right"):
+        padded_w = int(target_w * pad_factor)
+        padded_h = target_h
+    else:  # up, down
+        padded_w = target_w
+        padded_h = int(target_h * pad_factor)
+
+    img_array = _load_image_padded(image_path, padded_w, padded_h)
+    max_x = max(padded_w - target_w, 0)
+    max_y = max(padded_h - target_h, 0)
+
+    def make_frame(t: float) -> np.ndarray:
+        progress = min(t / max(duration, 0.001), 1.0)
+        eased    = progress * progress * (3 - 2 * progress)
+
+        if direction == "left":
+            cx = int(eased * max_x)
+            cy = 0
+        elif direction == "right":
+            cx = int((1.0 - eased) * max_x)
+            cy = 0
+        elif direction == "up":
+            cx = 0
+            cy = int(eased * max_y)
+        else:  # down
+            cx = 0
+            cy = int((1.0 - eased) * max_y)
+
+        cx = max(0, min(cx, max_x))
+        cy = max(0, min(cy, max_y))
+        cropped = img_array[cy:cy + target_h, cx:cx + target_w]
+        if cropped.shape[0] != target_h or cropped.shape[1] != target_w:
+            cropped = np.array(Image.fromarray(cropped).resize((target_w, target_h), Image.BILINEAR))
+        return cropped
+
+    return VideoClip(make_frame, duration=duration).set_fps(30)
+
+
+def make_pan_left_clip(image_path, duration, target_w, target_h, intensity="medium"):
+    return _make_pan_clip(image_path, duration, target_w, target_h, "left", intensity)
+
+def make_pan_right_clip(image_path, duration, target_w, target_h, intensity="medium"):
+    return _make_pan_clip(image_path, duration, target_w, target_h, "right", intensity)
+
+def make_pan_up_clip(image_path, duration, target_w, target_h, intensity="medium"):
+    return _make_pan_clip(image_path, duration, target_w, target_h, "up", intensity)
+
+def make_pan_down_clip(image_path, duration, target_w, target_h, intensity="medium"):
+    return _make_pan_clip(image_path, duration, target_w, target_h, "down", intensity)
+
+
+def make_subtle_random_clip(
+    image_path: str, duration: float, target_w: int, target_h: int,
+    intensity: str = "medium", seed: int = 0,
+) -> VideoClip:
+    """
+    Each clip gets a small random motion from a pool: zoom-in, zoom-out, or
+    one of the four pans. Keeps images alive without feeling chaotic.
+    """
+    options = ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down"]
+    choice  = options[seed % len(options)]
+
+    if choice == "zoom_in":
+        return make_zoom_in_clip(image_path, duration, target_w, target_h, intensity)
+    elif choice == "zoom_out":
+        return make_zoom_out_clip(image_path, duration, target_w, target_h, intensity)
+    elif choice == "pan_left":
+        return make_pan_left_clip(image_path, duration, target_w, target_h, intensity)
+    elif choice == "pan_right":
+        return make_pan_right_clip(image_path, duration, target_w, target_h, intensity)
+    elif choice == "pan_up":
+        return make_pan_up_clip(image_path, duration, target_w, target_h, intensity)
+    else:
+        return make_pan_down_clip(image_path, duration, target_w, target_h, intensity)
+
+
+def make_dynamic_shorts_clip(
+    image_path: str, duration: float, target_w: int, target_h: int,
+    intensity: str = "medium", seed: int = 0,
+) -> VideoClip:
+    """
+    Slightly stronger motion for short-form vertical videos.
+    Combines a gentle pan with a subtle zoom for energy.
+    """
+    # Increase intensity one step for shorts
+    intensity_map = {"low": "medium", "medium": "high", "high": "high"}
+    boosted = intensity_map.get(intensity, "high")
+
+    # Alternate between ken burns and pan variants per clip
+    if seed % 2 == 0:
+        return make_ken_burns_clip(image_path, duration, target_w, target_h, boosted, seed)
+    else:
+        directions = ["left", "right", "up", "down"]
+        direction  = directions[seed % len(directions)]
+        return _make_pan_clip(image_path, duration, target_w, target_h, direction, boosted)
+
+
+# ---------------------------------------------------------------------------
+# Legacy zoom clip (Batch 3 compat — same as zoom_in, kept for clarity)
+# ---------------------------------------------------------------------------
+
+def make_zoom_clip(
+    image_path: str,
+    duration: float,
+    target_w: int,
+    target_h: int,
+    zoom_factor: float = 1.08,
+) -> VideoClip:
+    """
+    Create a VideoClip with a slow zoom-in effect (Ken Burns style).
+    Kept for backward compatibility with Batch 3 zoom_effect='slow_zoom_in'.
+    """
+    padded_w = int(target_w * zoom_factor)
+    padded_h = int(target_h * zoom_factor)
+    img_array = _load_image_padded(image_path, padded_w, padded_h)
+
+    def make_frame(t: float) -> np.ndarray:
+        progress = min(t / max(duration, 0.001), 1.0)
+        scale    = 1.0 + (zoom_factor - 1.0) * progress
+        crop_w   = min(int(padded_w / scale), padded_w)
+        crop_h   = min(int(padded_h / scale), padded_h)
+        x0 = max((padded_w - crop_w) // 2, 0)
+        y0 = max((padded_h - crop_h) // 2, 0)
+        cropped  = img_array[y0:y0 + crop_h, x0:x0 + crop_w]
+        return np.array(Image.fromarray(cropped).resize((target_w, target_h), Image.BILINEAR))
+
+    return VideoClip(make_frame, duration=duration).set_fps(30)
+
+
+# ---------------------------------------------------------------------------
 # Watermark helpers (Pillow-based — no ImageMagick required)
 # ---------------------------------------------------------------------------
 
 def _load_watermark_font(font_size: int) -> Any:
-    """
-    Try to load a clean system font at font_size.
-    Falls back to PIL's built-in bitmap font if nothing is found.
-    """
     candidates: list[str] = []
-    if platform.system() == "Darwin":  # macOS
+    if platform.system() == "Darwin":
         candidates = [
             "/System/Library/Fonts/Helvetica.ttc",
             "/System/Library/Fonts/HelveticaNeue.ttc",
@@ -119,85 +356,51 @@ def _load_watermark_font(font_size: int) -> Any:
             "/System/Library/Fonts/SFNS.ttf",
             "/Library/Fonts/Arial.ttf",
         ]
-    else:  # Linux / other
+    else:
         candidates = [
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
             "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
             "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
         ]
-
     for path in candidates:
         try:
             return ImageFont.truetype(path, font_size)
         except (IOError, OSError):
             pass
-
-    # PIL built-in bitmap font — always works, lower quality
     return ImageFont.load_default()
 
 
 def _make_watermark_overlay(
-    target_w: int,
-    target_h: int,
-    text: str,
-    position_mode: str = "preset",
-    position: str = "bottom_right",
-    x_pos: int = 50,
-    y_pos: int = 50,
-    opacity: float = 0.65,
-    size: int = 20,
-    margin: int = 36,
+    target_w: int, target_h: int, text: str,
+    position_mode: str = "preset", position: str = "bottom_right",
+    x_pos: int = 50, y_pos: int = 50,
+    opacity: float = 0.65, size: int = 20, margin: int = 36,
 ) -> Optional[np.ndarray]:
-    """
-    Pre-render the watermark as an RGBA numpy array (target_h, target_w, 4).
-    The array is rendered once per job and applied to every frame via fl_image.
-    Returns None if rendering fails (caller skips watermark with a warning).
-
-    opacity: 0.0–1.0
-    size:    "small" | "medium" | "large"
-    margin:  pixels from edge
-    """
     text = text.strip()
     if not text:
         return None
-
-    # Scale font size proportionally to the video height
-    # Map 1-100 numeric size to a factor
-    # size=20 roughly maps to old 'small' (~0.022)
     size_factor = max(0.01, size * 0.0011)
     font_size = max(14, int(target_h * size_factor))
-
     try:
         font = _load_watermark_font(font_size)
-
-        # Create transparent canvas
         overlay = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
-
-        # Measure text bounding box
         try:
             bbox = draw.textbbox((0, 0), text, font=font)
             text_w = bbox[2] - bbox[0]
             text_h = bbox[3] - bbox[1]
-            text_offset_x = -bbox[0]   # correct for left bearing
-            text_offset_y = -bbox[1]   # correct for top bearing
+            text_offset_x = -bbox[0]
+            text_offset_y = -bbox[1]
         except AttributeError:
-            # Older Pillow fallback
             text_w, text_h = draw.textsize(text, font=font)  # type: ignore[attr-defined]
             text_offset_x = 0
             text_offset_y = 0
-
-        # Pill padding
         pad_x = max(int(font_size * 0.55), 8)
         pad_y = max(int(font_size * 0.28), 4)
         pill_w = text_w + pad_x * 2
         pill_h = text_h + pad_y * 2
-
-        # Clamp margin to valid range
         margin = max(5, min(margin, min(target_w, target_h) // 4))
-
-        # Compute pill top-left corner based on position
         if position_mode == "custom":
             x = x_pos
             y = y_pos
@@ -212,97 +415,32 @@ def _make_watermark_overlay(
             elif pos == "center":
                 x = (target_w - pill_w) // 2
                 y = (target_h - pill_h) // 2
-            else:  # bottom_right (default)
+            else:
                 x = target_w - pill_w - margin
                 y = target_h - pill_h - margin
-
-        # Keep pill inside canvas
         x = max(0, min(x, target_w - pill_w))
         y = max(0, min(y, target_h - pill_h))
-
-        # Alpha values
-        bg_alpha  = int(opacity * 170)   # semi-transparent dark background
-        txt_alpha = int(opacity * 255)   # text is more opaque
-
-        # Draw pill background (dark, rounded)
+        bg_alpha  = int(opacity * 170)
+        txt_alpha = int(opacity * 255)
         radius = pill_h // 2
         try:
-            draw.rounded_rectangle(
-                [x, y, x + pill_w, y + pill_h],
-                radius=radius,
-                fill=(0, 0, 0, bg_alpha),
-            )
+            draw.rounded_rectangle([x, y, x + pill_w, y + pill_h], radius=radius, fill=(0, 0, 0, bg_alpha))
         except AttributeError:
-            # Pillow < 8.2 fallback
             draw.rectangle([x, y, x + pill_w, y + pill_h], fill=(0, 0, 0, bg_alpha))
-
-        # Draw white text centred in pill
         tx = x + pad_x + text_offset_x
         ty = y + pad_y + text_offset_y
         draw.text((tx, ty), text, font=font, fill=(255, 255, 255, txt_alpha))
-
-        return np.array(overlay)   # (target_h, target_w, 4)
-
+        return np.array(overlay)
     except Exception as exc:
         logger.warning("Watermark overlay render failed: %s", exc)
         return None
 
 
 def _apply_wm_frame(frame: np.ndarray, overlay: np.ndarray) -> np.ndarray:
-    """
-    Composite a pre-rendered RGBA watermark overlay onto one RGB video frame.
-    frame:   (H, W, 3) uint8
-    overlay: (H, W, 4) uint8
-    Returns: (H, W, 3) uint8
-    """
-    alpha = overlay[:, :, 3:4].astype(np.float32) / 255.0   # (H, W, 1)
+    alpha = overlay[:, :, 3:4].astype(np.float32) / 255.0
     rgb   = overlay[:, :, :3].astype(np.float32)
     out   = frame.astype(np.float32) * (1.0 - alpha) + rgb * alpha
     return np.clip(out, 0, 255).astype(np.uint8)
-
-
-# ---------------------------------------------------------------------------
-# Zoom effect helper
-# ---------------------------------------------------------------------------
-
-def make_zoom_clip(
-    image_path: str,
-    duration: float,
-    target_w: int,
-    target_h: int,
-    zoom_factor: float = 1.08,
-) -> VideoClip:
-    """
-    Create a VideoClip with a slow zoom-in effect (Ken Burns style).
-
-    The image is pre-scaled slightly larger (zoom_factor) so the slow zoom
-    never reveals canvas edges. We use VideoClip (not ImageClip) because
-    MoviePy 1.0.3's ImageClip only accepts a static numpy array — passing
-    a callable to it causes 'function object has no attribute shape'.
-
-    zoom_factor: pre-scale multiplier (1.08 = 8% larger than target)
-    """
-    padded_w = int(target_w * zoom_factor)
-    padded_h = int(target_h * zoom_factor)
-
-    img = Image.open(image_path).convert("RGB")
-    img_resized = img.resize((padded_w, padded_h), Image.LANCZOS)
-    img_array = np.array(img_resized)  # (padded_h, padded_w, 3)
-
-    def make_frame(t: float) -> np.ndarray:
-        progress = min(t / max(duration, 0.001), 1.0)
-        scale    = 1.0 + (zoom_factor - 1.0) * progress
-        crop_w   = min(int(padded_w / scale), padded_w)
-        crop_h   = min(int(padded_h / scale), padded_h)
-        x0 = max((padded_w - crop_w) // 2, 0)
-        y0 = max((padded_h - crop_h) // 2, 0)
-        cropped  = img_array[y0:y0 + crop_h, x0:x0 + crop_w]
-        pil_frame = Image.fromarray(cropped).resize((target_w, target_h), Image.BILINEAR)
-        return np.array(pil_frame)
-
-    clip = VideoClip(make_frame, duration=duration)
-    clip = clip.set_fps(30)
-    return clip
 
 
 # ---------------------------------------------------------------------------
@@ -310,22 +448,15 @@ def make_zoom_clip(
 # ---------------------------------------------------------------------------
 
 def _load_media_clip(media_path: str, target_w: int, target_h: int) -> VideoFileClip:
-    """
-    Load and cover-crop media video to exactly (target_w × target_h).
-    Preserves audio if present.
-    """
     clip = VideoFileClip(media_path, audio=True)
     src_w, src_h = clip.size
-
     scale   = max(target_w / src_w, target_h / src_h)
     new_w   = int(src_w * scale)
     new_h   = int(src_h * scale)
     resized = clip.resize((new_w, new_h))
-
     x_off   = (new_w - target_w) // 2
     y_off   = (new_h - target_h) // 2
     cropped = resized.crop(x1=x_off, y1=y_off, x2=x_off + target_w, y2=y_off + target_h)
-
     if cropped.fps is None or cropped.fps <= 0:
         cropped = cropped.set_fps(30)
     return cropped
@@ -336,29 +467,18 @@ def _load_media_clip(media_path: str, target_w: int, target_h: int) -> VideoFile
 # ---------------------------------------------------------------------------
 
 def _build_music_track(
-    music_path: str,
-    target_duration: float,
-    volume: float,
-    fade: bool,
+    music_path: str, target_duration: float, volume: float, fade: bool,
 ) -> Optional[AudioFileClip]:
-    """
-    Load, loop/trim, volume-adjust, and optionally fade background music.
-    Returns an AudioFileClip ready to composite, or None on failure.
-    """
     music = AudioFileClip(music_path)
-
     if music.duration < target_duration:
         copies = int(target_duration / music.duration) + 2
         try:
             music = concatenate_audioclips([music] * copies)
         except Exception:
             pass
-
     if music.duration > target_duration:
         music = music.subclip(0, target_duration)
-
     music = music.volumex(float(volume))
-
     if fade:
         fade_dur = min(1.5, target_duration / 4)
         try:
@@ -366,8 +486,49 @@ def _build_music_track(
             music = audio_fadeout(music, fade_dur)
         except Exception:
             pass
-
     return music
+
+
+# ---------------------------------------------------------------------------
+# Dispatch: build one clip with the chosen motion effect
+# ---------------------------------------------------------------------------
+
+def _build_motion_clip(
+    image_path: str,
+    duration: float,
+    target_w: int,
+    target_h: int,
+    motion_effect: str,
+    motion_intensity: str,
+    fps: int,
+    clip_index: int,
+) -> Any:
+    """
+    Returns a VideoClip (or ImageClip) for the given motion effect.
+    All motion clips are pre-sized to (target_w, target_h) with no black edges.
+    """
+    if motion_effect == "slow_zoom_in":
+        return make_zoom_in_clip(image_path, duration, target_w, target_h, motion_intensity)
+    elif motion_effect == "slow_zoom_out":
+        return make_zoom_out_clip(image_path, duration, target_w, target_h, motion_intensity)
+    elif motion_effect == "ken_burns":
+        return make_ken_burns_clip(image_path, duration, target_w, target_h, motion_intensity, seed=clip_index)
+    elif motion_effect == "pan_left":
+        return make_pan_left_clip(image_path, duration, target_w, target_h, motion_intensity)
+    elif motion_effect == "pan_right":
+        return make_pan_right_clip(image_path, duration, target_w, target_h, motion_intensity)
+    elif motion_effect == "pan_up":
+        return make_pan_up_clip(image_path, duration, target_w, target_h, motion_intensity)
+    elif motion_effect == "pan_down":
+        return make_pan_down_clip(image_path, duration, target_w, target_h, motion_intensity)
+    elif motion_effect == "subtle_random":
+        return make_subtle_random_clip(image_path, duration, target_w, target_h, motion_intensity, seed=clip_index)
+    elif motion_effect == "dynamic_shorts":
+        return make_dynamic_shorts_clip(image_path, duration, target_w, target_h, motion_intensity, seed=clip_index)
+    else:
+        # No motion — static ImageClip
+        clip = ImageClip(image_path, duration=duration)
+        return clip.set_fps(fps)
 
 
 # ---------------------------------------------------------------------------
@@ -380,13 +541,19 @@ def generate_video(
     csv_path: str,
     output_path: str,
     temp_dir: str,
-    # Video settings (Batch 3)
+    # Core settings
     aspect_ratio: str = "9:16",
     export_resolution: str = "1080p",
     fit_mode: str = "cover",
-    transition: str = "none",
-    zoom_effect: str = "none",
+    transition: str = "fade",
+    transition_duration: float = 0.5,
+    zoom_effect: str = "none",      # kept for backward compat
     render_profile: str = "balanced",
+    # Batch 9A — motion & style
+    motion_effect: str = "slow_zoom_in",
+    motion_intensity: str = "medium",
+    visual_effect: str = "none",
+    effect_strength: str = "medium",
     # Watermark (Batch 3)
     enable_watermark: bool = False,
     watermark_text: str = "",
@@ -410,13 +577,7 @@ def generate_video(
 ) -> dict[str, Any]:
     """
     Main entry-point for video generation.
-
-    Returns a dict with:
-        success       (bool)
-        timeline      (list of row dicts enriched with status)
-        warnings      (list of str)
-        errors        (list of str)
-        cancelled     (bool)
+    Returns dict: success, timeline, warnings, errors, cancelled.
     """
     warnings: list[str] = []
     errors:   list[str] = []
@@ -424,40 +585,55 @@ def generate_video(
 
     # ── Resolve resolution & render profile ──────────────────────────────────
     target_w, target_h = get_resolution(aspect_ratio, export_resolution)
-
-    profile      = RENDER_PROFILES.get(render_profile, RENDER_PROFILES["balanced"])
-    fps          = profile["fps"]
-    preset       = profile["preset"]
-    base_kbps    = BASE_VIDEO_BITRATES.get(export_resolution, 5000)
+    profile       = RENDER_PROFILES.get(render_profile, RENDER_PROFILES["balanced"])
+    fps           = profile["fps"]
+    preset        = profile["preset"]
+    base_kbps     = BASE_VIDEO_BITRATES.get(export_resolution, 5000)
     video_bitrate = f"{int(base_kbps * profile['bitrate_factor'])}k"
     audio_bitrate = profile["audio_bitrate"]
 
     # ── Clamp optional numeric params ────────────────────────────────────────
-    music_volume       = max(0.0, min(1.0, music_volume))
-    watermark_opacity  = max(0.0, min(1.0, watermark_opacity))
-    watermark_margin   = max(5, min(watermark_margin, 200))
+    music_volume      = max(0.0, min(1.0, music_volume))
+    watermark_opacity = max(0.0, min(1.0, watermark_opacity))
+    watermark_margin  = max(5, min(watermark_margin, 200))
+    transition_duration = max(0.1, min(float(transition_duration), 2.0))
+
+    # ── Effective motion effect ───────────────────────────────────────────────
+    # motion_effect takes priority; zoom_effect is kept for backward compat
+    effective_motion = motion_effect
+    if effective_motion == "none" and zoom_effect == "slow_zoom_in":
+        effective_motion = "slow_zoom_in"
 
     # ── Feature flags ────────────────────────────────────────────────────────
     use_intro     = intro_path is not None and os.path.isfile(intro_path)
     use_outro     = outro_path is not None and os.path.isfile(outro_path)
     use_music     = enable_bg_music and bg_music_path is not None and os.path.isfile(bg_music_path)
     use_watermark = enable_watermark and bool(watermark_text.strip())
+    use_motion    = effective_motion != "none"
 
-    # ── Demanding combination warnings ───────────────────────────────────────
-    if export_resolution == "4K" and render_profile == "high_quality" and zoom_effect == "slow_zoom_in":
+    # ── Performance warnings ──────────────────────────────────────────────────
+    is_heavy_motion = effective_motion in ("ken_burns", "dynamic_shorts", "subtle_random")
+    if export_resolution == "4K" and render_profile == "high_quality" and is_heavy_motion:
         warnings.append(
-            "4K + High Quality + Slow Zoom In is a very demanding combination. "
-            "This may take significantly longer on your computer."
+            "4K + High Quality + heavy motion effect is a very demanding combination. "
+            "This may take significantly longer on your computer. "
+            "Consider using 720p Fast Preview to check timing first."
         )
     elif export_resolution in ("2K", "4K") and render_profile == "high_quality":
         warnings.append(
             f"{export_resolution} + High Quality render may take a while. "
             "Consider Balanced profile for faster results."
         )
+    elif is_heavy_motion and export_resolution == "4K":
+        warnings.append(
+            "Motion effects with 4K resolution will increase render time. "
+            "Use 720p Fast Preview for a quick timing check."
+        )
 
     logger.info(
         f"Starting job. Res: {export_resolution}, Profile: {render_profile}, "
-        f"Aspect: {aspect_ratio}, Watermark: {use_watermark}, Zoom: {zoom_effect}"
+        f"Motion: {effective_motion} ({motion_intensity}), "
+        f"Aspect: {aspect_ratio}, Watermark: {use_watermark}"
     )
 
     def _check_cancel():
@@ -480,12 +656,10 @@ def generate_video(
     _progress(10, "Extracting ZIP")
     images_dir = os.path.join(temp_dir, "images")
     os.makedirs(images_dir, exist_ok=True)
-
     extracted_files, zip_errors = extract_zip_safely(zip_path, images_dir)
     errors.extend(zip_errors)
     if zip_errors:
         return {"success": False, "timeline": [], "warnings": warnings, "errors": errors, "cancelled": False}
-
     _check_cancel()
 
     # ------------------------------------------------------------------
@@ -495,7 +669,6 @@ def generate_video(
     rows, csv_warnings, csv_errors = parse_and_validate_csv(csv_path)
     warnings.extend(csv_warnings)
     errors.extend(csv_errors)
-
     if csv_errors:
         return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
     if not rows:
@@ -504,7 +677,6 @@ def generate_video(
 
     total_duration = rows[-1]["end"] if rows else 0
     logger.info(f"Timeline loaded: {len(rows)} rows, duration: {seconds_to_mmss(total_duration)}")
-
     _check_cancel()
 
     # ------------------------------------------------------------------
@@ -517,7 +689,6 @@ def generate_video(
         warnings.append(
             f"The following images in the ZIP are not referenced in the CSV: {', '.join(sorted(unused))}"
         )
-
     _check_cancel()
 
     # ------------------------------------------------------------------
@@ -555,14 +726,23 @@ def generate_video(
         duration = row["duration"]
 
         try:
-            if zoom_effect == "slow_zoom_in":
-                clip = make_zoom_clip(preprocessed_path, duration, target_w, target_h)
+            if use_motion:
+                clip = _build_motion_clip(
+                    image_path=preprocessed_path,
+                    duration=duration,
+                    target_w=target_w,
+                    target_h=target_h,
+                    motion_effect=effective_motion,
+                    motion_intensity=motion_intensity,
+                    fps=fps,
+                    clip_index=idx,
+                )
             else:
                 clip = ImageClip(preprocessed_path, duration=duration)
                 clip = clip.set_fps(fps)
 
-            if transition == "fade" and duration > 0.5:
-                fade_dur = min(0.25, duration / 4)
+            if transition == "fade" and duration > (transition_duration * 2):
+                fade_dur = min(transition_duration, duration / 4)
                 clip = fadein(clip, fade_dur)
                 clip = fadeout(clip, fade_dur)
 
@@ -588,7 +768,8 @@ def generate_video(
     # ------------------------------------------------------------------
     _progress(55, "Building video timeline")
     try:
-        concat_method = "compose" if zoom_effect == "slow_zoom_in" or transition == "fade" else "chain"
+        # Use 'compose' when motion clips are present (VideoClip, not ImageClip)
+        concat_method = "compose" if use_motion or transition == "fade" else "chain"
         video = concatenate_videoclips(clips, method=concat_method)
     except Exception as e:
         errors.append(f"Failed to concatenate clips: {e}")
@@ -641,7 +822,6 @@ def generate_video(
             warnings.append(f"Background music could not be applied: {e}. Continuing without music.")
         _check_cancel()
 
-    # Attach main audio if music path was not taken
     if main_audio is not None:
         video = video.set_audio(main_audio)
         main_audio = None
@@ -668,7 +848,6 @@ def generate_video(
             margin=watermark_margin,
         )
         if wm_overlay is not None:
-            # Capture overlay in closure for fl_image callback
             _overlay = wm_overlay
             video = video.fl_image(lambda frame: _apply_wm_frame(frame, _overlay))
         else:
@@ -690,10 +869,8 @@ def generate_video(
         except Exception as e:
             errors.append(f"Failed to load intro video: {e}")
             if intro_clip is not None:
-                try:
-                    intro_clip.close()
-                except Exception:
-                    pass
+                try: intro_clip.close()
+                except Exception: pass
             return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
     clips_to_concat.append(video)
@@ -707,16 +884,10 @@ def generate_video(
             raise
         except Exception as e:
             errors.append(f"Failed to load outro video: {e}")
-            if intro_clip is not None:
-                try:
-                    intro_clip.close()
-                except Exception:
-                    pass
-            if outro_clip is not None:
-                try:
-                    outro_clip.close()
-                except Exception:
-                    pass
+            for c in [intro_clip, outro_clip]:
+                if c is not None:
+                    try: c.close()
+                    except Exception: pass
             return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
     if len(clips_to_concat) > 1:
@@ -755,25 +926,17 @@ def generate_video(
         return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
     finally:
         logger.info("Closing MoviePy clips to free memory")
-        try:
-            video.close()
-        except Exception:
-            pass
+        try: video.close()
+        except Exception: pass
         for c in clips:
-            try:
-                c.close()
-            except Exception:
-                pass
+            try: c.close()
+            except Exception: pass
         if intro_clip is not None:
-            try:
-                intro_clip.close()
-            except Exception:
-                pass
+            try: intro_clip.close()
+            except Exception: pass
         if outro_clip is not None:
-            try:
-                outro_clip.close()
-            except Exception:
-                pass
+            try: outro_clip.close()
+            except Exception: pass
 
     _progress(95, "Finalizing output")
     _check_cancel()
