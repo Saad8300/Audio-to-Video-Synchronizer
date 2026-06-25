@@ -102,7 +102,13 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
 
               {/* Metadata chips */}
               <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                {[settings.exportResolution, settings.aspectRatio, settings.renderProfile.replace('_', ' ')].map(chip => (
+                {[
+                  `Res: ${settings.exportResolution}`,
+                  `Profile: ${settings.renderProfile.replace(/_/g, ' ')}`,
+                  `Motion: ${settings.motionEffect.replace(/_/g, ' ')}`,
+                  `Transition: ${settings.transition.replace(/_/g, ' ')}`,
+                  `Visual: ${settings.visualEffect.replace(/_/g, ' ')}`
+                ].map(chip => (
                   <span
                     key={chip}
                     style={{
@@ -111,6 +117,7 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
                       background: 'var(--accent-subtle)',
                       border: '1px solid var(--accent-border)',
                       color: 'var(--accent-primary)',
+                      textTransform: 'capitalize'
                     }}
                   >
                     {chip}

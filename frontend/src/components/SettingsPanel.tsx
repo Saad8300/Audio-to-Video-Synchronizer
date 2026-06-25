@@ -21,6 +21,7 @@ interface SettingsPanelProps {
   settings:  GenerateSettings
   onChange:  (s: GenerateSettings) => void
   disabled?: boolean
+  audioDuration?: number | null
 }
 
 // ── Style preset configuration ───────────────────────────────────────────────
@@ -70,6 +71,16 @@ const PRESET_MAP: Record<StylePreset, PresetConfig> = {
     transition: 'zoom_in', transitionDuration: '0.2',
     visualEffect: 'high_contrast', effectStrength: 'high',
   },
+}
+
+const PRESET_DESCRIPTIONS: Record<StylePreset, string> = {
+  clean_default: 'Balanced motion and clean export for general videos.',
+  youtube_documentary: 'Smooth Ken Burns movement with cinematic color and soft transitions.',
+  tiktok_reels: 'Fast, energetic motion and punchier visuals for short-form videos.',
+  cinematic_story: 'Slow premium motion with cinematic color and soft dramatic transitions.',
+  news_report: 'Clean bright visuals with low motion for report-style videos.',
+  calm_educational: 'Gentle motion and clean visuals for lessons or explainer videos.',
+  dramatic_shorts: 'Strong motion and high contrast for intense short-form storytelling.',
 }
 
 // ── Reusable select ─────────────────────────────────────────────────────────
@@ -159,7 +170,7 @@ function Warn({ msg }: { msg: string }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export default function SettingsPanel({ settings, onChange, disabled }: SettingsPanelProps) {
+export default function SettingsPanel({ settings, onChange, disabled, audioDuration }: SettingsPanelProps) {
   const set = <K extends keyof GenerateSettings>(key: K, val: GenerateSettings[K]) =>
     onChange({ ...settings, [key]: val })
 
@@ -181,11 +192,11 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
   }
 
   // Derived warning flags
-  const isHighRes      = settings.exportResolution === '2K' || settings.exportResolution === '4K'
   const is4K           = settings.exportResolution === '4K'
   const isHQ           = settings.renderProfile === 'high_quality'
-  const isHeavyMotion  = settings.motionEffect === 'ken_burns' || settings.motionEffect === 'dynamic_shorts'
-  const is4kHQHeavy    = is4K && isHQ && isHeavyMotion
+  const isHeavyMotion  = ['ken_burns', 'subtle_random', 'dynamic_shorts'].includes(settings.motionEffect)
+  const isLong         = audioDuration && audioDuration > 600
+  const isVeryLong     = audioDuration && audioDuration > 1200
 
   return (
     <div className="space-y-5">
@@ -215,11 +226,11 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
           />
         </div>
         <ProfilePicker value={settings.renderProfile} onChange={v => set('renderProfile', v)} disabled={disabled} />
-        {isHighRes && !is4kHQHeavy && (
-          <Warn msg={`${settings.exportResolution} will increase render time.`} />
+        {is4K && isHQ && settings.motionEffect !== 'none' && (
+          <Warn msg="4K High Quality with motion effects can be slow and CPU-heavy." />
         )}
-        {is4kHQHeavy && (
-          <Warn msg="4K + HQ + heavy motion effect is very demanding — may take a long time. Use 720p Fast Preview first." />
+        {isVeryLong && (
+          <Warn msg="This is longer than the recommended tested range. Render time depends on your machine and selected effects." />
         )}
         <p className="text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>
           <span className="font-semibold" style={{ color: 'var(--color-warning)' }}>Tip:</span>{' '}
@@ -250,7 +261,7 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
             <option value="dramatic_shorts">Dramatic Shorts</option>
           </select>
           <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            Preset fills in motion + style — you can still adjust manually.
+            {PRESET_DESCRIPTIONS[settings.stylePreset]}
           </p>
         </div>
 
@@ -339,17 +350,14 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
         />
 
         {/* Performance warnings for heavy motion */}
-        {(settings.motionEffect === 'ken_burns' || settings.motionEffect === 'dynamic_shorts') && (
-          <Warn msg="Motion effects add render time for long videos. Use 720p Fast Preview for a quick check." />
+        {isLong && isHeavyMotion && (
+          <Warn msg="Long video with motion effects may take longer. For testing, use 720p Fast Preview first." />
         )}
-        {settings.motionEffect === 'subtle_random' && (
-          <Warn msg="Subtle Random motion varies per clip. Preview at 720p first to confirm the result." />
+        {settings.transition === 'blur_crossfade' && isLong && (
+          <Warn msg="Blur transitions can increase render time for long videos." />
         )}
-        {is4K && settings.motionEffect !== 'none' && (
-          <Warn msg="4K + motion effects is demanding. Fast Preview at 720p first is strongly recommended." />
-        )}
-        {settings.transition === 'blur_crossfade' && (
-          <Warn msg="Blur Crossfade requires more processing. May increase render time." />
+        {settings.motionEffect === 'dynamic_shorts' && settings.transition === 'flash' && (
+          <Warn msg="Dynamic shorts settings create energetic output. Use Fast Preview first if testing." />
         )}
       </div>
 
@@ -379,11 +387,32 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
             ]}
           />
         </div>
-        {settings.visualEffect !== 'none' && (
-          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            Visual style is applied during export.
-          </p>
+        {settings.effectStrength === 'high' && settings.visualEffect !== 'none' && isLong && (
+          <Warn msg="High visual effect strength may increase preprocessing time for long videos." />
         )}
+      </div>
+
+      {/* ── SELECTED STYLE SUMMARY ────────────────────────────────────── */}
+      <div className="space-y-3">
+        <SectionHead label="Selected Style Summary" />
+        <div className="text-[11px] space-y-1 p-3 rounded-lg" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
+          <div className="flex justify-between">
+            <span style={{ color: 'var(--text-muted)' }}>Preset:</span>
+            <span className="font-semibold">{settings.stylePreset.replace(/_/g, ' ')}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: 'var(--text-muted)' }}>Motion:</span>
+            <span>{settings.motionEffect.replace(/_/g, ' ')} <span style={{ opacity: 0.5 }}>/</span> {settings.motionIntensity}</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: 'var(--text-muted)' }}>Transition:</span>
+            <span>{settings.transition.replace(/_/g, ' ')} <span style={{ opacity: 0.5 }}>/</span> {settings.transitionDuration}s</span>
+          </div>
+          <div className="flex justify-between">
+            <span style={{ color: 'var(--text-muted)' }}>Visual:</span>
+            <span>{settings.visualEffect.replace(/_/g, ' ')} <span style={{ opacity: 0.5 }}>/</span> {settings.effectStrength}</span>
+          </div>
+        </div>
       </div>
 
       {/* ── FILE ────────────────────────────────────────────────────────── */}

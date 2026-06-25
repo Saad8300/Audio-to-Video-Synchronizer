@@ -517,8 +517,10 @@ export default function App() {
                 {/* Summary chips */}
                 <div className="hidden sm:flex items-center gap-1 flex-wrap justify-end">
                   <SummaryChip label="Res"     value={settings.exportResolution} active />
-                  <SummaryChip label="Ratio"   value={settings.aspectRatio}      active />
                   <SummaryChip label="Profile" value={settings.renderProfile.replace('_', ' ')} active />
+                  <SummaryChip label="Motion"  value={settings.motionEffect.replace(/_/g, ' ')} active={settings.motionEffect !== 'none'} />
+                  <SummaryChip label="Trans"   value={settings.transition.replace(/_/g, ' ')} active={settings.transition !== 'none'} />
+                  <SummaryChip label="Visual"  value={settings.visualEffect.replace(/_/g, ' ')} active={settings.visualEffect !== 'none'} />
                   {bgMusicFile  && <SummaryChip label="Music"  value="On" active />}
                   {introFile    && <SummaryChip label="Intro"  value="On" active />}
                   {outroFile    && <SummaryChip label="Outro"  value="On" active />}
@@ -619,7 +621,7 @@ export default function App() {
                   Inspector
                 </span>
               </div>
-              <SettingsPanel settings={settings} onChange={setSettings} disabled={isLoading} />
+              <SettingsPanel settings={settings} onChange={setSettings} disabled={isLoading} audioDuration={audioDuration} />
             </div>
 
             {/* Enhancements */}

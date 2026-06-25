@@ -41,3 +41,12 @@ Test the UI warnings without completing the full render.
 - **UI Responsiveness:** The browser should not freeze while the backend processes a 300-row CSV.
 - **Memory Footprint:** Temp images are cleaned up reliably on job end (success, cancel, or failure).
 - **Time Limits:** Fast Preview should complete substantially faster than real-time depending on the host machine. Balanced will be slower but steady.
+
+## Effects & Processing Guide
+The app provides **Style Presets** to quickly assign optimized effects:
+- **Motion Effects:** (e.g., Ken Burns, Dynamic Shorts) add energy but require preprocessing overhead.
+- **Transitions:** (e.g., Crossfade, Blur Crossfade) blend clips. Blur transitions take longer to compute.
+- **Visual Style Filters:** (e.g., Cinematic, High Contrast) adjust colors and contrast before rendering. These run quickly but scale with the resolution (4K is much slower to process than 1080p).
+
+> **Recommendation for Long Videos:**
+> For long videos, use 720p Fast Preview first. Heavy motion, blur transitions, 4K, and High Quality exports can increase render time.
