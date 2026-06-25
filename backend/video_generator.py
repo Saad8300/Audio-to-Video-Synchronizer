@@ -401,12 +401,17 @@ def _make_watermark_overlay(
         pill_w = text_w + pad_x * 2
         pill_h = text_h + pad_y * 2
         margin = max(5, min(margin, min(target_w, target_h) // 4))
+        is_white_default = (position_mode == "preset" and position.lower().replace("-", "_") == "white_default")
+        
         if position_mode == "custom":
             x = x_pos
             y = y_pos
         else:
             pos = position.lower().replace("-", "_")
-            if pos == "top_left":
+            if pos == "white_default":
+                x = (target_w - text_w) // 2
+                y = int(target_h * 0.85)
+            elif pos == "top_left":
                 x, y = margin, margin
             elif pos == "top_right":
                 x, y = target_w - pill_w - margin, margin
@@ -421,16 +426,27 @@ def _make_watermark_overlay(
         # If not using preset, use raw x/y coordinates directly (allowing negative or off-screen).
         if position_mode != "preset":
             pass
+            
         bg_alpha  = int(opacity * 170)
         txt_alpha = int(opacity * 255)
         radius = pill_h // 2
-        try:
-            draw.rounded_rectangle([x, y, x + pill_w, y + pill_h], radius=radius, fill=(0, 0, 0, bg_alpha))
-        except AttributeError:
-            draw.rectangle([x, y, x + pill_w, y + pill_h], fill=(0, 0, 0, bg_alpha))
-        tx = x + pad_x + text_offset_x
-        ty = y + pad_y + text_offset_y
-        draw.text((tx, ty), text, font=font, fill=(255, 255, 255, txt_alpha))
+        
+        if is_white_default:
+            shadow_offset = max(1, int(font_size * 0.06))
+            shadow_a = int(opacity * 220)
+            # Drop shadow
+            draw.text((x+text_offset_x+shadow_offset, y+text_offset_y+shadow_offset), text, font=font, fill=(0,0,0, shadow_a))
+            # Main white text
+            draw.text((x+text_offset_x, y+text_offset_y), text, font=font, fill=(255,255,255, txt_alpha))
+        else:
+            try:
+                draw.rounded_rectangle([x, y, x + pill_w, y + pill_h], radius=radius, fill=(0, 0, 0, bg_alpha))
+            except AttributeError:
+                draw.rectangle([x, y, x + pill_w, y + pill_h], fill=(0, 0, 0, bg_alpha))
+            tx = x + pad_x + text_offset_x
+            ty = y + pad_y + text_offset_y
+            draw.text((tx, ty), text, font=font, fill=(255, 255, 255, txt_alpha))
+            
         return np.array(overlay)
     except Exception as exc:
         logger.warning("Watermark overlay render failed: %s", exc)

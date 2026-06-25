@@ -9,6 +9,7 @@ import ResultsPanel from './components/ResultsPanel'
 import ProgressOverlay from './components/ProgressOverlay'
 import AppModeSwitcher, { type AppMode } from './components/AppModeSwitcher'
 import VideoTimelinePage from './components/VideoTimelinePage'
+import MediaTimelinePage from './components/MediaTimelinePage'
 import {
   IconMusic,
   IconImage,
@@ -47,7 +48,7 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   enableWatermark:       false,
   watermarkText:         '',
   watermarkPositionMode: 'preset',
-  watermarkPosition:     'bottom_right',
+  watermarkPosition:     'white_default',
   watermarkX:            50,
   watermarkY:            50,
   watermarkOpacity:      65,
@@ -462,7 +463,9 @@ export default function App() {
       {/* ════════════════════════════════════════════════════════════
           PAGE CONTENT — switches between modes
       ════════════════════════════════════════════════════════════ */}
-      {activeMode === 'video' ? (
+      {activeMode === 'media' ? (
+        <MediaTimelinePage />
+      ) : activeMode === 'video' ? (
         <VideoTimelinePage />
       ) : (
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">

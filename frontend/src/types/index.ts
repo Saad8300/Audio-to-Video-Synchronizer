@@ -21,7 +21,7 @@ export type Transition       =
   | 'flash'
 export type ZoomEffect       = 'none' | 'slow_zoom_in'
 export type RenderProfile    = 'fast_preview' | 'balanced' | 'high_quality'
-export type WatermarkPosition     = 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right' | 'center'
+export type WatermarkPosition     = 'white_default' | 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right' | 'center'
 export type WatermarkPositionMode = 'preset' | 'custom'
 
 // ── Batch 9A — new motion / style types ─────────────────────────────────────

@@ -354,6 +354,7 @@ export default function EnhancementsPanel({
                   className="form-select"
                   disabled={!watermarkActive}
                 >
+                  <option value="white_default">White Default</option>
                   <option value="top_left">Top Left</option>
                   <option value="top_right">Top Right</option>
                   <option value="bottom_left">Bottom Left</option>

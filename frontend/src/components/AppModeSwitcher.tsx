@@ -1,9 +1,9 @@
 // components/AppModeSwitcher.tsx — Top-level mode switcher for Image / Video Timeline
 
 import React from 'react'
-import { IconLayers, IconFilm } from './icons'
+import { IconLayers, IconFilm, IconGrid } from './icons'
 
-export type AppMode = 'image' | 'video'
+export type AppMode = 'image' | 'video' | 'media'
 
 interface ModeDef {
   id: AppMode
@@ -25,7 +25,13 @@ const MODES: ModeDef[] = [
     label: 'Video Timeline',
     subtitle: 'Create videos from reusable video clips, audio, and timeline CSV.',
     icon: <IconFilm size={15} />,
-    badge: 'Coming Soon',
+  },
+  {
+    id: 'media',
+    label: 'Media Timeline',
+    subtitle: 'Mix images, videos, and text using one timeline CSV.',
+    icon: <IconGrid size={15} />,
+    badge: 'Coming in Batch 11B',
   },
 ]
 

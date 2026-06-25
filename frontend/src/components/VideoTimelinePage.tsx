@@ -54,7 +54,7 @@ const DEFAULT_SETTINGS: VideoTimelineSettings = {
   enableWatermark:       false,
   watermarkText:         '',
   watermarkPositionMode: 'preset',
-  watermarkPosition:     'bottom_right',
+  watermarkPosition:     'white_default',
   watermarkX:            50,
   watermarkY:            50,
   watermarkOpacity:      65,

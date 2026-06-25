@@ -642,11 +642,16 @@ def _make_watermark_overlay(
     ph = th + py * 2
     margin = max(5, min(margin, min(target_w, target_h) // 4))
 
+    is_white_default = (position_mode == "preset" and position.lower().replace("-", "_") == "white_default")
+
     if position_mode == "custom":
         x, y = x_pos, y_pos
     else:
         pos = position.lower().replace("-", "_")
-        if pos == "top_left":
+        if pos == "white_default":
+            x = (target_w - tw) // 2
+            y = int(target_h * 0.85)
+        elif pos == "top_left":
             x, y = margin, margin
         elif pos == "top_right":
             x, y = target_w - pw - margin, margin
@@ -656,16 +661,28 @@ def _make_watermark_overlay(
             x, y = (target_w - pw) // 2, (target_h - ph) // 2
         else:
             x, y = target_w - pw - margin, target_h - ph - margin
+            
     if position_mode != "preset":
         pass
+        
     bg_a  = int(opacity * 170)
     txt_a = int(opacity * 255)
     r = ph // 2
-    try:
-        draw.rounded_rectangle([x, y, x+pw, y+ph], radius=r, fill=(0,0,0, bg_a))
-    except AttributeError:
-        draw.rectangle([x, y, x+pw, y+ph], fill=(0,0,0, bg_a))
-    draw.text((x+px+tx_off, y+py+ty_off), text, font=font, fill=(255,255,255, txt_a))
+    
+    if is_white_default:
+        shadow_offset = max(1, int(font_size * 0.06))
+        shadow_a = int(opacity * 220)
+        # Drop shadow for subtle readability
+        draw.text((x+tx_off+shadow_offset, y+ty_off+shadow_offset), text, font=font, fill=(0,0,0, shadow_a))
+        # Main white text
+        draw.text((x+tx_off, y+ty_off), text, font=font, fill=(255,255,255, txt_a))
+    else:
+        try:
+            draw.rounded_rectangle([x, y, x+pw, y+ph], radius=r, fill=(0,0,0, bg_a))
+        except AttributeError:
+            draw.rectangle([x, y, x+pw, y+ph], fill=(0,0,0, bg_a))
+        draw.text((x+px+tx_off, y+py+ty_off), text, font=font, fill=(255,255,255, txt_a))
+        
     return np.array(overlay)
 
 
