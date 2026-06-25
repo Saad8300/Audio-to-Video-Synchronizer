@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 
 
 # ---------------------------------------------------------------------------
@@ -226,8 +226,64 @@ def extract_zip_safely(zip_path: str, extract_to: str) -> tuple[set[str], list[s
 
 
 # ---------------------------------------------------------------------------
-# Image preprocessing
+# Image preprocessing & Visual Styles
 # ---------------------------------------------------------------------------
+
+def apply_visual_style(img: Image.Image, visual_effect: str, effect_strength: str) -> Image.Image:
+    if visual_effect == "none":
+        return img
+
+    s = {"low": 0.6, "medium": 1.0, "high": 1.4}.get(effect_strength, 1.0)
+
+    if visual_effect == "black_and_white":
+        img = img.convert("L").convert("RGB")
+        img = ImageEnhance.Contrast(img).enhance(1.0 + 0.2 * s)
+        return img
+
+    elif visual_effect == "high_contrast":
+        img = ImageEnhance.Contrast(img).enhance(1.0 + 0.3 * s)
+        img = ImageEnhance.Sharpness(img).enhance(1.0 + 0.5 * s)
+        img = ImageEnhance.Color(img).enhance(1.0 + 0.1 * s)
+        return img
+
+    elif visual_effect == "clean_bright":
+        img = ImageEnhance.Brightness(img).enhance(1.0 + 0.12 * s)
+        img = ImageEnhance.Contrast(img).enhance(1.0 + 0.1 * s)
+        return img
+
+    elif visual_effect == "warm":
+        img = ImageEnhance.Color(img).enhance(1.0 + 0.15 * s)
+        overlay = Image.new("RGB", img.size, (255, 170, 0))
+        img = Image.blend(img, overlay, 0.08 * s)
+        return img
+
+    elif visual_effect == "cinematic":
+        img = ImageEnhance.Contrast(img).enhance(1.0 + 0.15 * s)
+        img = ImageEnhance.Color(img).enhance(1.0 + 0.1 * s)
+        
+        overlay = Image.new("RGB", img.size, (255, 140, 0))
+        img = Image.blend(img, overlay, 0.05 * s)
+        
+        # Fast Vignette
+        w, h = img.size
+        sw, sh = 256, 256
+        mask = Image.new('L', (sw, sh), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((20, 20, 236, 236), fill=255)
+        try:
+            mask = mask.filter(ImageFilter.BoxBlur(20))
+        except AttributeError:
+            mask = mask.filter(ImageFilter.GaussianBlur(20))
+        mask = mask.resize((w, h), Image.BILINEAR)
+        
+        black = Image.new("RGB", (w, h), (0, 0, 0))
+        vignetted = Image.composite(img, black, mask)
+        img = Image.blend(img, vignetted, 0.4 * s)
+
+        return img
+
+    return img
+
 
 def preprocess_image(
     image_path: str,
@@ -235,6 +291,8 @@ def preprocess_image(
     target_w: int,
     target_h: int,
     fit_mode: str = "cover",
+    visual_effect: str = "none",
+    effect_strength: str = "medium",
 ) -> None:
     """
     Resize/crop an image to match the exact target dimensions (target_w × target_h).
@@ -285,5 +343,8 @@ def preprocess_image(
 
     else:
         img = img.resize((target_w, target_h), Image.LANCZOS)
+
+    # Apply visual style filter
+    img = apply_visual_style(img, visual_effect, effect_strength)
 
     img.save(output_path, "JPEG", quality=95)

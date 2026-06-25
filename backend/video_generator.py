@@ -598,11 +598,13 @@ def generate_video(
     watermark_margin  = max(5, min(watermark_margin, 200))
     transition_duration = max(0.1, min(float(transition_duration), 2.0))
 
-    # ── Effective motion effect ───────────────────────────────────────────────
-    # motion_effect takes priority; zoom_effect is kept for backward compat
+    # ── Effective motion and transition ───────────────────────────────────────
     effective_motion = motion_effect
     if effective_motion == "none" and zoom_effect == "slow_zoom_in":
         effective_motion = "slow_zoom_in"
+    
+    # Handle legacy 'none' transition as 'none', 'fade' remains 'fade'.
+    effective_transition = transition
 
     # ── Feature flags ────────────────────────────────────────────────────────
     use_intro     = intro_path is not None and os.path.isfile(intro_path)
@@ -613,6 +615,14 @@ def generate_video(
 
     # ── Performance warnings ──────────────────────────────────────────────────
     is_heavy_motion = effective_motion in ("ken_burns", "dynamic_shorts", "subtle_random")
+    
+    # Visual Style Warnings
+    if visual_effect != "none":
+        if export_resolution == "4K" and render_profile == "high_quality" and effect_strength == "high":
+            warnings.append("4K + High Quality + Visual Style High may significantly increase render time. For testing, use 720p Fast Preview first.")
+        if effect_strength == "high": # The duration check will happen after CSV parse, so we might need to add a general warning here or move the warning check below CSV parse.
+            pass # We don't have total_duration here!
+
     if export_resolution == "4K" and render_profile == "high_quality" and is_heavy_motion:
         warnings.append(
             "4K + High Quality + heavy motion effect is a very demanding combination. "
@@ -677,6 +687,13 @@ def generate_video(
 
     total_duration = rows[-1]["end"] if rows else 0
     logger.info(f"Timeline loaded: {len(rows)} rows, duration: {seconds_to_mmss(total_duration)}")
+    
+    # ── Additional Performance Warnings based on duration ─────────────────────
+    if visual_effect != "none" and effect_strength == "high" and total_duration > 1200:
+        warnings.append("20+ minute video + Visual Style High may increase render time significantly. For testing, use 720p Fast Preview first.")
+    if effective_motion == "dynamic_shorts" and visual_effect == "high_contrast" and total_duration > 300:
+        warnings.append("Dynamic Shorts Motion + High Contrast + long video may increase render time. For testing, use 720p Fast Preview first.")
+        
     _check_cancel()
 
     # ------------------------------------------------------------------
@@ -692,61 +709,98 @@ def generate_video(
     _check_cancel()
 
     # ------------------------------------------------------------------
-    # 4. Preprocess images and build clips
+    # 4. Preprocess images, calculate timings, and build clips
     # ------------------------------------------------------------------
-    _progress(40, "Preparing clips")
+    _progress(40, "Preparing clips & transitions")
     preprocessed_dir = os.path.join(temp_dir, "preprocessed")
     os.makedirs(preprocessed_dir, exist_ok=True)
 
-    clips: list = []
     total_rows = len(rows)
+    
+    # Transition timings
+    def get_transition_info(t_name: str, req_dur: float, d_prev: float, d_next: float):
+        overlap_types = {"crossfade", "slide_left", "slide_right", "slide_up", "slide_down",
+                         "push_left", "push_right", "zoom_in", "zoom_out", "blur_crossfade"}
+        if t_name in overlap_types:
+            return True, min(req_dur, d_prev / 2.0, d_next / 2.0), None
+        elif t_name in ("fade", "fade_black"):
+            return False, min(req_dur / 2.0, d_prev / 2.0, d_next / 2.0), [0, 0, 0]
+        elif t_name == "fade_white":
+            return False, min(req_dur / 2.0, d_prev / 2.0, d_next / 2.0), [255, 255, 255]
+        elif t_name == "flash":
+            return False, min(0.1, d_prev / 2.0, d_next / 2.0), [255, 255, 255]
+        else:
+            return False, 0.0, None
+
+    overlaps  = [0.0] * total_rows
+    fade_ins  = [(0.0, None)] * total_rows
+    fade_outs = [(0.0, None)] * total_rows
+
+    for i in range(total_rows - 1):
+        d_curr = rows[i]["duration"]
+        d_next = rows[i+1]["duration"]
+        is_ov, dur, col = get_transition_info(effective_transition, transition_duration, d_curr, d_next)
+        if is_ov:
+            overlaps[i] = dur
+        else:
+            fade_outs[i]   = (dur, col)
+            fade_ins[i+1] = (dur, col)
+
+    base_clips = []
+    start_times = []
+    current_s = 0.0
 
     for idx, row in enumerate(rows):
         _check_cancel()
-
         img_name = row["image"]
         src_path = os.path.join(images_dir, img_name)
-
         if not os.path.isfile(src_path):
             errors.append(f"Image not found in ZIP: {img_name}")
             row["status"] = "missing"
             timeline.append(row)
             continue
 
-        preprocessed_path = os.path.join(preprocessed_dir, f"pp_{img_name}.jpg")
+        # Create a unique cache key based on all parameters that affect the image
+        safe_ve = str(visual_effect).replace('_', '')
+        safe_es = str(effect_strength).replace('_', '')
+        pp_filename = f"pp_{target_w}x{target_h}_{fit_mode}_{safe_ve}_{safe_es}_{img_name}.jpg"
+        preprocessed_path = os.path.join(preprocessed_dir, pp_filename)
         try:
             if not os.path.isfile(preprocessed_path):
-                preprocess_image(src_path, preprocessed_path, target_w, target_h, fit_mode)
+                preprocess_image(
+                    src_path, preprocessed_path, target_w, target_h, fit_mode,
+                    visual_effect=visual_effect, effect_strength=effect_strength
+                )
         except Exception as e:
             errors.append(f"Failed to preprocess {img_name}: {e}")
             row["status"] = "error"
             timeline.append(row)
             continue
 
-        duration = row["duration"]
+        d_curr = row["duration"]
+        t_over = overlaps[i] if idx < total_rows - 1 else 0.0
+        clip_dur = d_curr + t_over
 
         try:
             if use_motion:
                 clip = _build_motion_clip(
-                    image_path=preprocessed_path,
-                    duration=duration,
-                    target_w=target_w,
-                    target_h=target_h,
-                    motion_effect=effective_motion,
-                    motion_intensity=motion_intensity,
-                    fps=fps,
-                    clip_index=idx,
+                    image_path=preprocessed_path, duration=clip_dur, target_w=target_w, target_h=target_h,
+                    motion_effect=effective_motion, motion_intensity=motion_intensity, fps=fps, clip_index=idx,
                 )
             else:
-                clip = ImageClip(preprocessed_path, duration=duration)
-                clip = clip.set_fps(fps)
+                clip = ImageClip(preprocessed_path, duration=clip_dur).set_fps(fps)
 
-            if transition == "fade" and duration > (transition_duration * 2):
-                fade_dur = min(transition_duration, duration / 4)
-                clip = fadein(clip, fade_dur)
-                clip = fadeout(clip, fade_dur)
+            f_in_dur, f_in_col = fade_ins[idx]
+            if f_in_dur > 0:
+                clip = fadein(clip, f_in_dur, color=f_in_col)
 
-            clips.append(clip)
+            f_out_dur, f_out_col = fade_outs[idx]
+            if f_out_dur > 0:
+                clip = fadeout(clip, f_out_dur, color=f_out_col)
+
+            base_clips.append(clip)
+            start_times.append(current_s)
+            current_s += d_curr
             row["status"] = "ok"
 
         except Exception as e:
@@ -754,25 +808,96 @@ def generate_video(
             row["status"] = "error"
 
         timeline.append(row)
-        clip_pct = 40 + int(12 * (idx + 1) / max(total_rows, 1))
-        _progress(clip_pct, f"Preparing clips ({idx + 1}/{total_rows})")
+        _progress(40 + int(10 * (idx + 1) / max(total_rows, 1)), f"Preparing clips ({idx + 1}/{total_rows})")
 
-    if not clips:
+    if not base_clips:
         errors.append("No valid image clips could be created.")
         return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
     _check_cancel()
 
     # ------------------------------------------------------------------
-    # 5. Concatenate main image clips
+    # 5. Apply overlap transitions and composite
     # ------------------------------------------------------------------
-    _progress(55, "Building video timeline")
+    _progress(52, "Applying transitions")
+    for i in range(len(base_clips) - 1):
+        t_o = overlaps[i]
+        if t_o <= 0: continue
+
+        c_prev = base_clips[i]
+        c_next = base_clips[i+1]
+        D_prev = rows[i]["duration"]
+        T = effective_transition
+
+        if T == "crossfade":
+            c_next = c_next.crossfadein(t_o)
+        elif T == "slide_left":
+            def fl_sl(t, to=t_o, w=target_w): return (int(w * (1 - min(t/to, 1.0))), 0)
+            c_next = c_next.set_pos(fl_sl)
+        elif T == "slide_right":
+            def fl_sr(t, to=t_o, w=target_w): return (int(-w * (1 - min(t/to, 1.0))), 0)
+            c_next = c_next.set_pos(fl_sr)
+        elif T == "slide_up":
+            def fl_su(t, to=t_o, h=target_h): return (0, int(h * (1 - min(t/to, 1.0))))
+            c_next = c_next.set_pos(fl_su)
+        elif T == "slide_down":
+            def fl_sd(t, to=t_o, h=target_h): return (0, int(-h * (1 - min(t/to, 1.0))))
+            c_next = c_next.set_pos(fl_sd)
+        elif T == "push_left":
+            def fl_npl(t, to=t_o, w=target_w): return (int(w * (1 - min(t/to, 1.0))), 0)
+            def fl_ppl(t, d=D_prev, to=t_o, w=target_w): return (int(-w * min(max(t - d, 0)/to, 1.0)), 0)
+            c_next = c_next.set_pos(fl_npl)
+            c_prev = c_prev.set_pos(fl_ppl)
+        elif T == "push_right":
+            def fl_npr(t, to=t_o, w=target_w): return (int(-w * (1 - min(t/to, 1.0))), 0)
+            def fl_ppr(t, d=D_prev, to=t_o, w=target_w): return (int(w * min(max(t - d, 0)/to, 1.0)), 0)
+            c_next = c_next.set_pos(fl_npr)
+            c_prev = c_prev.set_pos(fl_ppr)
+        elif T == "zoom_in":
+            def fl_zi(gf, t, to=t_o):
+                fr = gf(t)
+                if t >= to: return fr
+                sc = 1.3 - 0.3 * (t / max(to, 0.001))
+                h, w = fr.shape[:2]
+                cw, ch = int(w/sc), int(h/sc)
+                x0, y0 = (w - cw)//2, (h - ch)//2
+                cr = fr[y0:y0+ch, x0:x0+cw]
+                return np.array(Image.fromarray(cr).resize((w, h), Image.BILINEAR))
+            c_next = c_next.fl(fl_zi).crossfadein(t_o)
+        elif T == "zoom_out":
+            def fl_zo(gf, t, to=t_o):
+                fr = gf(t)
+                if t >= to: return fr
+                sc = 0.7 + 0.3 * (t / max(to, 0.001))
+                h, w = fr.shape[:2]
+                nw, nh = int(w*sc), int(h*sc)
+                rz = np.array(Image.fromarray(fr).resize((nw, nh), Image.BILINEAR))
+                out = np.zeros_like(fr)
+                x0, y0 = (w - nw)//2, (h - nh)//2
+                out[y0:y0+nh, x0:x0+nw] = rz
+                return out
+            c_next = c_next.fl(fl_zo).crossfadein(t_o)
+        elif T == "blur_crossfade":
+            def fl_bc(gf, t, to=t_o):
+                fr = gf(t)
+                if t >= to: return fr
+                prog = t / max(to, 0.001)
+                rad = int(20 * (1.0 - prog))
+                if rad < 1: return fr
+                im = Image.fromarray(fr)
+                sm = im.resize((max(1, fr.shape[1]//4), max(1, fr.shape[0]//4)), Image.BILINEAR)
+                return np.array(sm.resize((fr.shape[1], fr.shape[0]), Image.BILINEAR))
+            c_next = c_next.fl(fl_bc).crossfadein(t_o)
+
+        base_clips[i] = c_prev
+        base_clips[i+1] = c_next
+
+    _progress(58, "Compositing video timeline")
+    final_clips = [c.set_start(st) for c, st in zip(base_clips, start_times)]
     try:
-        # Use 'compose' when motion clips are present (VideoClip, not ImageClip)
-        concat_method = "compose" if use_motion or transition == "fade" else "chain"
-        video = concatenate_videoclips(clips, method=concat_method)
+        video = CompositeVideoClip(final_clips, size=(target_w, target_h))
     except Exception as e:
-        errors.append(f"Failed to concatenate clips: {e}")
+        errors.append(f"Failed to composite clips: {e}")
         return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
 
     _check_cancel()
@@ -928,7 +1053,7 @@ def generate_video(
         logger.info("Closing MoviePy clips to free memory")
         try: video.close()
         except Exception: pass
-        for c in clips:
+        for c in base_clips:
             try: c.close()
             except Exception: pass
         if intro_clip is not None:

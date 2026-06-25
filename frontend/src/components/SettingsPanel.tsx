@@ -42,17 +42,17 @@ const PRESET_MAP: Record<StylePreset, PresetConfig> = {
   },
   youtube_documentary: {
     motionEffect: 'ken_burns', motionIntensity: 'medium',
-    transition: 'fade', transitionDuration: '0.5',
+    transition: 'crossfade', transitionDuration: '0.8',
     visualEffect: 'cinematic', effectStrength: 'medium',
   },
   tiktok_reels: {
     motionEffect: 'dynamic_shorts', motionIntensity: 'high',
-    transition: 'fade', transitionDuration: '0.2',
+    transition: 'flash', transitionDuration: '0.2',
     visualEffect: 'high_contrast', effectStrength: 'medium',
   },
   cinematic_story: {
     motionEffect: 'ken_burns', motionIntensity: 'medium',
-    transition: 'fade', transitionDuration: '0.8',
+    transition: 'fade_black', transitionDuration: '0.8',
     visualEffect: 'cinematic', effectStrength: 'medium',
   },
   news_report: {
@@ -62,12 +62,12 @@ const PRESET_MAP: Record<StylePreset, PresetConfig> = {
   },
   calm_educational: {
     motionEffect: 'slow_zoom_in', motionIntensity: 'low',
-    transition: 'fade', transitionDuration: '0.5',
+    transition: 'crossfade', transitionDuration: '0.8',
     visualEffect: 'clean_bright', effectStrength: 'low',
   },
   dramatic_shorts: {
     motionEffect: 'dynamic_shorts', motionIntensity: 'high',
-    transition: 'fade', transitionDuration: '0.5',
+    transition: 'zoom_in', transitionDuration: '0.2',
     visualEffect: 'high_contrast', effectStrength: 'high',
   },
 }
@@ -301,6 +301,19 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
             options={[
               { value: 'none', label: 'None' },
               { value: 'fade', label: 'Fade' },
+              { value: 'crossfade', label: 'Crossfade' },
+              { value: 'fade_black', label: 'Fade to Black' },
+              { value: 'fade_white', label: 'Fade to White' },
+              { value: 'slide_left', label: 'Slide Left' },
+              { value: 'slide_right', label: 'Slide Right' },
+              { value: 'slide_up', label: 'Slide Up' },
+              { value: 'slide_down', label: 'Slide Down' },
+              { value: 'push_left', label: 'Push Left' },
+              { value: 'push_right', label: 'Push Right' },
+              { value: 'zoom_in', label: 'Zoom In' },
+              { value: 'zoom_out', label: 'Zoom Out' },
+              { value: 'blur_crossfade', label: 'Blur Crossfade' },
+              { value: 'flash', label: 'Flash' },
             ]}
           />
           <Sel
@@ -335,6 +348,9 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
         {is4K && settings.motionEffect !== 'none' && (
           <Warn msg="4K + motion effects is demanding. Fast Preview at 720p first is strongly recommended." />
         )}
+        {settings.transition === 'blur_crossfade' && (
+          <Warn msg="Blur Crossfade requires more processing. May increase render time." />
+        )}
       </div>
 
       {/* ── VISUAL STYLE ────────────────────────────────────────────────── */}
@@ -365,7 +381,7 @@ export default function SettingsPanel({ settings, onChange, disabled }: Settings
         </div>
         {settings.visualEffect !== 'none' && (
           <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            Visual effects are applied during render. Full implementation coming in next batch.
+            Visual style is applied during export.
           </p>
         )}
       </div>
