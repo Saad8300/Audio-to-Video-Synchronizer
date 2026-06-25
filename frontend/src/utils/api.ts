@@ -22,7 +22,7 @@ export async function checkHealth(): Promise<boolean> {
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
 export async function startJob(
-  audioFile:    File,
+  audioFiles:   File[],
   imagesZip:    File,
   timestampCsv: File,
   settings:     GenerateSettings,
@@ -33,7 +33,7 @@ export async function startJob(
   const form = new FormData()
 
   // Required
-  form.append('audio_file',     audioFile)
+  audioFiles.forEach(f => form.append('audio_files', f))
   form.append('images_zip',     imagesZip)
   form.append('timestamp_csv',  timestampCsv)
 
@@ -122,7 +122,7 @@ export async function cancelJob(jobId: string): Promise<void> {
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
 export async function startVideoTimelineJob(
-  audioFile:   File,
+  audioFiles:  File[],
   videosZip:   File,
   timelineCsv: File,
   settings:    VideoTimelineSettings,
@@ -132,7 +132,7 @@ export async function startVideoTimelineJob(
   const form = new FormData()
 
   // Required uploads
-  form.append('audio_file',   audioFile)
+  audioFiles.forEach(f => form.append('audio_files', f))
   form.append('videos_zip',   videosZip)
   form.append('timeline_csv', timelineCsv)
 

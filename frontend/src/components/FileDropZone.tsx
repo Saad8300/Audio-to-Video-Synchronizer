@@ -9,8 +9,11 @@ interface FileDropZoneProps {
   description: string
   accept:      string
   icon:        React.ReactNode
-  file:        File | null
-  onChange:    (file: File | null) => void
+  file?:       File | null
+  files?:      File[]
+  onChange?:   (file: File | null) => void
+  onFilesChange?: (files: File[]) => void
+  multiple?:   boolean
   disabled?:   boolean
   required?:   boolean
   compact?:    boolean
@@ -23,7 +26,10 @@ export default function FileDropZone({
   accept,
   icon,
   file,
+  files = [],
   onChange,
+  onFilesChange,
+  multiple,
   disabled,
   required,
   compact,
@@ -31,9 +37,26 @@ export default function FileDropZone({
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
-  const handleFile = useCallback(
-    (f: File | null) => { if (!f || disabled) return; onChange(f) },
-    [onChange, disabled],
+  const handleFiles = useCallback(
+    (droppedFiles: FileList | File[]) => {
+      if (disabled) return
+      const list = Array.from(droppedFiles)
+      if (list.length === 0) {
+        if (onChange) onChange(null)
+        if (onFilesChange) onFilesChange([])
+        return
+      }
+
+      // Natural sort by filename
+      list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+
+      if (multiple && onFilesChange) {
+        onFilesChange(list)
+      } else if (onChange) {
+        onChange(list[0])
+      }
+    },
+    [onChange, onFilesChange, multiple, disabled],
   )
 
   const onDragOver  = (e: React.DragEvent) => { if (disabled) return; e.preventDefault(); setDragging(true) }
@@ -41,8 +64,7 @@ export default function FileDropZone({
   const onDrop      = (e: React.DragEvent) => {
     e.preventDefault(); setDragging(false)
     if (disabled) return
-    const dropped = e.dataTransfer.files[0]
-    if (dropped) handleFile(dropped)
+    handleFiles(e.dataTransfer.files)
   }
 
   const formatSize = (bytes: number) => {
@@ -51,11 +73,12 @@ export default function FileDropZone({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
+  const hasFile = (file !== undefined && file !== null) || files.length > 0
   const zoneClass = [
     'dropzone',
     compact ? 'px-3 py-2.5' : 'px-4 py-3',
     dragging && !disabled ? 'dropzone-active' : '',
-    file ? 'dropzone-filled' : '',
+    hasFile ? 'dropzone-filled' : '',
     disabled ? 'opacity-50 pointer-events-none' : '',
   ].filter(Boolean).join(' ')
 
@@ -63,7 +86,7 @@ export default function FileDropZone({
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={id} className="form-label mb-0">{label}</label>
-        {required && !file && (
+        {required && !hasFile && (
           <span
             className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
             style={{ color: 'var(--color-error)', background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}
@@ -71,10 +94,14 @@ export default function FileDropZone({
             Required
           </span>
         )}
-        {file && (
+        {hasFile && (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onChange(null) }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onChange) onChange(null);
+              if (onFilesChange) onFilesChange([]);
+            }}
             className="btn-ghost p-0.5 rounded-md text-[10px]"
             aria-label={`Remove ${label}`}
             title="Remove file"
@@ -101,12 +128,13 @@ export default function FileDropZone({
           id={id}
           type="file"
           accept={accept}
+          multiple={multiple}
           className="sr-only"
           disabled={disabled}
-          onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleFiles(e.target.files ?? [])}
         />
 
-        {file ? (
+        {hasFile ? (
           <div className="flex items-center gap-2.5 w-full animate-fade-in">
             <div
               className="w-7 h-7 rounded-md shrink-0 flex items-center justify-center"
@@ -115,8 +143,26 @@ export default function FileDropZone({
               <IconCheck size={13} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-success)' }}>{file.name}</p>
-              <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{formatSize(file.size)}</p>
+              {files.length > 1 ? (
+                <>
+                  <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-success)' }}>
+                    {files.length} audio parts selected
+                  </p>
+                  <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                    {files.slice(0, 2).map(f => f.name).join(' → ')}
+                    {files.length > 2 && ` (+ ${files.length - 2} more)`}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-success)' }}>
+                    {file ? file.name : files[0]?.name}
+                  </p>
+                  <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                    {formatSize(file ? file.size : (files[0]?.size ?? 0))}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (

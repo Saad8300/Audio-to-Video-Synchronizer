@@ -90,15 +90,34 @@ function Sel<T extends string>({
 // ── File Drop Zone ─────────────────────────────────────────────────────────────
 
 function VideoDropZone({
-  id, label, description, accept, icon, file, onChange, disabled, required,
+  id, label, description, accept, icon, file, files = [], onChange, onFilesChange, multiple, disabled, required,
 }: {
   id: string; label: string; description: string; accept: string;
-  icon: React.ReactNode; file: File | null;
-  onChange: (f: File | null) => void; disabled?: boolean; required?: boolean;
+  icon: React.ReactNode; file?: File | null; files?: File[];
+  onChange?: (f: File | null) => void; onFilesChange?: (f: File[]) => void;
+  multiple?: boolean; disabled?: boolean; required?: boolean;
 }) {
   const [drag, setDrag] = useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const handleFile = (f: File | null) => { if (f) onChange(f) }
+  
+  const handleFiles = (droppedFiles: FileList | File[]) => {
+    const list = Array.from(droppedFiles)
+    if (list.length === 0) {
+      if (onChange) onChange(null)
+      if (onFilesChange) onFilesChange([])
+      return
+    }
+
+    // Natural sort by filename
+    list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+    if (multiple && onFilesChange) {
+      onFilesChange(list)
+    } else if (onChange) {
+      onChange(list[0])
+    }
+  }
+
+  const hasFile = (file !== undefined && file !== null) || files.length > 0
 
   return (
     <div
@@ -110,35 +129,45 @@ function VideoDropZone({
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
       onDragOver={e => { e.preventDefault(); setDrag(true) }}
       onDragLeave={() => setDrag(false)}
-      onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0] ?? null) }}
+      onDrop={e => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files) }}
       className="relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl text-center cursor-pointer transition-all"
       style={{
-        border: `1.5px dashed ${file ? 'var(--color-success-border)' : drag ? 'var(--accent-primary)' : 'var(--border-default)'}`,
-        background: file ? 'var(--color-success-bg)' : drag ? 'var(--accent-subtle)' : 'var(--bg-input)',
+        border: `1.5px dashed ${hasFile ? 'var(--color-success-border)' : drag ? 'var(--accent-primary)' : 'var(--border-default)'}`,
+        background: hasFile ? 'var(--color-success-bg)' : drag ? 'var(--accent-subtle)' : 'var(--bg-input)',
         minHeight: 88,
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
     >
       <input
-        ref={inputRef} type="file" accept={accept} className="sr-only" disabled={disabled}
-        onChange={e => handleFile(e.target.files?.[0] ?? null)}
+        ref={inputRef} type="file" accept={accept} multiple={multiple} className="sr-only" disabled={disabled}
+        onChange={e => handleFiles(e.target.files ?? [])}
       />
-      <span style={{ color: file ? 'var(--color-success)' : 'var(--accent-primary)' }}>
-        {file ? <IconCheck size={16} /> : icon}
+      <span style={{ color: hasFile ? 'var(--color-success)' : 'var(--accent-primary)' }}>
+        {hasFile ? <IconCheck size={16} /> : icon}
       </span>
       <div>
-        <p className="text-[11px] font-semibold" style={{ color: file ? 'var(--color-success)' : 'var(--text-primary)' }}>
-          {file ? file.name : label}
-          {required && !file && <span style={{ color: 'var(--color-error)' }}> *</span>}
+        <p className="text-[11px] font-semibold" style={{ color: hasFile ? 'var(--color-success)' : 'var(--text-primary)' }}>
+          {files.length > 1 ? `${files.length} audio parts selected` : (file ? file.name : (files[0]?.name ?? label))}
+          {required && !hasFile && <span style={{ color: 'var(--color-error)' }}> *</span>}
         </p>
-        {!file && (
+        {!hasFile && (
           <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{description}</p>
         )}
-        {file && (
+        {hasFile && files.length > 1 && (
+          <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)', maxWidth: 180 }}>
+            {files.slice(0, 2).map(f => f.name).join(' → ')}
+            {files.length > 2 && ` (+ ${files.length - 2} more)`}
+          </p>
+        )}
+        {hasFile && (
           <button
             type="button"
-            onClick={e => { e.stopPropagation(); onChange(null) }}
+            onClick={e => {
+              e.stopPropagation();
+              if (onChange) onChange(null);
+              if (onFilesChange) onFilesChange([]);
+            }}
             className="text-[10px] mt-0.5"
             style={{ color: 'var(--text-muted)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
           >
@@ -306,7 +335,7 @@ function SectionDivider({ label }: { label: string }) {
 
 export default function VideoTimelinePage() {
   // Files
-  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioFiles, setAudioFiles] = useState<File[]>([])
   const [videosZip, setVideosZip] = useState<File | null>(null)
   const [csvFile,   setCsvFile]   = useState<File | null>(null)
   const [introFile, setIntroFile] = useState<File | null>(null)
@@ -339,18 +368,32 @@ export default function VideoTimelinePage() {
 
   // Calculate audio duration
   useEffect(() => {
-    if (!audioFile) {
+    if (audioFiles.length === 0) {
       setAudioDur(null)
       return
     }
-    const url = URL.createObjectURL(audioFile)
-    const audio = new Audio(url)
-    audio.addEventListener('loadedmetadata', () => {
-      setAudioDur(audio.duration)
-      URL.revokeObjectURL(url)
+    let totalDur = 0
+    let loaded = 0
+    let hasErr = false
+
+    audioFiles.forEach(f => {
+      const url = URL.createObjectURL(f)
+      const audio = new Audio(url)
+      audio.addEventListener('loadedmetadata', () => {
+        if (!hasErr) {
+          totalDur += audio.duration
+          loaded++
+          if (loaded === audioFiles.length) setAudioDur(totalDur)
+        }
+        URL.revokeObjectURL(url)
+      })
+      audio.addEventListener('error', () => {
+        hasErr = true
+        setAudioDur(null)
+        URL.revokeObjectURL(url)
+      })
     })
-    return () => URL.revokeObjectURL(url)
-  }, [audioFile])
+  }, [audioFiles])
 
   // Calculate visual duration from CSV
   useEffect(() => {
@@ -417,7 +460,7 @@ export default function VideoTimelinePage() {
   const [result,       setResult]       = useState<GenerateResponse | null>(null)
   const [cancelledMsg, setCancelledMsg] = useState<string | null>(null)
 
-  const canGenerate = !!audioFile && !!videosZip && !!csvFile
+  const canGenerate = audioFiles.length > 0 && !!videosZip && !!csvFile
     && status !== 'uploading' && status !== 'generating' && status !== 'cancelling'
   const isLoading   = status === 'uploading' || status === 'generating' || status === 'cancelling'
 
@@ -432,11 +475,11 @@ export default function VideoTimelinePage() {
 
   // Generate
   const handleGenerate = async () => {
-    if (!audioFile || !videosZip || !csvFile) return
+    if (audioFiles.length === 0 || !videosZip || !csvFile) return
     setResult(null); setCancelledMsg(null); setStatus('uploading')
     try {
       const { job_id } = await startVideoTimelineJob(
-        audioFile, videosZip, csvFile, settings,
+        audioFiles, videosZip, csvFile, settings,
         introFile, outroFile,
       )
       setCurrentJobId(job_id); setStatus('generating')
@@ -543,17 +586,17 @@ export default function VideoTimelinePage() {
                   <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>All three files are required to generate a video timeline.</p>
                 </div>
                 <div className="hidden sm:flex items-center gap-3 text-[11px]">
-                  {[{ label: 'Audio', file: audioFile }, { label: 'Videos', file: videosZip }, { label: 'CSV', file: csvFile }].map(({ label, file }) => (
-                    <span key={label} className="flex items-center gap-1" style={{ color: file ? 'var(--color-success)' : 'var(--text-muted)' }}>
-                      <span style={{ fontWeight: 700 }}>{file ? '✓' : '○'}</span> {label}
+                  {[{ label: 'Audio', hasFile: audioFiles.length > 0 }, { label: 'Videos', hasFile: !!videosZip }, { label: 'CSV', hasFile: !!csvFile }].map(({ label, hasFile }) => (
+                    <span key={label} className="flex items-center gap-1" style={{ color: hasFile ? 'var(--color-success)' : 'var(--text-muted)' }}>
+                      <span style={{ fontWeight: 700 }}>{hasFile ? '✓' : '○'}</span> {label}
                     </span>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <VideoDropZone id="vt-audio-upload" label="Main Audio" description="MP3, WAV, M4A, AAC" accept="audio/*,.mp3,.wav,.m4a,.aac"
-                  icon={<IconMusic size={14} />} file={audioFile} onChange={setAudioFile} disabled={isLoading} required />
+                <VideoDropZone id="vt-audio-upload" label="Main Audio" description="Upload one file or multiple audio parts" accept="audio/*,.mp3,.wav,.m4a,.aac"
+                  icon={<IconMusic size={14} />} files={audioFiles} onFilesChange={setAudioFiles} multiple disabled={isLoading} required />
                 <VideoDropZone id="vt-videos-upload" label="Videos ZIP" description="ZIP of .mp4, .mov, .webm clips" accept=".zip,application/zip"
                   icon={<IconVideo size={14} />} file={videosZip} onChange={setVideosZip} disabled={isLoading} required />
                 <VideoDropZone id="vt-csv-upload" label="Timeline CSV" description="start, end, video columns" accept=".csv,text/csv"
@@ -673,8 +716,8 @@ export default function VideoTimelinePage() {
               {/* Missing files */}
               {!canGenerate && !isLoading && (
                 <div className="flex items-center gap-3 flex-wrap">
-                  {[{ label: 'Audio', file: audioFile }, { label: 'Videos ZIP', file: videosZip }, { label: 'CSV', file: csvFile }]
-                    .filter(f => !f.file)
+                  {[{ label: 'Audio', hasFile: audioFiles.length > 0 }, { label: 'Videos ZIP', hasFile: !!videosZip }, { label: 'CSV', hasFile: !!csvFile }]
+                    .filter(f => !f.hasFile)
                     .map(f => (
                       <span key={f.label} className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-error)' }}>
                         <span>✗</span> {f.label} missing

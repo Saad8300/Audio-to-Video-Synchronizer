@@ -362,34 +362,39 @@ export default function EnhancementsPanel({
                 </select>
               </div>
             ) : (
-              <div className="flex gap-2 flex-1 animate-fade-in">
-                <div className="space-y-1 flex-1 min-w-0">
-                  <label htmlFor="watermark-x" className="form-label">X px</label>
-                  <input
-                    id="watermark-x"
-                    type="number"
-                    value={settings.watermarkX}
-                    onChange={e => {
-                      const v = parseInt(e.target.value);
-                      set('watermarkX', isNaN(v) ? 0 : v);
-                    }}
-                    className="form-input px-2"
-                    disabled={!watermarkActive}
-                  />
+              <div className="flex flex-col gap-1 flex-1 animate-fade-in">
+                <div className="flex gap-2">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <label htmlFor="watermark-x" className="form-label">X px</label>
+                    <input
+                      id="watermark-x"
+                      type="number"
+                      value={settings.watermarkX}
+                      onChange={e => {
+                        const v = parseInt(e.target.value);
+                        set('watermarkX', isNaN(v) ? 0 : v);
+                      }}
+                      className="form-input px-2"
+                      disabled={!watermarkActive}
+                    />
+                  </div>
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <label htmlFor="watermark-y" className="form-label">Y px</label>
+                    <input
+                      id="watermark-y"
+                      type="number"
+                      value={settings.watermarkY}
+                      onChange={e => {
+                        const v = parseInt(e.target.value);
+                        set('watermarkY', isNaN(v) ? 0 : v);
+                      }}
+                      className="form-input px-2"
+                      disabled={!watermarkActive}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1 flex-1 min-w-0">
-                  <label htmlFor="watermark-y" className="form-label">Y px</label>
-                  <input
-                    id="watermark-y"
-                    type="number"
-                    value={settings.watermarkY}
-                    onChange={e => {
-                      const v = parseInt(e.target.value);
-                      set('watermarkY', isNaN(v) ? 0 : v);
-                    }}
-                    className="form-input px-2"
-                    disabled={!watermarkActive}
-                  />
+                <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  X = pixels from left, Y = pixels from top (of final export resolution).
                 </div>
               </div>
             )}

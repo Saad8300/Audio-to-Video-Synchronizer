@@ -164,13 +164,8 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, ren
   const progress   = jobStatus?.progress ?? 0
   const step       = cancelling ? 'Cancelling…' : (jobStatus?.current_step ?? (jobId ? 'Connecting…' : 'Starting…'))
   const elapsed    = jobStatus?.elapsed_seconds ?? 0
-  const remaining  = jobStatus?.estimated_remaining_seconds ?? null
   const isTerminal = jobStatus?.status === 'completed' || jobStatus?.status === 'failed' || jobStatus?.status === 'cancelled'
   const isActive   = !isTerminal && !cancelling
-
-  const etaLabel = (remaining !== null && (remaining > 0 || progress > 5))
-    ? formatTime(remaining)
-    : 'Calculating…'
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -322,7 +317,7 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, ren
 
               {/* Zone 5 — Timing */}
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '10px 14px', borderRadius: 10,
                 background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
               }}>
@@ -331,14 +326,6 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, ren
                   <span style={{ color: 'var(--text-muted)' }}>Elapsed</span>
                   <strong style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {formatTime(elapsed)}
-                  </strong>
-                </span>
-                <div style={{ width: 1, height: 14, background: 'var(--border-default)' }} />
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  <IconClock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  <span style={{ color: 'var(--text-muted)' }}>Remaining</span>
-                  <strong style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {etaLabel}
                   </strong>
                 </span>
               </div>

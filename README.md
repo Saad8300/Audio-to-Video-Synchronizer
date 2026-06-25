@@ -10,13 +10,13 @@ This app provides two professional workflows for automated video creation:
 
 ### 1. Image Timeline (Photos to Video)
 You give it:
-1. 🎵 An **audio file** (MP3, WAV, or M4A)
+1. 🎵 An **audio file** (or multiple audio files that will be merged into one) (MP3, WAV, or M4A)
 2. 🖼️ A **ZIP file** of images named `1.jpg`, `2.jpg`, `3.jpg`…
 3. 📋 A **timestamp CSV file** that says when each image should appear
 
 ### 2. Video Timeline (Clips to Video)
 You give it:
-1. 🎵 An **audio file** (MP3, WAV, or M4A)
+1. 🎵 An **audio file** (or multiple audio files that will be merged into one) (MP3, WAV, or M4A)
 2. 🎬 A **ZIP file** of video clips named `1.mp4`, `2.mov`, `3.webm`…
 3. 📋 A **timeline CSV file** that specifies clip sequence and exact timings
 

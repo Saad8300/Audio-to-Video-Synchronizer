@@ -418,8 +418,9 @@ def _make_watermark_overlay(
             else:
                 x = target_w - pill_w - margin
                 y = target_h - pill_h - margin
-        x = max(0, min(x, target_w - pill_w))
-        y = max(0, min(y, target_h - pill_h))
+        # If not using preset, use raw x/y coordinates directly (allowing negative or off-screen).
+        if position_mode != "preset":
+            pass
         bg_alpha  = int(opacity * 170)
         txt_alpha = int(opacity * 255)
         radius = pill_h // 2
@@ -791,12 +792,12 @@ def generate_video(
                 clip = ImageClip(preprocessed_path, duration=clip_dur).set_fps(fps)
 
             f_in_dur, f_in_col = fade_ins[idx]
-            if f_in_dur > 0:
-                clip = fadein(clip, f_in_dur, color=f_in_col)
+            if f_in_dur > 0 and f_in_col is not None:
+                clip = fadein(clip, f_in_dur, initial_color=f_in_col)
 
             f_out_dur, f_out_col = fade_outs[idx]
-            if f_out_dur > 0:
-                clip = fadeout(clip, f_out_dur, color=f_out_col)
+            if f_out_dur > 0 and f_out_col is not None:
+                clip = fadeout(clip, f_out_dur, final_color=f_out_col)
 
             base_clips.append(clip)
             start_times.append(current_s)

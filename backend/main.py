@@ -11,8 +11,9 @@ import shutil
 import logging
 import time
 import threading
+import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -132,7 +133,7 @@ async def health_check():
 @app.post("/api/jobs/start")
 async def jobs_start(
     # Required uploads
-    audio_file:      UploadFile = File(...),
+    audio_files:     List[UploadFile] = File(...),
     images_zip:      UploadFile = File(...),
     timestamp_csv:   UploadFile = File(...),
     # Core video settings
@@ -236,15 +237,41 @@ async def jobs_start(
     job_temp.mkdir(parents=True, exist_ok=True)
 
     # Save required uploads
-    audio_ext   = Path(audio_file.filename).suffix if audio_file.filename else ".mp3"
-    audio_path  = str(job_temp / f"audio{audio_ext}")
     zip_path    = str(job_temp / "images.zip")
     csv_path    = str(job_temp / "timestamps.csv")
 
-    for upload, dest in [(audio_file, audio_path), (images_zip, zip_path), (timestamp_csv, csv_path)]:
+    for upload, dest in [(images_zip, zip_path), (timestamp_csv, csv_path)]:
         content = await upload.read()
         with open(dest, "wb") as f:
             f.write(content)
+
+    audio_path = str(job_temp / "merged_audio.m4a")
+    if len(audio_files) == 1:
+        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
+        audio_path = str(job_temp / f"audio{audio_ext}")
+        content = await audio_files[0].read()
+        with open(audio_path, "wb") as f:
+            f.write(content)
+    else:
+        from moviepy.editor import AudioFileClip, concatenate_audioclips
+        
+        def natural_sort_key(s):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', str(s))]
+            
+        sorted_files = sorted(audio_files, key=lambda f: natural_sort_key(f.filename or ""))
+        
+        clips = []
+        for i, af in enumerate(sorted_files):
+            ext = Path(af.filename).suffix if af.filename else ".m4a"
+            tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
+            content = await af.read()
+            with open(tmp_path, "wb") as f:
+                f.write(content)
+            clips.append(AudioFileClip(tmp_path))
+        merged = concatenate_audioclips(clips)
+        merged.write_audiofile(audio_path, logger=None)
+        for c in clips: c.close()
+        merged.close()
 
     # Save optional uploads
     intro_path: Optional[str] = None
@@ -454,7 +481,7 @@ async def jobs_cancel(job_id: str):
 @app.post("/api/jobs/start-video-timeline")
 async def jobs_start_video_timeline(
     # Required uploads
-    audio_file:   UploadFile = File(...),
+    audio_files:  List[UploadFile] = File(...),
     videos_zip:   UploadFile = File(...),
     timeline_csv: UploadFile = File(...),
     # Optional uploads
@@ -501,19 +528,44 @@ async def jobs_start_video_timeline(
     job_temp.mkdir(parents=True, exist_ok=True)
 
     # Save required uploads
-    audio_ext  = Path(audio_file.filename).suffix if audio_file.filename else ".mp3"
-    audio_path = str(job_temp / f"audio{audio_ext}")
     zip_path   = str(job_temp / "videos.zip")
     csv_path   = str(job_temp / "timeline.csv")
 
     for upload, dest in [
-        (audio_file, audio_path),
         (videos_zip, zip_path),
         (timeline_csv, csv_path),
     ]:
         content = await upload.read()
         with open(dest, "wb") as f:
             f.write(content)
+
+    audio_path = str(job_temp / "merged_audio.m4a")
+    if len(audio_files) == 1:
+        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
+        audio_path = str(job_temp / f"audio{audio_ext}")
+        content = await audio_files[0].read()
+        with open(audio_path, "wb") as f:
+            f.write(content)
+    else:
+        from moviepy.editor import AudioFileClip, concatenate_audioclips
+        
+        def natural_sort_key(s):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', str(s))]
+            
+        sorted_files = sorted(audio_files, key=lambda f: natural_sort_key(f.filename or ""))
+        
+        clips = []
+        for i, af in enumerate(sorted_files):
+            ext = Path(af.filename).suffix if af.filename else ".m4a"
+            tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
+            content = await af.read()
+            with open(tmp_path, "wb") as f:
+                f.write(content)
+            clips.append(AudioFileClip(tmp_path))
+        merged = concatenate_audioclips(clips)
+        merged.write_audiofile(audio_path, logger=None)
+        for c in clips: c.close()
+        merged.close()
 
     # Save optional intro/outro
     intro_path: Optional[str] = None

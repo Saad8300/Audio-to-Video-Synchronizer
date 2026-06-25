@@ -173,17 +173,18 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── File requirement indicator ──────────────────────────────────────────────
 
-function FileReq({ label, file }: { label: string; file: File | null }) {
+function FileReq({ label, file, files = [] }: { label: string; file?: File | null; files?: File[] }) {
+  const hasFile = (file !== undefined && file !== null) || files.length > 0;
   return (
-    <div className="flex items-center gap-1.5 text-[11px]" style={{ color: file ? 'var(--color-success)' : 'var(--text-muted)' }}>
+    <div className="flex items-center gap-1.5 text-[11px]" style={{ color: hasFile ? 'var(--color-success)' : 'var(--text-muted)' }}>
       <span
         className="w-3.5 h-3.5 rounded flex items-center justify-center text-[8px] font-bold shrink-0"
         style={{
-          background: file ? 'var(--color-success-bg)' : 'var(--bg-input)',
-          border: `1px solid ${file ? 'var(--color-success-border)' : 'var(--border-default)'}`,
+          background: hasFile ? 'var(--color-success-bg)' : 'var(--bg-input)',
+          border: `1px solid ${hasFile ? 'var(--color-success-border)' : 'var(--border-default)'}`,
         }}
       >
-        {file ? '✓' : '○'}
+        {hasFile ? '✓' : '○'}
       </span>
       {label}
     </div>
@@ -209,7 +210,7 @@ export default function App() {
   }
 
   // Required files
-  const [audioFile, setAudioFile]   = useState<File | null>(null)
+  const [audioFiles, setAudioFiles] = useState<File[]>([])
   const [imagesZip, setImagesZip]   = useState<File | null>(null)
   const [csvFile,   setCsvFile]     = useState<File | null>(null)
   const [audioDuration, setAudioDuration] = useState<number | null>(null)
@@ -234,14 +235,31 @@ export default function App() {
 
   // Audio duration detection
   useEffect(() => {
-    if (!audioFile) { setAudioDuration(null); return }
-    const url   = URL.createObjectURL(audioFile)
-    const audio = new Audio(url)
-    audio.onloadedmetadata = () => { setAudioDuration(audio.duration); URL.revokeObjectURL(url) }
-    audio.onerror          = () => { setAudioDuration(null);           URL.revokeObjectURL(url) }
-  }, [audioFile])
+    if (audioFiles.length === 0) { setAudioDuration(null); return }
+    let totalDuration = 0;
+    let loadedCount = 0;
+    let hasError = false;
 
-  const canGenerate = audioFile !== null && imagesZip !== null && csvFile !== null
+    audioFiles.forEach(f => {
+      const url = URL.createObjectURL(f);
+      const audio = new Audio(url);
+      audio.onloadedmetadata = () => {
+        if (!hasError) {
+          totalDuration += audio.duration;
+          loadedCount++;
+          if (loadedCount === audioFiles.length) setAudioDuration(totalDuration);
+        }
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        hasError = true;
+        setAudioDuration(null);
+        URL.revokeObjectURL(url);
+      };
+    });
+  }, [audioFiles])
+
+  const canGenerate = audioFiles.length > 0 && imagesZip !== null && csvFile !== null
     && status !== 'uploading' && status !== 'generating' && status !== 'cancelling'
   const isLoading   = status === 'uploading' || status === 'generating' || status === 'cancelling'
 
@@ -250,14 +268,14 @@ export default function App() {
     result     ? 5 :
     isLoading  ? 4 :
     canGenerate? 4 :
-    audioFile || imagesZip || csvFile ? 2 : 1
+    audioFiles.length > 0 || imagesZip || csvFile ? 2 : 1
 
   // Generate
   const handleGenerate = async () => {
-    if (!audioFile || !imagesZip || !csvFile) return
-    setResult(null); setCancelledMsg(null); setStatus('uploading')
+    if (audioFiles.length === 0 || !imagesZip || !csvFile) return
+    setStatus('uploading')
     try {
-      const { job_id } = await startJob(audioFile, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
+      const { job_id } = await startJob(audioFiles, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
       setCurrentJobId(job_id); setStatus('generating')
     } catch (err) {
       setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
@@ -461,7 +479,7 @@ export default function App() {
                   <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Three files are required to generate a video</p>
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5">
-                  <FileReq label="Audio"  file={audioFile} />
+                  <FileReq label="Audio"  files={audioFiles} />
                   <span style={{ color: 'var(--border-default)' }}>·</span>
                   <FileReq label="Images" file={imagesZip} />
                   <span style={{ color: 'var(--border-default)' }}>·</span>
@@ -472,12 +490,13 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <FileDropZone
                   id="audio-upload"
-                  label="Audio"
-                  description="MP3, WAV, M4A, AAC"
+                  label="Main Audio"
+                  description="Upload one file or multiple audio parts"
                   accept="audio/*,.mp3,.wav,.m4a,.aac"
                   icon={<IconMusic size={14} />}
-                  file={audioFile}
-                  onChange={setAudioFile}
+                  files={audioFiles}
+                  onFilesChange={setAudioFiles}
+                  multiple
                   disabled={isLoading}
                   required
                 />
@@ -600,10 +619,10 @@ export default function App() {
               {!canGenerate && !isLoading && (
                 <div className="flex items-center gap-3 flex-wrap">
                   {[
-                    { label: 'Audio',     file: audioFile },
-                    { label: 'Images',    file: imagesZip },
-                    { label: 'CSV',       file: csvFile   },
-                  ].filter(f => !f.file).map(f => (
+                    { label: 'Audio',     hasFile: audioFiles.length > 0 },
+                    { label: 'Images',    hasFile: !!imagesZip },
+                    { label: 'CSV',       hasFile: !!csvFile   },
+                  ].filter(f => !f.hasFile).map(f => (
                     <span
                       key={f.label}
                       className="flex items-center gap-1 text-[10px]"

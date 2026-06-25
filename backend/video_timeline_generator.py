@@ -561,13 +561,13 @@ def _apply_transition_to_pair(
         return clip_prev, clip_next.fl(fl_bc).crossfadein(safe_t), safe_t
 
     elif transition in ("fade", "fade_black"):
-        c_prev = fadeout(clip_prev, safe_t, color=[0, 0, 0])
-        c_next = fadein(clip_next,  safe_t, color=[0, 0, 0])
+        c_prev = fadeout(clip_prev, safe_t, final_color=[0, 0, 0])
+        c_next = fadein(clip_next,  safe_t, initial_color=[0, 0, 0])
         return c_prev, c_next, 0.0
 
     elif transition == "fade_white":
-        c_prev = fadeout(clip_prev, safe_t, color=[255, 255, 255])
-        c_next = fadein(clip_next,  safe_t, color=[255, 255, 255])
+        c_prev = fadeout(clip_prev, safe_t, final_color=[255, 255, 255])
+        c_next = fadein(clip_next,  safe_t, initial_color=[255, 255, 255])
         return c_prev, c_next, 0.0
 
     elif transition == "flash":
@@ -656,9 +656,8 @@ def _make_watermark_overlay(
             x, y = (target_w - pw) // 2, (target_h - ph) // 2
         else:
             x, y = target_w - pw - margin, target_h - ph - margin
-
-    x = max(0, min(x, target_w - pw))
-    y = max(0, min(y, target_h - ph))
+    if position_mode != "preset":
+        pass
     bg_a  = int(opacity * 170)
     txt_a = int(opacity * 255)
     r = ph // 2
@@ -915,6 +914,7 @@ def generate_video_timeline(
             modified = list(all_clips)
             overlaps = [0.0] * len(modified)
 
+            transition_errors = set()
             for i in range(len(modified) - 1):
                 try:
                     cp, cn, ov = _apply_transition_to_pair(
@@ -926,10 +926,13 @@ def generate_video_timeline(
                     modified[i+1] = cn
                     overlaps[i]   = ov
                 except Exception as te:
-                    warnings_out.append(
-                        f"Transition failed between clips {i+1} and {i+2}: {te}. "
-                        f"Skipping transition for this pair."
-                    )
+                    transition_errors.add(str(te))
+            
+            if transition_errors:
+                err_str = "; ".join(list(transition_errors)[:3])
+                warnings_out.append(
+                    f"Transitions failed for some clips and were skipped. Details: {err_str}"
+                )
 
             # Compose with overlaps
             if any(ov > 0 for ov in overlaps):
