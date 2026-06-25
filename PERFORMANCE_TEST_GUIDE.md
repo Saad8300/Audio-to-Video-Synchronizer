@@ -1,52 +1,43 @@
-# Performance Test Guide for Long Videos
+# Video Timeline Performance & Testing Guide
 
-This guide details the procedure for validating the performance and reliability of Audio Image Sync Studio when rendering long videos (up to 20 minutes).
+This guide covers performance best practices and how to test the Video Timeline workflow effectively.
 
-## Prerequisites
-1. **Audio File:** A `.mp3` or `.wav` file around 20 minutes in length.
-2. **Images ZIP:** A `.zip` file containing 100–300 unique images.
-3. **Timeline CSV:** A timeline CSV file containing rows spanning the full 20 minutes.
+## Performance Guide
 
-## Recommended Test Strategy
+For the best experience, especially with longer timelines, keep these tips in mind:
 
-### Test 1: Fast Preview (The Baseline)
-To quickly ensure the timeline is fully functional without waiting for a massive render, use the Fast Preview setting.
-- **Resolution:** `720p — Fast`
-- **Render Profile:** `Fast Preview`
-- **Expected Results:**
-  - Fast extraction and clip prep (images are preprocessed once and cached if repeated).
-  - Rapid encoding (using `ultrafast` preset and low bitrate).
-  - App UI should not lag; timeline report should remain collapsed and load instantly when expanded.
+- **Use 720p Fast Preview First:** When testing timing and clip sequences, use the `720p` + `Fast Preview` render profile. This generates videos significantly faster without complex encoding.
+- **Long Timelines:** Timelines longer than 10 minutes are fully supported but can take several minutes to encode.
+- **Heavy Visuals:** Combining `4K` resolution, `High Quality` profile, `Blur Crossfade` transitions, or `High` visual styles can be computationally expensive and will substantially increase render time.
+- **Repeated Clips:** You can reuse the exact same video file (e.g., `1.mp4`) multiple times across different CSV rows without duplicating it in the ZIP file. The system handles this efficiently.
+- **Audio Rules:** The main audio file you upload dictates the final video's audio track. The original audio from individual video clips is muted by default.
+- **Timeline Sequencing:** The CSV dictates exactly *when* and *for how long* each clip appears on the timeline. If the visual timeline ends before the audio finishes, black padding will be applied automatically.
 
-### Test 2: Balanced 1080p (Production Grade)
-Once Fast Preview succeeds, test the final production quality.
-- **Resolution:** `1080p — Standard`
-- **Render Profile:** `Balanced`
-- **Expected Results:**
-  - Progress modal accurately reflects progress.
-  - Slower encoding, but stable. 
-  - Backend does not exceed memory limits.
+---
 
-### Test 3: High Resource Warning Check (Optional)
-Test the UI warnings without completing the full render.
-- **Settings:** `4K — Ultra HD`, `High Quality`, and enable `Slow Zoom In`.
-- **Expected Results:** The UI displays a warning recommending Fast Preview and cautioning about slow rendering.
+## Testing Checklist
 
-## Monitoring the Process
-- Check `backend_server.log` to view detailed step timestamps.
-- Ensure the progress modal updates gracefully and shows "Calculating..." if ETA is unavailable.
-- Test the "Abort" button to confirm temp files are successfully deleted upon cancellation.
+To confirm the Video Timeline feature is fully stable, run the following test cases.
 
-## Acceptable Performance
-- **UI Responsiveness:** The browser should not freeze while the backend processes a 300-row CSV.
-- **Memory Footprint:** Temp images are cleaned up reliably on job end (success, cancel, or failure).
-- **Time Limits:** Fast Preview should complete substantially faster than real-time depending on the host machine. Balanced will be slower but steady.
+### Test Asset Preparation
+Create a `videos.zip` containing three short test clips: `1.mp4`, `2.mp4`, `3.mp4`.
+Create a `timeline.csv` with the following content:
+```csv
+start,end,video
+0,5,1.mp4
+5,10,2.mp4
+10,15,1.mp4
+15,20,3.mp4
+```
 
-## Effects & Processing Guide
-The app provides **Style Presets** to quickly assign optimized effects:
-- **Motion Effects:** (e.g., Ken Burns, Dynamic Shorts) add energy but require preprocessing overhead.
-- **Transitions:** (e.g., Crossfade, Blur Crossfade) blend clips. Blur transitions take longer to compute.
-- **Visual Style Filters:** (e.g., Cinematic, High Contrast) adjust colors and contrast before rendering. These run quickly but scale with the resolution (4K is much slower to process than 1080p).
-
-> **Recommendation for Long Videos:**
-> For long videos, use 720p Fast Preview first. Heavy motion, blur transitions, 4K, and High Quality exports can increase render time.
+### Test Cases
+- [ ] **Basic 720p Fast Preview:** Generate using the default settings.
+- [ ] **1080p Balanced:** Generate using higher resolution and standard profile.
+- [ ] **Repeated Clip Handling:** Verify `1.mp4` successfully plays from `0-5s` and again at `10-15s`.
+- [ ] **Audio Longer Than Timeline:** Use a 30-second audio track. Verify the final 10 seconds are padded with black.
+- [ ] **Timeline Longer Than Audio:** Use a 10-second audio track. Verify the visual timeline still completes accurately but is silent after 10s.
+- [ ] **Transitions Enabled:** Select `Crossfade` or `Slide Left` and verify smooth overlap between the four clips.
+- [ ] **Visual Style Enabled:** Apply the `Cinematic` style and ensure the color grading is visible across all clips.
+- [ ] **Intro/Outro/Watermark:** Add a watermark text, upload an intro, and upload an outro video. Verify they append correctly to the generated timeline.
+- [ ] **Missing Video File Error:** Add a row referencing `4.mp4` (which isn't in the ZIP) and verify a clear error message is shown instead of a crash.
+- [ ] **Overlapping Rows Error:** Change row 2 to start at `3s` instead of `5s` and verify the overlap validation catches it.

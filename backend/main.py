@@ -457,6 +457,9 @@ async def jobs_start_video_timeline(
     audio_file:   UploadFile = File(...),
     videos_zip:   UploadFile = File(...),
     timeline_csv: UploadFile = File(...),
+    # Optional uploads
+    intro_file:   Optional[UploadFile] = File(None),
+    outro_file:   Optional[UploadFile] = File(None),
     # Core settings
     aspect_ratio:      str = Form("9:16"),
     export_resolution: str = Form("1080p"),
@@ -464,9 +467,23 @@ async def jobs_start_video_timeline(
     fill_mode:         str = Form("loop"),
     render_profile:    str = Form("balanced"),
     output_name:       Optional[str] = Form(None),
+    # Batch 10C — styling
+    transition:          str   = Form("none"),
+    transition_duration: float = Form(0.5),
+    visual_effect:       str   = Form("none"),
+    effect_strength:     str   = Form("medium"),
+    # Batch 10C — watermark
+    watermark_text:          str   = Form(""),
+    watermark_position_mode: str   = Form("preset"),
+    watermark_position:      str   = Form("bottom_right"),
+    watermark_x:             int   = Form(50),
+    watermark_y:             int   = Form(50),
+    watermark_opacity:       float = Form(0.65),
+    watermark_size:          int   = Form(20),
+    watermark_margin:        int   = Form(36),
 ):
     """
-    Accept uploaded files and settings for Video Timeline mode.
+    Accept uploaded files and settings for Video Timeline mode (Batch 10B + 10C).
     Creates a background job; client polls GET /api/jobs/{job_id}/status.
     """
     # Validate
@@ -483,7 +500,7 @@ async def jobs_start_video_timeline(
     job_temp = TEMP_DIR / job_id
     job_temp.mkdir(parents=True, exist_ok=True)
 
-    # Save uploads
+    # Save required uploads
     audio_ext  = Path(audio_file.filename).suffix if audio_file.filename else ".mp3"
     audio_path = str(job_temp / f"audio{audio_ext}")
     zip_path   = str(job_temp / "videos.zip")
@@ -497,6 +514,30 @@ async def jobs_start_video_timeline(
         content = await upload.read()
         with open(dest, "wb") as f:
             f.write(content)
+
+    # Save optional intro/outro
+    intro_path: Optional[str] = None
+    outro_path: Optional[str] = None
+
+    if intro_file and intro_file.filename:
+        intro_ext  = Path(intro_file.filename).suffix or ".mp4"
+        intro_path = str(job_temp / f"intro{intro_ext}")
+        intro_data = await intro_file.read()
+        if intro_data:
+            with open(intro_path, "wb") as f:
+                f.write(intro_data)
+        else:
+            intro_path = None
+
+    if outro_file and outro_file.filename:
+        outro_ext  = Path(outro_file.filename).suffix or ".mp4"
+        outro_path = str(job_temp / f"outro{outro_ext}")
+        outro_data = await outro_file.read()
+        if outro_data:
+            with open(outro_path, "wb") as f:
+                f.write(outro_data)
+        else:
+            outro_path = None
 
     # Output filename
     safe_name       = output_name.strip() if output_name and output_name.strip() else "video_timeline"
@@ -515,7 +556,7 @@ async def jobs_start_video_timeline(
         with _jobs_lock:
             state["status"]       = "running"
             state["started_at"]   = time.time()
-            state["current_step"] = "Starting"
+            state["current_step"] = "Starting video timeline job"
             state["progress"]     = 3
 
         def progress_callback(pct: int, step: str):
@@ -536,6 +577,20 @@ async def jobs_start_video_timeline(
                 fit_mode=fit_mode,
                 fill_mode=fill_mode_safe,
                 render_profile=render_profile,
+                transition=transition,
+                transition_duration=transition_duration,
+                visual_effect=visual_effect,
+                effect_strength=effect_strength,
+                watermark_text=watermark_text,
+                watermark_position_mode=watermark_position_mode,
+                watermark_position=watermark_position,
+                watermark_x=watermark_x,
+                watermark_y=watermark_y,
+                watermark_opacity=watermark_opacity,
+                watermark_size=watermark_size,
+                watermark_margin=watermark_margin,
+                intro_path=intro_path,
+                outro_path=outro_path,
                 cancel_event=state["cancel_event"],
                 progress_callback=progress_callback,
             )

@@ -1,4 +1,4 @@
-// components/VideoTimelinePage.tsx — Functional Video Timeline workflow (Batch 10B)
+// components/VideoTimelinePage.tsx — Video Timeline workflow (Batch 10B + 10C)
 
 import React, { useState, useCallback, useEffect } from 'react'
 import {
@@ -21,6 +21,12 @@ import type {
   FitMode,
   ClipFillMode,
   RenderProfile,
+  Transition,
+  TransitionDuration,
+  VisualEffect,
+  EffectStrength,
+  WatermarkPosition,
+  WatermarkPositionMode,
   GenerateStatus,
   JobStatus,
   GenerateResponse,
@@ -29,15 +35,34 @@ import { startVideoTimelineJob } from '../utils/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CSV_TEMPLATE = `start,end,video\n0,5,1.mp4\n5,10,2.mp4\n10,15,3.mp4\n15,20,1.mp4\n`
+const CSV_TEMPLATE = `start,end,video\n0,5,1.mp4\n5,10,2.mp4\n10,15,1.mp4\n15,20,3.mp4\n`
 
 const DEFAULT_SETTINGS: VideoTimelineSettings = {
+  // Core
   aspectRatio:      '9:16',
   exportResolution: '1080p',
   fitMode:          'cover',
   fillMode:         'loop',
   renderProfile:    'balanced',
   outputName:       'video_timeline',
+  // Styling
+  transition:          'none',
+  transitionDuration:  '0.5',
+  visualEffect:        'none',
+  effectStrength:      'medium',
+  // Watermark
+  enableWatermark:       false,
+  watermarkText:         '',
+  watermarkPositionMode: 'preset',
+  watermarkPosition:     'bottom_right',
+  watermarkX:            50,
+  watermarkY:            50,
+  watermarkOpacity:      65,
+  watermarkSize:         20,
+  watermarkMargin:       36,
+  // Intro / Outro
+  enableIntro: false,
+  enableOutro: false,
 }
 
 // ── Reusable Select ───────────────────────────────────────────────────────────
@@ -73,7 +98,6 @@ function VideoDropZone({
 }) {
   const [drag, setDrag] = useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
-
   const handleFile = (f: File | null) => { if (f) onChange(f) }
 
   return (
@@ -129,11 +153,40 @@ function VideoDropZone({
 // ── Results strip ──────────────────────────────────────────────────────────────
 
 function VideoTimelineResult({
-  result, rowCount,
-}: { result: GenerateResponse; rowCount: number }) {
-  const videoUrl  = result.output_video_url
-  const hasVideo  = result.success && videoUrl
-  const filename  = result.output_filename ?? 'video_timeline.mp4'
+  result, rowCount, settings,
+}: { result: GenerateResponse; rowCount: number; settings: VideoTimelineSettings }) {
+  const videoUrl = result.output_video_url
+  const hasVideo = result.success && videoUrl
+  const filename = result.output_filename ?? 'video_timeline.mp4'
+
+  let chips = result.success ? [
+    `Mode: Video Timeline`,
+    `Rows: ${rowCount}`,
+    `Res: ${settings.exportResolution}`,
+    `Profile: ${settings.renderProfile.replace('_', ' ')}`,
+    `Fill: ${settings.fillMode}`,
+    ...(settings.transition !== 'none' ? [`Trans: ${settings.transition.replace('_', ' ')}`] : []),
+    ...(settings.visualEffect !== 'none' ? [`Style: ${settings.visualEffect.replace('_', ' ')}`] : []),
+    ...(settings.watermarkText.trim() ? ['Watermark: on'] : []),
+    ...(settings.enableIntro ? ['Intro: on'] : []),
+    ...(settings.enableOutro ? ['Outro: on'] : []),
+    ...(result.visual_duration ? [`Visual: ${result.visual_duration.toFixed(2)}s`] : []),
+    ...(result.audio_duration ? [`Audio: ${result.audio_duration.toFixed(2)}s`] : []),
+  ] : []
+
+  // Compact display: if too many chips, prioritize key information
+  if (chips.length > 9) {
+    chips = [
+      `Mode: Video Timeline`,
+      `Rows: ${rowCount}`,
+      `Res: ${settings.exportResolution}`,
+      `Profile: ${settings.renderProfile.replace('_', ' ')}`,
+      ...(result.visual_duration ? [`Duration: ${result.visual_duration.toFixed(2)}s`] : []),
+      ...(settings.transition !== 'none' ? [`Trans: ${settings.transition.replace('_', ' ')}`] : []),
+      ...(settings.visualEffect !== 'none' ? [`Style: ${settings.visualEffect.replace('_', ' ')}`] : []),
+      ...(settings.watermarkText.trim() || settings.enableIntro || settings.enableOutro ? ['Extras: on'] : []),
+    ]
+  }
 
   return (
     <div className="space-y-4 animate-slide-up">
@@ -158,16 +211,12 @@ function VideoTimelineResult({
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
               {result.success
-                ? `Your video is ready to preview and download.${result.elapsed_seconds ? ` Completed in ${result.elapsed_seconds}s.` : ''}`
+                ? 'Your video is ready to preview and download.'
                 : 'See error details below.'}
             </p>
-            {result.success && (
+            {chips.length > 0 && (
               <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                {[
-                  'Mode: Video Timeline',
-                  `Rows: ${rowCount}`,
-                  ...(result.elapsed_seconds ? [`Time: ${result.elapsed_seconds}s`] : []),
-                ].map(chip => (
+                {chips.map(chip => (
                   <span key={chip} style={{
                     fontSize: 10, fontFamily: 'monospace', fontWeight: 600,
                     padding: '2px 8px', borderRadius: 6,
@@ -183,11 +232,23 @@ function VideoTimelineResult({
 
       {/* Errors / warnings */}
       {result.errors.length > 0 && (
-        <div className="rounded-xl p-3.5 space-y-1.5" style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}>
-          <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-error)' }}>
-            <IconX size={12} /> {result.errors.length} Error{result.errors.length > 1 ? 's' : ''}
+        <div className="rounded-xl p-4 space-y-2" style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}>
+          <p className="text-sm font-bold flex items-center gap-1.5" style={{ color: 'var(--color-error)' }}>
+            <IconX size={14} /> Video Timeline Failed
           </p>
-          {result.errors.map((e, i) => <p key={i} className="text-xs" style={{ color: 'var(--color-error)', opacity: 0.85 }}>· {e}</p>)}
+          <p className="text-xs font-semibold" style={{ color: 'var(--color-error)', opacity: 0.9 }}>
+            {result.errors[0]}
+          </p>
+          {result.errors.length > 1 && (
+            <details className="mt-2 pt-2" style={{ borderTop: '1px solid var(--color-error-border)' }}>
+              <summary className="text-[10px] uppercase tracking-wider font-bold opacity-70 cursor-pointer outline-none select-none" style={{ color: 'var(--color-error)' }}>
+                Details ({result.errors.length - 1} more)
+              </summary>
+              <div className="mt-2 space-y-1">
+                {result.errors.slice(1).map((e, i) => <p key={i} className="text-xs" style={{ color: 'var(--color-error)', opacity: 0.85 }}>· {e}</p>)}
+              </div>
+            </details>
+          )}
         </div>
       )}
       {result.warnings.length > 0 && (
@@ -229,6 +290,18 @@ function VideoTimelineResult({
   )
 }
 
+// ── Section Divider ───────────────────────────────────────────────────────────
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
+      <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{label}</span>
+      <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function VideoTimelinePage() {
@@ -236,11 +309,107 @@ export default function VideoTimelinePage() {
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [videosZip, setVideosZip] = useState<File | null>(null)
   const [csvFile,   setCsvFile]   = useState<File | null>(null)
+  const [introFile, setIntroFile] = useState<File | null>(null)
+  const [outroFile, setOutroFile] = useState<File | null>(null)
 
   // Settings
   const [settings, setSettings] = useState<VideoTimelineSettings>(DEFAULT_SETTINGS)
   const set = <K extends keyof VideoTimelineSettings>(key: K, val: VideoTimelineSettings[K]) =>
     setSettings(s => ({ ...s, [key]: val }))
+
+  // Auto-enable intro/outro when files uploaded
+  const handleIntroChange = (f: File | null) => {
+    setIntroFile(f)
+    set('enableIntro', !!f)
+  }
+  const handleOutroChange = (f: File | null) => {
+    setOutroFile(f)
+    set('enableOutro', !!f)
+  }
+  // Auto-enable watermark when text typed
+  const handleWmTextChange = (text: string) => {
+    set('watermarkText', text)
+    set('enableWatermark', text.trim().length > 0)
+  }
+
+  // Duration warnings
+  const [audioDur, setAudioDur] = useState<number | null>(null)
+  const [visualDur, setVisualDur] = useState<number | null>(null)
+  const [durationWarning, setDurationWarning] = useState<string | null>(null)
+
+  // Calculate audio duration
+  useEffect(() => {
+    if (!audioFile) {
+      setAudioDur(null)
+      return
+    }
+    const url = URL.createObjectURL(audioFile)
+    const audio = new Audio(url)
+    audio.addEventListener('loadedmetadata', () => {
+      setAudioDur(audio.duration)
+      URL.revokeObjectURL(url)
+    })
+    return () => URL.revokeObjectURL(url)
+  }, [audioFile])
+
+  // Calculate visual duration from CSV
+  useEffect(() => {
+    if (!csvFile) {
+      setVisualDur(null)
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string
+        if (!text) return
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+        if (lines.length < 2) return
+        
+        const header = lines[0].toLowerCase().split(',')
+        const startIdx = header.indexOf('start')
+        const endIdx = header.indexOf('end')
+        
+        if (startIdx === -1 || endIdx === -1) return
+        
+        let minStart = Infinity
+        let maxEnd = -Infinity
+        
+        for (let i = 1; i < lines.length; i++) {
+          const parts = lines[i].split(',')
+          const s = parseFloat(parts[startIdx])
+          const e = parseFloat(parts[endIdx])
+          if (!isNaN(s) && !isNaN(e)) {
+            if (s < minStart) minStart = s
+            if (e > maxEnd) maxEnd = e
+          }
+        }
+        if (minStart !== Infinity && maxEnd !== -Infinity && maxEnd > minStart) {
+          setVisualDur(maxEnd - minStart)
+        } else {
+          setVisualDur(null)
+        }
+      } catch (err) {
+        setVisualDur(null)
+      }
+    }
+    reader.readAsText(csvFile)
+  }, [csvFile])
+
+  // Update duration warning
+  useEffect(() => {
+    if (audioDur !== null && visualDur !== null) {
+      if (visualDur < audioDur - 0.5) {
+        setDurationWarning(`Visual timeline is shorter than audio. Black padding will be added until the audio ends.`)
+      } else if (visualDur > audioDur + 0.5) {
+        setDurationWarning(`Visual timeline is longer than audio. Final video will be trimmed to match the main audio.`)
+      } else {
+        setDurationWarning(null)
+      }
+    } else {
+      setDurationWarning(null)
+    }
+  }, [audioDur, visualDur])
 
   // Generation state
   const [status,       setStatus]       = useState<GenerateStatus>('idle')
@@ -266,7 +435,10 @@ export default function VideoTimelinePage() {
     if (!audioFile || !videosZip || !csvFile) return
     setResult(null); setCancelledMsg(null); setStatus('uploading')
     try {
-      const { job_id } = await startVideoTimelineJob(audioFile, videosZip, csvFile, settings)
+      const { job_id } = await startVideoTimelineJob(
+        audioFile, videosZip, csvFile, settings,
+        introFile, outroFile,
+      )
       setCurrentJobId(job_id); setStatus('generating')
     } catch (err) {
       setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
@@ -306,6 +478,18 @@ export default function VideoTimelinePage() {
   }, [])
 
   const rowCount = result?.timeline_report?.length ?? 0
+
+  // Summary chips for Generate panel
+  const summaryChips = [
+    { label: 'Res',     value: settings.exportResolution },
+    { label: 'Profile', value: settings.renderProfile.replace('_', ' ') },
+    { label: 'Fill',    value: settings.fillMode },
+    ...(settings.transition !== 'none' ? [{ label: 'Trans', value: settings.transition.replace('_', ' ') }] : []),
+    ...(settings.visualEffect !== 'none' ? [{ label: 'Style', value: settings.visualEffect.replace('_', ' ') }] : []),
+    ...(settings.watermarkText.trim() ? [{ label: 'WM', value: 'on' }] : []),
+    ...(introFile ? [{ label: 'Intro', value: 'on' }] : []),
+    ...(outroFile ? [{ label: 'Outro', value: 'on' }] : []),
+  ]
 
   return (
     <>
@@ -411,8 +595,8 @@ export default function VideoTimelinePage() {
 {`start,end,video
 0,5,1.mp4
 5,10,2.mp4
-10,15,3.mp4
-15,20,1.mp4`}
+10,15,1.mp4
+15,20,3.mp4`}
                     </pre>
                   </div>
                 </div>
@@ -441,11 +625,7 @@ export default function VideoTimelinePage() {
                   </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-1 flex-wrap justify-end">
-                  {[
-                    { label: 'Res',     value: settings.exportResolution },
-                    { label: 'Profile', value: settings.renderProfile.replace('_', ' ') },
-                    { label: 'Fill',    value: settings.fillMode },
-                  ].map(({ label, value }) => (
+                  {summaryChips.map(({ label, value }) => (
                     <span key={label} className="flex items-center gap-1 px-2 py-1 rounded text-[10px]"
                       style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)' }}>
                       <span className="font-semibold">{label}</span>
@@ -455,6 +635,18 @@ export default function VideoTimelinePage() {
                   ))}
                 </div>
               </div>
+
+              {/* Duration Warning */}
+              {durationWarning && !isLoading && (
+                <div className="rounded-xl p-3.5 space-y-1" style={{ background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)' }}>
+                  <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-warning)' }}>
+                    <IconAlertTriangle size={12} /> Timeline Duration Mismatch
+                  </p>
+                  <p className="text-[11px]" style={{ color: 'var(--color-warning)', opacity: 0.85 }}>
+                    {durationWarning}
+                  </p>
+                </div>
+              )}
 
               <button
                 id="vt-generate-btn"
@@ -493,7 +685,7 @@ export default function VideoTimelinePage() {
             </div>
 
             {/* Results */}
-            {result && <VideoTimelineResult result={result} rowCount={rowCount} />}
+            {result && <VideoTimelineResult result={result} rowCount={rowCount} settings={settings} />}
           </div>
 
           {/* ── RIGHT COLUMN — Settings ── */}
@@ -507,7 +699,10 @@ export default function VideoTimelinePage() {
                 </span>
               </div>
 
+              {/* ── Output ── */}
               <div className="space-y-3">
+                <SectionDivider label="Output" />
+
                 <div className="grid grid-cols-2 gap-2">
                   <Sel id="vt-aspect" label="Aspect Ratio" value={settings.aspectRatio}
                     onChange={v => set('aspectRatio', v as AspectRatio)} disabled={isLoading}
@@ -561,9 +756,9 @@ export default function VideoTimelinePage() {
                   ]}
                 />
                 <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                  {settings.fillMode === 'loop'      ? 'Loops the clip to fill the full segment duration.' : ''}
-                  {settings.fillMode === 'trim_only' ? 'Uses only the available clip length; pads remainder with black.' : ''}
-                  {settings.fillMode === 'freeze'    ? 'Plays clip once then holds the last frame.' : ''}
+                  {settings.fillMode === 'loop'      ? 'Repeats short clips until the CSV segment is filled.' : ''}
+                  {settings.fillMode === 'trim_only' ? 'Uses the clip once. If it is shorter than the segment, remaining time is padded safely.' : ''}
+                  {settings.fillMode === 'freeze'    ? 'Plays the clip once, then holds the final frame until the segment ends.' : ''}
                 </p>
 
                 <div className="space-y-1">
@@ -576,9 +771,158 @@ export default function VideoTimelinePage() {
                     />
                     <span className="text-[10px] font-mono shrink-0 px-2 py-1.5 rounded-md"
                       style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                      _YYYYMMDD.mp4
+                      .mp4
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* ── Timeline Styling ── */}
+              <div className="space-y-3">
+                <SectionDivider label="Timeline Styling" />
+
+                <Sel id="vt-transition" label="Transition" value={settings.transition}
+                  onChange={v => set('transition', v as Transition)} disabled={isLoading}
+                  options={[
+                    { value: 'none',          label: 'None' },
+                    { value: 'fade',          label: 'Fade' },
+                    { value: 'crossfade',     label: 'Crossfade' },
+                    { value: 'fade_black',    label: 'Fade to Black' },
+                    { value: 'fade_white',    label: 'Fade to White' },
+                    { value: 'slide_left',    label: 'Slide Left' },
+                    { value: 'slide_right',   label: 'Slide Right' },
+                    { value: 'slide_up',      label: 'Slide Up' },
+                    { value: 'slide_down',    label: 'Slide Down' },
+                    { value: 'push_left',     label: 'Push Left' },
+                    { value: 'push_right',    label: 'Push Right' },
+                    { value: 'zoom_in',       label: 'Zoom In' },
+                    { value: 'zoom_out',      label: 'Zoom Out' },
+                    { value: 'blur_crossfade',label: 'Blur Crossfade' },
+                    { value: 'flash',         label: 'Flash' },
+                  ]}
+                />
+
+                {settings.transition !== 'none' && (
+                  <Sel id="vt-transition-dur" label="Transition Duration" value={settings.transitionDuration}
+                    onChange={v => set('transitionDuration', v as TransitionDuration)} disabled={isLoading}
+                    options={[
+                      { value: '0.2', label: '0.2s — Quick' },
+                      { value: '0.5', label: '0.5s — Default' },
+                      { value: '0.8', label: '0.8s — Smooth' },
+                      { value: '1.0', label: '1.0s — Slow' },
+                    ]}
+                  />
+                )}
+
+                <Sel id="vt-visual-effect" label="Visual Style" value={settings.visualEffect}
+                  onChange={v => set('visualEffect', v as VisualEffect)} disabled={isLoading}
+                  options={[
+                    { value: 'none',          label: 'None' },
+                    { value: 'cinematic',     label: 'Cinematic' },
+                    { value: 'warm',          label: 'Warm' },
+                    { value: 'high_contrast', label: 'High Contrast' },
+                    { value: 'black_and_white', label: 'Black & White' },
+                    { value: 'clean_bright',  label: 'Clean Bright' },
+                  ]}
+                />
+
+                {settings.visualEffect !== 'none' && (
+                  <Sel id="vt-effect-strength" label="Effect Strength" value={settings.effectStrength}
+                    onChange={v => set('effectStrength', v as EffectStrength)} disabled={isLoading}
+                    options={[
+                      { value: 'low',    label: 'Low' },
+                      { value: 'medium', label: 'Medium' },
+                      { value: 'high',   label: 'High' },
+                    ]}
+                  />
+                )}
+              </div>
+
+              {/* ── Enhancements ── */}
+              <div className="space-y-3">
+                <SectionDivider label="Enhancements" />
+
+                {/* Intro */}
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>Intro Video <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></p>
+                  <VideoDropZone
+                    id="vt-intro-upload"
+                    label="Upload Intro"
+                    description=".mp4, .mov, .webm"
+                    accept="video/*,.mp4,.mov,.webm"
+                    icon={<IconFilm size={14} />}
+                    file={introFile}
+                    onChange={handleIntroChange}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {/* Outro */}
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>Outro Video <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></p>
+                  <VideoDropZone
+                    id="vt-outro-upload"
+                    label="Upload Outro"
+                    description=".mp4, .mov, .webm"
+                    accept="video/*,.mp4,.mov,.webm"
+                    icon={<IconFilm size={14} />}
+                    file={outroFile}
+                    onChange={handleOutroChange}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {/* Watermark */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    Watermark
+                    {settings.watermarkText.trim() && (
+                      <span className="ml-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                        style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)' }}>
+                        ON
+                      </span>
+                    )}
+                  </p>
+                  <input
+                    id="vt-watermark-text"
+                    type="text"
+                    placeholder="Watermark text (leave blank to disable)"
+                    value={settings.watermarkText}
+                    onChange={e => handleWmTextChange(e.target.value)}
+                    className="form-input w-full"
+                    disabled={isLoading}
+                    maxLength={80}
+                  />
+                  {settings.watermarkText.trim() && (
+                    <div className="space-y-2">
+                      <Sel id="vt-wm-pos" label="Position" value={settings.watermarkPosition}
+                        onChange={v => set('watermarkPosition', v as WatermarkPosition)} disabled={isLoading}
+                        options={[
+                          { value: 'bottom_right', label: 'Bottom Right' },
+                          { value: 'bottom_left',  label: 'Bottom Left' },
+                          { value: 'top_right',    label: 'Top Right' },
+                          { value: 'top_left',     label: 'Top Left' },
+                          { value: 'center',       label: 'Center' },
+                        ]}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="form-label">Size</label>
+                          <input type="range" min={8} max={60} value={settings.watermarkSize}
+                            onChange={e => set('watermarkSize', Number(e.target.value))}
+                            className="w-full" disabled={isLoading} />
+                          <p className="text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>{settings.watermarkSize}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="form-label">Opacity</label>
+                          <input type="range" min={10} max={100} value={settings.watermarkOpacity}
+                            onChange={e => set('watermarkOpacity', Number(e.target.value))}
+                            className="w-full" disabled={isLoading} />
+                          <p className="text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>{settings.watermarkOpacity}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

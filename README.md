@@ -6,12 +6,21 @@
 
 ## 🧩 What does this app do?
 
+This app provides two professional workflows for automated video creation:
+
+### 1. Image Timeline (Photos to Video)
 You give it:
 1. 🎵 An **audio file** (MP3, WAV, or M4A)
 2. 🖼️ A **ZIP file** of images named `1.jpg`, `2.jpg`, `3.jpg`…
 3. 📋 A **timestamp CSV file** that says when each image should appear
 
-It generates a professional **MP4 video** where each image is shown at exactly the right time, synced to your audio.
+### 2. Video Timeline (Clips to Video)
+You give it:
+1. 🎵 An **audio file** (MP3, WAV, or M4A)
+2. 🎬 A **ZIP file** of video clips named `1.mp4`, `2.mov`, `3.webm`…
+3. 📋 A **timeline CSV file** that specifies clip sequence and exact timings
+
+It generates a professional **MP4 video** precisely synced to your audio with optional transitions, watermarks, intro/outro bumpers, and stylistic filters.
 
 ---
 
@@ -49,6 +58,12 @@ brew install ffmpeg
 4. A terminal window opens and the app starts automatically
 5. Your browser opens at **http://localhost:5173** ✨
 
+### Windows Users
+1. Open the project folder in Windows Explorer
+2. Double-click `start_windows.bat`
+3. Two command prompt windows will open for the backend and frontend
+4. Open **http://localhost:5173** in your browser
+
 That's it! The script handles everything:
 - Creates the Python virtual environment
 - Installs Python packages
@@ -59,7 +74,8 @@ That's it! The script handles everything:
 
 ### To Stop the App
 
-**Double-click `stop_app.command`** — it cleanly stops everything.
+**Mac Users:** Double-click `stop_app.command` — it cleanly stops everything.
+**Windows Users:** Close the two command prompt windows or run `stop_windows.bat`.
 
 ---
 

@@ -115,6 +115,8 @@ export interface GenerateResponse {
   timeline_report:    TimelineRow[]
   warnings:           string[]
   errors:             string[]
+  visual_duration?:   number
+  audio_duration?:    number
 }
 
 export type GenerateStatus = 'idle' | 'uploading' | 'generating' | 'cancelling' | 'done' | 'error'
@@ -132,17 +134,41 @@ export interface JobStatus {
   output_video_url:            string | null
   output_filename:             string | null
   timeline_report:             TimelineRow[]
+  visual_duration?:            number
+  audio_duration?:             number
 }
 
-// ── Batch 10B — Video Timeline ────────────────────────────────────────────────
+// ── Batch 10B + 10C — Video Timeline ─────────────────────────────────────────
 
 export type ClipFillMode = 'loop' | 'trim_only' | 'freeze'
 
 export interface VideoTimelineSettings {
+  // Core
   aspectRatio:      AspectRatio
   exportResolution: ExportResolution
   fitMode:          FitMode
   fillMode:         ClipFillMode
   renderProfile:    RenderProfile
   outputName:       string
+
+  // Batch 10C — styling
+  transition:          Transition
+  transitionDuration:  TransitionDuration
+  visualEffect:        VisualEffect
+  effectStrength:      EffectStrength
+
+  // Batch 10C — watermark
+  enableWatermark:       boolean
+  watermarkText:         string
+  watermarkPositionMode: WatermarkPositionMode
+  watermarkPosition:     WatermarkPosition
+  watermarkX:            number
+  watermarkY:            number
+  watermarkOpacity:      number
+  watermarkSize:         number
+  watermarkMargin:       number
+
+  // Batch 10C — intro / outro
+  enableIntro:  boolean
+  enableOutro:  boolean
 }

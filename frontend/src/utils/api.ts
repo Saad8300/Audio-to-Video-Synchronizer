@@ -118,7 +118,7 @@ export async function cancelJob(jobId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Start a Video Timeline background job.
+ * Start a Video Timeline background job (Batch 10B + 10C).
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
 export async function startVideoTimelineJob(
@@ -126,17 +126,46 @@ export async function startVideoTimelineJob(
   videosZip:   File,
   timelineCsv: File,
   settings:    VideoTimelineSettings,
+  introFile?:  File | null,
+  outroFile?:  File | null,
 ): Promise<{ job_id: string }> {
   const form = new FormData()
-  form.append('audio_file',        audioFile)
-  form.append('videos_zip',        videosZip)
-  form.append('timeline_csv',      timelineCsv)
+
+  // Required uploads
+  form.append('audio_file',   audioFile)
+  form.append('videos_zip',   videosZip)
+  form.append('timeline_csv', timelineCsv)
+
+  // Optional uploads
+  if (introFile) form.append('intro_file', introFile)
+  if (outroFile) form.append('outro_file', outroFile)
+
+  // Core settings
   form.append('aspect_ratio',      settings.aspectRatio)
   form.append('export_resolution', settings.exportResolution)
   form.append('fit_mode',          settings.fitMode)
   form.append('fill_mode',         settings.fillMode)
   form.append('render_profile',    settings.renderProfile)
   form.append('output_name',       settings.outputName || 'video_timeline')
+
+  // Batch 10C — styling
+  form.append('transition',          settings.transition)
+  form.append('transition_duration', settings.transitionDuration)
+  form.append('visual_effect',       settings.visualEffect)
+  form.append('effect_strength',     settings.effectStrength)
+
+  // Batch 10C — watermark (auto-enable when text exists)
+  const wmActive = settings.watermarkText.trim().length > 0
+  if (wmActive) {
+    form.append('watermark_text',          settings.watermarkText)
+    form.append('watermark_position_mode', settings.watermarkPositionMode)
+    form.append('watermark_position',      settings.watermarkPosition)
+    form.append('watermark_x',             String(settings.watermarkX))
+    form.append('watermark_y',             String(settings.watermarkY))
+    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
+    form.append('watermark_size',          String(settings.watermarkSize))
+    form.append('watermark_margin',        String(settings.watermarkMargin))
+  }
 
   const res = await fetch(`${BASE_URL}/api/jobs/start-video-timeline`, {
     method: 'POST',
@@ -150,6 +179,7 @@ export async function startVideoTimelineJob(
 
   return res.json() as Promise<{ job_id: string }>
 }
+
 
 // ---------------------------------------------------------------------------
 // Legacy synchronous API (kept for backward compat — not used by main UI)
