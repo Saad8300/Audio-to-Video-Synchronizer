@@ -172,3 +172,30 @@ export interface VideoTimelineSettings {
   enableIntro:  boolean
   enableOutro:  boolean
 }
+
+// ── Batch 11C — Media Timeline Text Styling ────────────────────────────────
+export type TextPosition   = 'bottom_center' | 'lower_third' | 'center' | 'top_center' | 'bottom_left' | 'bottom_right'
+export type TextSize       = 'small' | 'medium' | 'large' | 'extra_large'
+export type TextColor      = 'white' | 'yellow' | 'black' | 'accent'
+export type TextBackground = 'none' | 'soft_shadow' | 'dark_box' | 'light_box' | 'blur_box'
+export type TextWidth      = 'narrow' | 'medium' | 'wide'
+export type TextAlignment  = 'left' | 'center' | 'right'
+
+// ── Batch 11B/11C — Media Timeline ───────────────────────────────────────────
+
+export interface MediaTimelineSettings {
+  aspectRatio:      AspectRatio
+  exportResolution: ExportResolution
+  fitMode:          FitMode
+  fillMode:         ClipFillMode
+  renderProfile:    RenderProfile
+  outputName:       string
+  
+  // Batch 11C
+  textPosition:   TextPosition
+  textSize:       TextSize
+  textColor:      TextColor
+  textBackground: TextBackground
+  textWidth:      TextWidth
+  textAlignment:  TextAlignment
+}

@@ -213,3 +213,63 @@ export async function generateVideo(
 
   return res.json() as Promise<GenerateResponse>
 }
+
+// ---------------------------------------------------------------------------
+// Media Timeline job API (Batch 11B)
+// ---------------------------------------------------------------------------
+
+/**
+ * Start a Media Timeline background job (Batch 11B).
+ * Returns immediately with a job_id; poll getJobStatus() for updates.
+ */
+export async function startMediaTimelineJob(
+  audioFiles:  File[],
+  mediaZip:    File,
+  timelineCsv: File,
+  settings:    {
+    aspectRatio:      string
+    exportResolution: string
+    fitMode:          string
+    fillMode:         string
+    renderProfile:    string
+    outputName:       string
+    textPosition:     string
+    textSize:         string
+    textColor:        string
+    textBackground:   string
+    textWidth:        string
+    textAlignment:    string
+  }
+): Promise<{ job_id: string }> {
+  const form = new FormData()
+
+  audioFiles.forEach(f => form.append('audio_files', f))
+  form.append('media_zip',    mediaZip)
+  form.append('timeline_csv', timelineCsv)
+
+  form.append('aspect_ratio',      settings.aspectRatio)
+  form.append('export_resolution', settings.exportResolution)
+  form.append('fit_mode',          settings.fitMode)
+  form.append('fill_mode',         settings.fillMode)
+  form.append('render_profile',    settings.renderProfile)
+  form.append('output_name',       settings.outputName || 'media_timeline')
+
+  form.append('text_position',   settings.textPosition)
+  form.append('text_size',       settings.textSize)
+  form.append('text_color',      settings.textColor)
+  form.append('text_background', settings.textBackground)
+  form.append('text_width',      settings.textWidth)
+  form.append('text_alignment',  settings.textAlignment)
+
+  const res = await fetch(`${BASE_URL}/api/jobs/start-media-timeline`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Server error ${res.status}: ${text}`)
+  }
+
+  return res.json() as Promise<{ job_id: string }>
+}

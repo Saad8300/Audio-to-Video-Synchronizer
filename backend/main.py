@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from video_generator import generate_video, GenerationCancelled
 from video_timeline_generator import generate_video_timeline, VideoTimelineCancelled
+from media_timeline_generator import generate_media_timeline, MediaTimelineCancelled
 from utils import seconds_to_mmss, FORMAT_DIMENSIONS
 
 # ---------------------------------------------------------------------------
@@ -697,6 +698,190 @@ async def jobs_start_video_timeline(
     thread.start()
 
     logger.info("Video timeline job %s queued", job_id)
+    return JSONResponse(content={"job_id": job_id})
+
+
+# ---------------------------------------------------------------------------
+# Route — Media Timeline (Batch 11B)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/jobs/start-media-timeline")
+async def jobs_start_media_timeline(
+    # Required uploads
+    audio_files:  List[UploadFile] = File(...),
+    media_zip:    UploadFile = File(...),
+    timeline_csv: UploadFile = File(...),
+    # Core settings
+    aspect_ratio:      str = Form("9:16"),
+    export_resolution: str = Form("1080p"),
+    fit_mode:          str = Form("cover"),
+    fill_mode:         str = Form("loop"),
+    render_profile:    str = Form("balanced"),
+    output_name:       Optional[str] = Form(None),
+    # Batch 11C — Text Styling
+    text_position:     str = Form("bottom_center"),
+    text_size:         str = Form("medium"),
+    text_color:        str = Form("white"),
+    text_background:   str = Form("soft_shadow"),
+    text_width:        str = Form("wide"),
+    text_alignment:    str = Form("center"),
+):
+    """
+    Accept uploaded files and settings for Media Timeline mode (Batch 11B).
+    Creates a background job; client polls GET /api/jobs/{job_id}/status.
+    """
+    # Validate
+    if aspect_ratio not in VALID_ASPECT_RATIOS:
+        raise HTTPException(400, f"Invalid aspect_ratio '{aspect_ratio}'.")
+    if export_resolution not in VALID_EXPORT_RESOLUTIONS:
+        raise HTTPException(400, f"Invalid export_resolution '{export_resolution}'.")
+    if render_profile not in VALID_RENDER_PROFILES:
+        raise HTTPException(400, f"Invalid render_profile '{render_profile}'.")
+    fill_mode_safe = fill_mode if fill_mode in VALID_FILL_MODES else "loop"
+
+    # Set up job temp dir
+    job_id   = uuid.uuid4().hex
+    job_temp = TEMP_DIR / job_id
+    job_temp.mkdir(parents=True, exist_ok=True)
+
+    # Save required uploads
+    zip_path   = str(job_temp / "media.zip")
+    csv_path   = str(job_temp / "timeline.csv")
+
+    for upload, dest in [
+        (media_zip, zip_path),
+        (timeline_csv, csv_path),
+    ]:
+        content = await upload.read()
+        with open(dest, "wb") as f:
+            f.write(content)
+
+    audio_path = str(job_temp / "merged_audio.m4a")
+    if len(audio_files) == 1:
+        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
+        audio_path = str(job_temp / f"audio{audio_ext}")
+        content = await audio_files[0].read()
+        with open(audio_path, "wb") as f:
+            f.write(content)
+    else:
+        from moviepy.editor import AudioFileClip, concatenate_audioclips
+        
+        def natural_sort_key(s):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', str(s))]
+            
+        sorted_files = sorted(audio_files, key=lambda f: natural_sort_key(f.filename or ""))
+        
+        clips = []
+        for i, af in enumerate(sorted_files):
+            ext = Path(af.filename).suffix if af.filename else ".m4a"
+            tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
+            content = await af.read()
+            with open(tmp_path, "wb") as f:
+                f.write(content)
+            clips.append(AudioFileClip(tmp_path))
+        merged = concatenate_audioclips(clips)
+        merged.write_audiofile(audio_path, logger=None)
+        for c in clips: c.close()
+        merged.close()
+
+    # Output filename
+    safe_name       = output_name.strip() if output_name and output_name.strip() else "media_timeline"
+    safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
+    safe_name       = safe_name.strip().replace(" ", "_") or "media_timeline"
+    timestamp_str   = time.strftime("%Y%m%d_%H%M%S")
+    output_filename = f"{safe_name}_{timestamp_str}.mp4"
+    output_path     = str(OUTPUTS_DIR / output_filename)
+
+    # Register job
+    state = _new_job(job_id)
+    state["temp_dir"]        = str(job_temp)
+    state["output_filename"] = output_filename
+
+    def run_job():
+        with _jobs_lock:
+            state["status"]       = "running"
+            state["started_at"]   = time.time()
+            state["current_step"] = "Starting media timeline job"
+            state["progress"]     = 3
+
+        def progress_callback(pct: int, step: str):
+            with _jobs_lock:
+                if state["status"] == "running":
+                    state["progress"]     = pct
+                    state["current_step"] = step
+
+        try:
+            result = generate_media_timeline(
+                audio_path=audio_path,
+                zip_path=zip_path,
+                csv_path=csv_path,
+                output_path=output_path,
+                temp_dir=str(job_temp),
+                aspect_ratio=aspect_ratio,
+                export_resolution=export_resolution,
+                fit_mode=fit_mode,
+                fill_mode=fill_mode_safe,
+                render_profile=render_profile,
+                text_position=text_position,
+                text_size=text_size,
+                text_color=text_color,
+                text_background=text_background,
+                text_width=text_width,
+                text_alignment=text_alignment,
+                cancel_event=state["cancel_event"],
+                progress_callback=progress_callback,
+            )
+
+            timeline_report = _format_timeline(result.get("timeline", []))
+
+            with _jobs_lock:
+                state["warnings"]        = result.get("warnings", [])
+                state["errors"]          = result.get("errors", [])
+                state["timeline_report"] = timeline_report
+                state["finished_at"]     = time.time()
+
+                if result.get("cancelled"):
+                    state["status"]       = "cancelled"
+                    state["current_step"] = "Cancelled"
+                    state["progress"]     = 0
+                elif result["success"] and os.path.isfile(output_path):
+                    state["status"]           = "completed"
+                    state["current_step"]     = "Complete"
+                    state["progress"]         = 100
+                    state["output_video_url"] = f"/outputs/{output_filename}"
+                else:
+                    state["status"]       = "failed"
+                    state["current_step"] = "Failed"
+
+        except MediaTimelineCancelled:
+            with _jobs_lock:
+                state["status"]       = "cancelled"
+                state["current_step"] = "Cancelled"
+                state["progress"]     = 0
+                state["finished_at"]  = time.time()
+            if os.path.isfile(output_path):
+                try: os.remove(output_path)
+                except Exception: pass
+
+        except Exception as exc:
+            logger.exception("Unhandled error in media timeline job %s", job_id)
+            with _jobs_lock:
+                state["status"]       = "failed"
+                state["current_step"] = "Failed"
+                state["errors"]       = [f"Internal server error: {str(exc)}"]
+                state["finished_at"]  = time.time()
+
+        finally:
+            try:
+                shutil.rmtree(str(job_temp), ignore_errors=True)
+            except Exception:
+                pass
+            logger.info("Media timeline job %s finished → status=%s", job_id, state["status"])
+
+    thread = threading.Thread(target=run_job, daemon=True, name=f"mtl-{job_id[:8]}")
+    thread.start()
+
+    logger.info("Media timeline job %s queued", job_id)
     return JSONResponse(content={"job_id": job_id})
 
 
