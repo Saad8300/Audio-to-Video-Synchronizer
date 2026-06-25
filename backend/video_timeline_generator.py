@@ -484,7 +484,7 @@ def _apply_transition_to_pair(
     safe_t   = min(t_dur, dur_prev / 2.0, dur_next / 2.0)
 
     if safe_t <= 0.01:
-        return clip_prev, clip_next, 0.0
+        raise ValueError(transition.replace("_", " ").title())
 
     if transition == "crossfade":
         c_next = clip_next.crossfadein(safe_t)
@@ -572,8 +572,8 @@ def _apply_transition_to_pair(
 
     elif transition == "flash":
         flash_t = min(0.1, safe_t)
-        c_prev = fadeout(clip_prev, flash_t, color=[255, 255, 255])
-        c_next = fadein(clip_next,  flash_t, color=[255, 255, 255])
+        c_prev = fadeout(clip_prev, flash_t, final_color=[255, 255, 255])
+        c_next = fadein(clip_next,  flash_t, initial_color=[255, 255, 255])
         return c_prev, c_next, 0.0
 
     # Unknown — no transition

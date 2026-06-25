@@ -198,4 +198,21 @@ export interface MediaTimelineSettings {
   textBackground: TextBackground
   textWidth:      TextWidth
   textAlignment:  TextAlignment
+  
+  // Batch 11D — styling & enhancements
+  transition:            Transition
+  transitionDuration:    TransitionDuration
+  visualEffect:          VisualEffect
+  effectStrength:        EffectStrength
+  enableWatermark:       boolean
+  watermarkText:         string
+  watermarkPositionMode: WatermarkPositionMode
+  watermarkPosition:     WatermarkPosition
+  watermarkX:            number
+  watermarkY:            number
+  watermarkOpacity:      number
+  watermarkSize:         number
+  watermarkMargin:       number
+  enableIntro:           boolean
+  enableOutro:           boolean
 }

@@ -441,10 +441,7 @@ export default function App() {
             <div className="text-xs">
               <p className="font-semibold">Backend server is not running</p>
               <p className="mt-0.5 opacity-80">
-                Double-click <strong>start_app.command</strong> or run:{' '}
-                <code className="text-[10px] rounded px-1 py-0.5" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                  uvicorn main:app --reload --host 127.0.0.1 --port 8000
-                </code>
+                Start the app with <strong>./start_app.command</strong> or run the backend manually.
               </p>
             </div>
           </div>

@@ -29,6 +29,13 @@ from moviepy.editor import (
 )
 from moviepy.video.fx.all import resize
 
+from video_timeline_generator import (
+    _apply_visual_style_to_clip,
+    _apply_transition_to_pair,
+    _load_media_clip,
+    _make_watermark_overlay,
+)
+
 logger = logging.getLogger(__name__)
 
 # Pillow compatibility shim
@@ -84,7 +91,7 @@ def _make_black_clip(width: int, height: int, duration: float, fps: int):
 def _make_text_overlay_frame(
     width: int, height: int, text: str,
     pos: str, size: str, color: str, bg: str, width_mode: str, align: str
-) -> np.ndarray:
+) -> tuple[np.ndarray, bool]:
     """Create a transparent image with styled text overlay."""
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -92,6 +99,8 @@ def _make_text_overlay_frame(
     # 1. Font Size
     pct = {"small": 0.03, "medium": 0.04, "large": 0.05, "extra_large": 0.06}.get(size, 0.04)
     fs = max(16, int(height * pct))
+    
+    font_reduced = False
     
     # Simple default font
     try:
@@ -122,9 +131,28 @@ def _make_text_overlay_frame(
     line_spacing = int(lh * 1.3)
     total_h = line_spacing * len(lines)
     
-    # 4. Box dimensions
+    # 4. Box dimensions and Font Reduction Check
     pad_x = int(width * 0.03)
     pad_y = int(height * 0.02)
+    
+    # If text is too tall, reduce font size to fit safely
+    safe_max_h = height * 0.8
+    while total_h > safe_max_h and fs > 16:
+        fs -= 4
+        font_reduced = True
+        try:
+            font = ImageFont.truetype(font_path, fs)
+        except Exception:
+            break
+        avg_char_w = draw.textlength("a", font=font) if hasattr(draw, "textlength") else fs * 0.6
+        chars_per_line = max(10, int(max_w / avg_char_w))
+        lines = textwrap.wrap(text, width=chars_per_line)
+        try:
+            lh = draw.textbbox((0,0), "A", font=font)[3] - draw.textbbox((0,0), "A", font=font)[1]
+        except Exception:
+            lh = fs
+        line_spacing = int(lh * 1.3)
+        total_h = line_spacing * len(lines)
     
     box_w = 0
     for line in lines:
@@ -193,20 +221,20 @@ def _make_text_overlay_frame(
         draw.text((x, y), line, font=font, fill=txt_col + (255,))
         y += line_spacing
         
-    return np.array(img)
+    return np.array(img), font_reduced
 
 def _make_text_clip(
     width: int, height: int, text: str, duration: float, fps: int,
     pos: str, size: str, color: str, bg: str, width_mode: str, align: str
 ):
-    rgba_frame = _make_text_overlay_frame(width, height, text, pos, size, color, bg, width_mode, align)
+    rgba_frame, font_reduced = _make_text_overlay_frame(width, height, text, pos, size, color, bg, width_mode, align)
     rgb_frame = rgba_frame[:, :, :3]
     alpha_frame = rgba_frame[:, :, 3] / 255.0
     
     clip = ImageClip(rgb_frame, duration=duration).set_fps(fps)
     mask = ImageClip(alpha_frame, duration=duration, ismask=True).set_fps(fps)
     clip = clip.set_mask(mask)
-    return clip
+    return clip, font_reduced
 
 def _validate_clip(clip: Any, label: str) -> None:
     if clip is None:
@@ -230,27 +258,35 @@ def extract_media_zip(zip_path: str, dest_dir: str) -> dict[str, str]:
     dest = Path(dest_dir)
     dest.mkdir(parents=True, exist_ok=True)
     
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        for member in zf.infolist():
-            name = member.filename
-            if member.is_dir(): continue
-            basename = Path(name).name
-            if not basename or basename.startswith(".") or "__MACOSX" in name: continue
-            ext = Path(basename).suffix.lower()
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for member in zf.infolist():
+                name = member.filename
+                if member.is_dir(): continue
+                basename = Path(name).name
+                if not basename or basename.startswith(".") or "__MACOSX" in name or ".DS_Store" in name: 
+                    continue
+                ext = Path(basename).suffix.lower()
+                
+                if ext not in ALLOWED_EXTS:
+                    continue
+                    
+                target_path = (dest / basename).resolve()
+                if not str(target_path).startswith(str(dest.resolve())): 
+                    continue
+                    
+                if basename.lower() in media_map:
+                    raise MediaTimelineError(f"Duplicate media filename found in ZIP: {basename}")
+                    
+                with zf.open(member) as src, open(target_path, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                media_map[basename.lower()] = str(target_path)
+    except zipfile.BadZipFile:
+        raise MediaTimelineError("Uploaded ZIP file is invalid or corrupted.")
             
-            if ext not in ALLOWED_EXTS:
-                continue
-                
-            target_path = (dest / basename).resolve()
-            if not str(target_path).startswith(str(dest.resolve())): continue
-                
-            if basename.lower() in media_map:
-                raise MediaTimelineError(f"Duplicate filename in ZIP: {basename}")
-                
-            with zf.open(member) as src, open(target_path, "wb") as dst:
-                shutil.copyfileobj(src, dst)
-            media_map[basename.lower()] = str(target_path)
-            
+    if not media_map:
+        raise MediaTimelineError("Media ZIP does not contain any supported images or videos.")
+        
     return media_map
 
 def parse_media_csv(csv_path: str, media_map: dict[str, str]) -> tuple[list[dict], list[str], list[str]]:
@@ -280,13 +316,15 @@ def parse_media_csv(csv_path: str, media_map: dict[str, str]) -> tuple[list[dict
     bg_col    = next((f for f in lower_fields if f == "text_background"), None)
     align_col = next((f for f in lower_fields if f == "text_alignment"), None)
 
-    if not start_col or not end_col or not asset_col:
-        errors.append("CSV must have 'start', 'end', and 'asset' columns.")
+    if not start_col: errors.append("CSV is missing required column: start")
+    if not end_col: errors.append("CSV is missing required column: end")
+    if not asset_col: errors.append("CSV is missing required column: asset")
+    if errors:
         return rows, warnings, errors
 
     reader.fieldnames = lower_fields
 
-    prev_end = 0.0
+    parsed_raw_rows = []
     for idx, row in enumerate(reader, start=2):
         s_str = row.get(start_col, "").strip()
         e_str = row.get(end_col, "").strip()
@@ -305,64 +343,97 @@ def parse_media_csv(csv_path: str, media_map: dict[str, str]) -> tuple[list[dict
 
         try:
             start_sec = float(s_str)
+        except ValueError:
+            errors.append(f"CSV row {idx} has invalid start time: {s_str}")
+            continue
+            
+        try:
             end_sec   = float(e_str)
         except ValueError:
-            errors.append(f"Row {idx}: Invalid start/end times ('{s_str}', '{e_str}'). Must be numbers.")
+            errors.append(f"CSV row {idx} has invalid end time: {e_str}")
             continue
 
         if start_sec >= end_sec:
-            errors.append(f"Row {idx}: Start time ({start_sec}) must be < end time ({end_sec}).")
+            errors.append(f"CSV row {idx} end time must be greater than start time")
             continue
 
-        if start_sec < prev_end:
-            errors.append(f"Row {idx}: Overlaps previous row. Expected start >= {prev_end}, got {start_sec}.")
+        if not asset_str and not text_str:
+            errors.append(f"CSV row {idx} has no asset and no text. Add an asset filename or text.")
             continue
 
         asset_path = None
         asset_type = "none"
         if asset_str:
+            ext = Path(asset_str).suffix.lower()
+            if ext not in ALLOWED_EXTS:
+                errors.append(f"CSV row {idx} references \"{asset_str}\", but this file type is not supported.")
+                continue
+                
             asset_path = media_map.get(asset_str.lower())
             if not asset_path:
-                errors.append(f"Row {idx}: Asset '{asset_str}' not found in ZIP.")
+                errors.append(f"CSV row {idx} references \"{asset_str}\", but it was not found in the Media ZIP.")
                 continue
-            ext = Path(asset_path).suffix.lower()
+                
             if ext in VIDEO_EXTS:
                 asset_type = "video"
             elif ext in IMAGE_EXTS:
                 asset_type = "image"
-        else:
-            if not text_str:
-                warnings.append(f"Row {idx}: No asset and no text. Wil be a black screen.")
 
-        if start_sec > prev_end:
-            gap = start_sec - prev_end
+        parsed_raw_rows.append({
+            "idx": idx,
+            "start": start_sec,
+            "end": end_sec,
+            "asset_str": asset_str,
+            "asset_path": asset_path,
+            "asset_type": asset_type,
+            "text_str": text_str,
+            "t_pos": t_pos, "t_size": t_size, "t_col": t_col, "t_bg": t_bg, "t_align": t_align,
+        })
+
+    if errors:
+        return rows, warnings, errors
+
+    # Safe sorting
+    parsed_raw_rows.sort(key=lambda r: r["start"])
+
+    prev_end = 0.0
+    prev_idx = None
+    for r in parsed_raw_rows:
+        if r["start"] < prev_end:
+            errors.append(f"CSV rows {prev_idx} and {r['idx']} overlap. Please fix timeline timings.")
+            continue
+            
+        if r["start"] > prev_end:
+            gap = r["start"] - prev_end
             rows.append({
                 "type": "gap",
                 "start": prev_end,
-                "end": start_sec,
+                "end": r["start"],
                 "duration": gap,
             })
 
         rows.append({
             "type": "content",
-            "start": start_sec,
-            "end": end_sec,
-            "duration": end_sec - start_sec,
-            "asset_name": asset_str,
-            "asset_path": asset_path,
-            "asset_type": asset_type,
-            "text": text_str,
-            "text_position": t_pos,
-            "text_size": t_size,
-            "text_color": t_col,
-            "text_background": t_bg,
-            "text_alignment": t_align,
-            "row_idx": idx,
+            "start": r["start"],
+            "end": r["end"],
+            "duration": r["end"] - r["start"],
+            "asset_name": r["asset_str"],
+            "asset_path": r["asset_path"],
+            "asset_type": r["asset_type"],
+            "text": r["text_str"],
+            "text_position": r["t_pos"],
+            "text_size": r["t_size"],
+            "text_color": r["t_col"],
+            "text_background": r["t_bg"],
+            "text_alignment": r["t_align"],
+            "row_idx": r["idx"],
         })
-        prev_end = end_sec
+        prev_end = r["end"]
+        prev_idx = r["idx"]
 
     if not any(r["type"] == "content" for r in rows):
-        errors.append("No valid content rows found in CSV.")
+        if not errors:
+            errors.append("No valid content rows found in CSV.")
 
     return rows, warnings, errors
 
@@ -387,6 +458,20 @@ def generate_media_timeline(
     text_background: str = "soft_shadow",
     text_width: str = "wide",
     text_alignment: str = "center",
+    transition: str = "none",
+    transition_duration: float = 0.5,
+    visual_effect: str = "none",
+    effect_strength: str = "medium",
+    watermark_text: str = "",
+    watermark_position_mode: str = "preset",
+    watermark_position: str = "bottom_right",
+    watermark_x: int = 50,
+    watermark_y: int = 50,
+    watermark_opacity: float = 0.65,
+    watermark_size: int = 20,
+    watermark_margin: int = 36,
+    intro_path: Optional[str] = None,
+    outro_path: Optional[str] = None,
     cancel_event: threading.Event = None,
     progress_callback: Callable[[int, str], None] = None,
 ) -> dict:
@@ -435,6 +520,8 @@ def generate_media_timeline(
             c_type = row["type"]
             
             if c_type == "gap":
+                if not any("Timeline contains gaps." in w for w in warnings):
+                    warnings.append("Timeline contains gaps. Neutral filler clips were added.")
                 clip = _make_black_clip(width, height, dur, fps)
                 final_clips.append(clip)
                 visual_dur += dur
@@ -448,31 +535,39 @@ def generate_media_timeline(
             base_clip = None
             
             if asset_type == "video":
-                raw = VideoFileClip(asset_path)
-                _raw_clips.append(raw)
-                
-                v_dur = raw.duration
-                if v_dur <= 0.1:
-                    warnings.append(f"Row {row['row_idx']}: video too short ({v_dur}s).")
-                    base_clip = _make_black_clip(width, height, dur, fps)
-                else:
-                    if dur > v_dur:
-                        if fill_mode == "loop":
-                            from moviepy.video.fx.all import loop
-                            base_clip = raw.fx(loop, duration=dur)
-                        elif fill_mode == "freeze":
-                            freeze = raw.to_ImageClip(t=v_dur - 0.1).set_duration(dur - v_dur)
-                            from moviepy.editor import concatenate_videoclips
-                            base_clip = concatenate_videoclips([raw, freeze], method="chain")
-                        else: # trim_only -> leaves black
-                            padding = _make_black_clip(raw.w, raw.h, dur - v_dur, fps)
-                            from moviepy.editor import concatenate_videoclips
-                            base_clip = concatenate_videoclips([raw, padding], method="chain")
+                try:
+                    raw = VideoFileClip(asset_path)
+                    _raw_clips.append(raw)
+                    
+                    v_dur = raw.duration
+                    if v_dur <= 0.1:
+                        warnings.append(f"Row {row['row_idx']}: video too short ({v_dur}s).")
+                        base_clip = _make_black_clip(width, height, dur, fps)
                     else:
-                        base_clip = raw.subclip(0, dur)
+                        if dur > v_dur:
+                            if fill_mode == "loop":
+                                from moviepy.video.fx.all import loop
+                                base_clip = raw.fx(loop, duration=dur)
+                            elif fill_mode == "freeze":
+                                freeze = raw.to_ImageClip(t=v_dur - 0.1).set_duration(dur - v_dur)
+                                from moviepy.editor import concatenate_videoclips
+                                base_clip = concatenate_videoclips([raw, freeze], method="chain")
+                            else: # trim_only -> leaves black
+                                padding = _make_black_clip(raw.w, raw.h, dur - v_dur, fps)
+                                from moviepy.editor import concatenate_videoclips
+                                base_clip = concatenate_videoclips([raw, padding], method="chain")
+                        else:
+                            base_clip = raw.subclip(0, dur)
+                except Exception as e:
+                    errors.append(f"Video asset \"{Path(asset_path).name}\" could not be processed.")
+                    base_clip = _make_black_clip(width, height, dur, fps)
                         
             elif asset_type == "image":
-                base_clip = ImageClip(asset_path).set_duration(dur)
+                try:
+                    base_clip = ImageClip(asset_path).set_duration(dur)
+                except Exception as e:
+                    errors.append(f"Image asset \"{Path(asset_path).name}\" could not be processed.")
+                    base_clip = _make_black_clip(width, height, dur, fps)
             else: # none / text only
                 # For text-only rows, we want a nice background
                 # We will create a dark gradient or neutral surface
@@ -504,7 +599,11 @@ def generate_media_timeline(
                             from moviepy.editor import CompositeVideoClip
                             bg = _make_black_clip(width, height, dur, fps)
                             base_clip = CompositeVideoClip([bg, base_clip.set_position("center")])
-                            
+
+            # Apply Visual Style (before text so text stays clear)
+            if asset_type in ("video", "image"):
+                base_clip = _apply_visual_style_to_clip(base_clip, visual_effect, effect_strength)
+                
             # Overlay Text
             if text_str:
                 row_pos = row.get("text_position") or text_position
@@ -514,10 +613,12 @@ def generate_media_timeline(
                 row_wid = row.get("text_width") or text_width
                 row_aln = row.get("text_alignment") or text_alignment
                 
-                txt_clip = _make_text_clip(
+                txt_clip, font_reduced = _make_text_clip(
                     width, height, text_str, dur, fps,
                     pos=row_pos, size=row_sz, color=row_col, bg=row_bg, width_mode=row_wid, align=row_aln
                 )
+                if font_reduced:
+                    warnings.append(f"Text on row {row['row_idx']} was very long, so font size was reduced to fit safely.")
                 base_clip = CompositeVideoClip([base_clip, txt_clip])
                 
             base_clip = base_clip.set_fps(fps)
@@ -538,26 +639,134 @@ def generate_media_timeline(
         
         # Match audio and visual duration
         if visual_dur < audio_dur:
-            warnings.append(f"Visual timeline ({visual_dur:.2f}s) is shorter than audio ({audio_dur:.2f}s). Black padding added at the end.")
+            warnings.append("Visual timeline is shorter than audio. Padding was added until the audio ends.")
             pad = _make_black_clip(width, height, audio_dur - visual_dur, fps)
             final_clips.append(pad)
             visual_dur = audio_dur
-            
-        final_video = concatenate_videoclips(final_clips, method="chain")
-        
-        if visual_dur > audio_dur:
-            warnings.append(f"Visual timeline ({visual_dur:.2f}s) is longer than audio ({audio_dur:.2f}s). Audio padded with silence.")
-            # moviepy automatically handles shorter audio by padding or we can just set it
-            # set_audio on a clip with longer duration automatically pads audio with silence in moviepy 1.0.3 usually
-            pass
-            
-        final_video = final_video.set_audio(main_audio.set_duration(visual_dur))
 
-        report(70, "Encoding final MP4...")
+        # Apply transitions
+        if transition != "none" and len(final_clips) > 1:
+            report(65, "Applying transitions...")
+            modified = list(final_clips)
+            overlaps = [0.0] * len(modified)
+
+            transition_errors = set()
+            transition_skips = {}
+            for i in range(len(modified) - 1):
+                try:
+                    cp, cn, ov = _apply_transition_to_pair(
+                        modified[i], modified[i+1],
+                        transition, transition_duration,
+                        width, height, fps,
+                    )
+                    modified[i]   = cp
+                    modified[i+1] = cn
+                    overlaps[i]   = ov
+                except ValueError as ve:
+                    tr_name = str(ve)
+                    transition_skips[tr_name] = transition_skips.get(tr_name, 0) + 1
+                except Exception as te:
+                    transition_errors.add(str(te))
+            
+            for tr_name, count in transition_skips.items():
+                warnings.append(f"{tr_name} transition was skipped for {count} clip pairs because of unsupported clip timing.")
+
+            if transition_errors:
+                err_str = "; ".join(list(transition_errors)[:3])
+                warnings.append(
+                    f"Transitions failed for some clips and were skipped. Details: {err_str}"
+                )
+
+            # Compose with overlaps
+            if any(ov > 0 for ov in overlaps):
+                start_times: list[float] = [0.0]
+                for i in range(1, len(modified)):
+                    start_times.append(start_times[-1] + modified[i-1].duration - overlaps[i-1])
+                positioned = [c.set_start(s) for c, s in zip(modified, start_times)]
+                total_dur  = start_times[-1] + modified[-1].duration
+                try:
+                    main_video = CompositeVideoClip(positioned, size=(width, height))
+                    main_video = main_video.set_duration(total_dur)
+                    visual_dur = total_dur
+                except Exception as ce:
+                    warnings.append(f"Transition compositing failed: {ce}. Falling back to simple concat.")
+                    main_video = concatenate_videoclips(final_clips, method="chain")
+            else:
+                main_video = concatenate_videoclips(modified, method="chain")
+        else:
+            main_video = concatenate_videoclips(final_clips, method="chain")
+            
+        if visual_dur > audio_dur:
+            warnings.append("Visual timeline is longer than audio. Final video was trimmed to match the main audio.")
+            main_video = main_video.subclip(0, audio_dur)
+            visual_dur = audio_dur
+            
+        main_video = main_video.set_audio(main_audio.set_duration(visual_dur))
+
+        # Watermark
+        use_wm = bool(watermark_text.strip())
+        if use_wm:
+            report(70, "Applying watermark...")
+            try:
+                wm_overlay = _make_watermark_overlay(
+                    width=width, height=height,
+                    text=watermark_text,
+                    position_mode=watermark_position_mode,
+                    position=watermark_position,
+                    x_pos=watermark_x, y_pos=watermark_y,
+                    opacity=watermark_opacity,
+                    size=watermark_size, margin=watermark_margin,
+                )
+                if watermark_position_mode == "custom":
+                    # basic safety check for warning
+                    if watermark_x < 0 or watermark_y < 0 or watermark_x > width * 0.9 or watermark_y > height * 0.9:
+                        warnings.append("Watermark custom X/Y places the watermark partly outside the frame.")
+                from moviepy.editor import ImageClip, CompositeVideoClip
+                wm_clip = ImageClip(wm_overlay, ismask=False).set_duration(visual_dur).set_fps(fps)
+                
+                # Extract audio to preserve it during visual composite
+                saved_audio = main_video.audio
+                main_video = CompositeVideoClip([main_video.without_audio(), wm_clip], size=(width, height))
+                if saved_audio:
+                    main_video = main_video.set_audio(saved_audio)
+            except Exception as e:
+                warnings.append(f"Watermark failed to apply: {e}")
+
+        # Intro / Outro
+        use_intro = intro_path is not None and os.path.isfile(intro_path)
+        use_outro = outro_path is not None and os.path.isfile(outro_path)
+
+        if use_intro or use_outro:
+            report(75, "Adding intro/outro...")
+            clips_to_concat = []
+            
+            if use_intro:
+                try:
+                    intro_clip = _load_media_clip(intro_path, width, height, fps, _raw_clips)
+                    clips_to_concat.append(intro_clip)
+                except Exception as ie:
+                    warnings.append(f"Intro video could not be loaded: {ie}. Skipping intro.")
+
+            clips_to_concat.append(main_video)
+
+            if use_outro:
+                try:
+                    outro_clip = _load_media_clip(outro_path, width, height, fps, _raw_clips)
+                    clips_to_concat.append(outro_clip)
+                except Exception as oe:
+                    warnings.append(f"Outro video could not be loaded: {oe}. Skipping outro.")
+
+            if len(clips_to_concat) > 1:
+                try:
+                    main_video = concatenate_videoclips(clips_to_concat, method="chain")
+                except Exception as ce:
+                    warnings.append(f"Could not merge intro/outro with main timeline: {ce}")
+
+        report(85, "Encoding final MP4...")
         
         logger_func = "bar" if not progress_callback else None
         
-        final_video.write_videofile(
+        main_video.write_videofile(
             output_path,
             fps=fps,
             codec="libx264",

@@ -217,7 +217,7 @@ cd "$BACKEND_DIR"
 # Clear old log
 > "$BACKEND_LOG"
 
-uvicorn main:app --host 127.0.0.1 --port 8000 \
+python3 -m uvicorn main:app --host 127.0.0.1 --port 8000 \
     > "$BACKEND_LOG" 2>&1 &
 BACKEND_PID=$!
 echo "$BACKEND_PID" > "$BACKEND_PID_FILE"

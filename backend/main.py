@@ -725,6 +725,23 @@ async def jobs_start_media_timeline(
     text_background:   str = Form("soft_shadow"),
     text_width:        str = Form("wide"),
     text_alignment:    str = Form("center"),
+    # Batch 11D — Enhancements
+    transition:              str   = Form("none"),
+    transition_duration:     float = Form(0.5),
+    visual_effect:           str   = Form("none"),
+    effect_strength:         str   = Form("medium"),
+    # Batch 11D — Watermark
+    watermark_text:          str   = Form(""),
+    watermark_position_mode: str   = Form("preset"),
+    watermark_position:      str   = Form("bottom_right"),
+    watermark_x:             int   = Form(50),
+    watermark_y:             int   = Form(50),
+    watermark_opacity:       float = Form(0.65),
+    watermark_size:          int   = Form(20),
+    watermark_margin:        int   = Form(36),
+    # Batch 11D — Intro / Outro
+    intro_file:              Optional[UploadFile] = File(None),
+    outro_file:              Optional[UploadFile] = File(None),
 ):
     """
     Accept uploaded files and settings for Media Timeline mode (Batch 11B).
@@ -756,6 +773,9 @@ async def jobs_start_media_timeline(
         with open(dest, "wb") as f:
             f.write(content)
 
+    if not audio_files or len(audio_files) == 0 or (len(audio_files) == 1 and not audio_files[0].filename):
+        raise HTTPException(400, "Please upload a main audio file or audio parts.")
+
     audio_path = str(job_temp / "merged_audio.m4a")
     if len(audio_files) == 1:
         audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
@@ -778,11 +798,41 @@ async def jobs_start_media_timeline(
             content = await af.read()
             with open(tmp_path, "wb") as f:
                 f.write(content)
-            clips.append(AudioFileClip(tmp_path))
-        merged = concatenate_audioclips(clips)
-        merged.write_audiofile(audio_path, logger=None)
-        for c in clips: c.close()
-        merged.close()
+            
+            try:
+                clip = AudioFileClip(tmp_path)
+                clips.append(clip)
+            except Exception as e:
+                for c in clips:
+                    try: c.close()
+                    except: pass
+                raise HTTPException(400, f"Audio part \"{af.filename}\" could not be processed. {str(e)}")
+                
+        try:
+            merged = concatenate_audioclips(clips)
+            merged.write_audiofile(audio_path, logger=None)
+        except Exception as e:
+            raise HTTPException(500, f"Failed to merge audio files: {e}")
+        finally:
+            for c in clips:
+                try: c.close()
+                except: pass
+            try: merged.close()
+            except: pass
+
+    # Save optional intro/outro
+    intro_path, outro_path = None, None
+    if intro_file and intro_file.filename:
+        intro_ext  = Path(intro_file.filename).suffix or ".mp4"
+        intro_path = str(job_temp / f"intro{intro_ext}")
+        with open(intro_path, "wb") as f:
+            f.write(await intro_file.read())
+
+    if outro_file and outro_file.filename:
+        outro_ext  = Path(outro_file.filename).suffix or ".mp4"
+        outro_path = str(job_temp / f"outro{outro_ext}")
+        with open(outro_path, "wb") as f:
+            f.write(await outro_file.read())
 
     # Output filename
     safe_name       = output_name.strip() if output_name and output_name.strip() else "media_timeline"
@@ -828,6 +878,20 @@ async def jobs_start_media_timeline(
                 text_background=text_background,
                 text_width=text_width,
                 text_alignment=text_alignment,
+                transition=transition,
+                transition_duration=transition_duration,
+                visual_effect=visual_effect,
+                effect_strength=effect_strength,
+                watermark_text=watermark_text.strip(),
+                watermark_position_mode=watermark_position_mode.strip().lower(),
+                watermark_position=watermark_position.lower().replace("-", "_"),
+                watermark_x=int(watermark_x),
+                watermark_y=int(watermark_y),
+                watermark_opacity=max(0.0, min(1.0, float(watermark_opacity))),
+                watermark_size=max(1, min(100, int(watermark_size))),
+                watermark_margin=max(5, min(int(watermark_margin), 200)),
+                intro_path=intro_path,
+                outro_path=outro_path,
                 cancel_event=state["cancel_event"],
                 progress_callback=progress_callback,
             )

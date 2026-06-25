@@ -239,7 +239,22 @@ export async function startMediaTimelineJob(
     textBackground:   string
     textWidth:        string
     textAlignment:    string
-  }
+    transition:       string
+    transitionDuration: string
+    visualEffect:     string
+    effectStrength:   string
+    enableWatermark:       boolean
+    watermarkText:         string
+    watermarkPositionMode: string
+    watermarkPosition:     string
+    watermarkX:            number
+    watermarkY:            number
+    watermarkOpacity:      number
+    watermarkSize:         number
+    watermarkMargin:       number
+  },
+  introFile?:  File | null,
+  outroFile?:  File | null,
 ): Promise<{ job_id: string }> {
   const form = new FormData()
 
@@ -260,6 +275,27 @@ export async function startMediaTimelineJob(
   form.append('text_background', settings.textBackground)
   form.append('text_width',      settings.textWidth)
   form.append('text_alignment',  settings.textAlignment)
+
+  // Batch 11D — styling & enhancements
+  form.append('transition',          settings.transition)
+  form.append('transition_duration', settings.transitionDuration)
+  form.append('visual_effect',       settings.visualEffect)
+  form.append('effect_strength',     settings.effectStrength)
+
+  if (introFile) form.append('intro_file', introFile)
+  if (outroFile) form.append('outro_file', outroFile)
+
+  const wmActive = settings.watermarkText.trim().length > 0
+  if (wmActive) {
+    form.append('watermark_text',          settings.watermarkText)
+    form.append('watermark_position_mode', settings.watermarkPositionMode)
+    form.append('watermark_position',      settings.watermarkPosition)
+    form.append('watermark_x',             String(settings.watermarkX))
+    form.append('watermark_y',             String(settings.watermarkY))
+    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
+    form.append('watermark_size',          String(settings.watermarkSize))
+    form.append('watermark_margin',        String(settings.watermarkMargin))
+  }
 
   const res = await fetch(`${BASE_URL}/api/jobs/start-media-timeline`, {
     method: 'POST',

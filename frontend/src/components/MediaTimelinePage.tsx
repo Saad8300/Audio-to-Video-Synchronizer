@@ -9,6 +9,7 @@ import {
   IconCheck,
   IconAlertTriangle,
   IconX,
+  IconFilm,
 } from './icons'
 import ProgressOverlay from './ProgressOverlay'
 import type {
@@ -21,7 +22,7 @@ import { startMediaTimelineJob } from '../utils/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CSV_TEMPLATE = `start,end,asset,text\n0,5,1.png,"Opening line"\n5,10,clip_1.mp4,""\n10,15,2.jpg,"Important point"\n15,20,clip_2.mp4,"Final moment"\n20,25,,"Text-only screen"\n`
+const CSV_TEMPLATE = `start,end,asset,text\n0,5,1.png,"Opening line"\n5,10,clip_1.mp4,"Text over video"\n10,15,2.jpg,"Important point"\n15,20,clip_2.mp4,"Final moment"\n20,25,,"Text-only screen"\n`
 
 const DEFAULT_SETTINGS: MediaTimelineSettings = {
   aspectRatio:      '9:16',
@@ -36,6 +37,22 @@ const DEFAULT_SETTINGS: MediaTimelineSettings = {
   textBackground:   'soft_shadow',
   textWidth:        'wide',
   textAlignment:    'center',
+  // Batch 11D
+  transition:          'none',
+  transitionDuration:  '0.5',
+  visualEffect:        'none',
+  effectStrength:      'medium',
+  enableWatermark:       false,
+  watermarkText:         '',
+  watermarkPositionMode: 'preset',
+  watermarkPosition:     'white_default',
+  watermarkX:            50,
+  watermarkY:            50,
+  watermarkOpacity:      65,
+  watermarkSize:         20,
+  watermarkMargin:       36,
+  enableIntro: false,
+  enableOutro: false,
 }
 
 // ── Reusable Select ───────────────────────────────────────────────────────────
@@ -180,9 +197,16 @@ function MediaTimelineResult({
     `Text-only: ${textRows}`,
     `Res: ${settings.exportResolution}`,
     `Profile: ${settings.renderProfile.replace('_', ' ')}`,
+    `Fit: ${settings.fitMode}`,
     `Fill: ${settings.fillMode}`,
     `Text: ${settings.textPosition.replace('_', ' ')} (${settings.textSize})`,
   ] : ['Generation Failed']
+
+  if (settings.transition !== 'none') chips.push(`Trans: ${settings.transition.replace('_', ' ')}`)
+  if (settings.visualEffect !== 'none') chips.push(`Style: ${settings.visualEffect.replace('_', ' ')}`)
+  if (settings.enableWatermark) chips.push(`WM: on`)
+  if (settings.enableIntro) chips.push(`Intro: on`)
+  if (settings.enableOutro) chips.push(`Outro: on`)
 
   if (result.visual_duration) chips.push(`Visual: ${result.visual_duration.toFixed(2)}s`)
   if (result.audio_duration) chips.push(`Audio: ${result.audio_duration.toFixed(2)}s`)
@@ -254,6 +278,8 @@ export default function MediaTimelinePage() {
   const [audioFiles, setAudioFiles] = useState<File[]>([])
   const [mediaZip, setMediaZip] = useState<File | null>(null)
   const [timelineCsv, setTimelineCsv] = useState<File | null>(null)
+  const [introFile, setIntroFile] = useState<File | null>(null)
+  const [outroFile, setOutroFile] = useState<File | null>(null)
   
   const [settings, setSettings] = useState<MediaTimelineSettings>(DEFAULT_SETTINGS)
 
@@ -266,6 +292,19 @@ export default function MediaTimelinePage() {
   const set = useCallback(<K extends keyof MediaTimelineSettings>(k: K, v: MediaTimelineSettings[K]) => {
     setSettings(prev => ({ ...prev, [k]: v }))
   }, [])
+
+  const handleIntroChange = (f: File | null) => {
+    setIntroFile(f)
+    set('enableIntro', !!f)
+  }
+  const handleOutroChange = (f: File | null) => {
+    setOutroFile(f)
+    set('enableOutro', !!f)
+  }
+  const handleWmTextChange = (text: string) => {
+    set('watermarkText', text)
+    set('enableWatermark', text.trim().length > 0)
+  }
 
   const disabled = status === 'uploading' || status === 'generating' || status === 'cancelling'
   const isReady  = audioFiles.length > 0 && mediaZip && timelineCsv && !disabled
@@ -316,7 +355,9 @@ export default function MediaTimelinePage() {
         audioFiles,
         mediaZip,
         timelineCsv,
-        settings
+        settings,
+        introFile,
+        outroFile
       )
       setJobId(res.job_id)
       setStatus('generating')
@@ -388,6 +429,16 @@ export default function MediaTimelinePage() {
                 required
                 disabled={disabled}
               />
+            </div>
+            
+            <div className="pt-2 border-t border-[var(--border-subtle)]">
+              <h3 className="text-[11px] font-bold text-[var(--text-secondary)] mb-3">Optional Appends</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <MediaDropZone id="mt-intro-upload" label="Intro Video" description="Appended before timeline" accept="video/mp4,video/quicktime,video/webm"
+                  icon={<IconFilm size={14} />} file={introFile} onChange={handleIntroChange} disabled={disabled} />
+                <MediaDropZone id="mt-outro-upload" label="Outro Video" description="Appended after timeline" accept="video/mp4,video/quicktime,video/webm"
+                  icon={<IconFilm size={14} />} file={outroFile} onChange={handleOutroChange} disabled={disabled} />
+              </div>
             </div>
           </div>
 
@@ -487,6 +538,101 @@ export default function MediaTimelinePage() {
             </div>
           </div>
 
+          {/* Advanced Enhancements (Batch 11D) */}
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Enhancements</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Transitions and visual styles.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Sel id="transition" label="Transition" value={settings.transition} disabled={disabled} onChange={v => set('transition', v)}
+                options={[
+                  { value: 'none', label: 'None (Hard Cut)' },
+                  { value: 'crossfade', label: 'Crossfade' },
+                  { value: 'fade_black', label: 'Fade to Black' },
+                  { value: 'slide_left', label: 'Slide Left' },
+                  { value: 'slide_right', label: 'Slide Right' },
+                  { value: 'zoom_in', label: 'Zoom In' }
+                ]} />
+              <Sel id="transition-duration" label="Transition Duration" value={settings.transitionDuration} disabled={disabled} onChange={v => set('transitionDuration', v)}
+                options={[ { value: '0.2', label: '0.2s (Fast)' }, { value: '0.5', label: '0.5s (Medium)' }, { value: '1.0', label: '1.0s (Slow)' } ]} />
+              <Sel id="visual-effect" label="Visual Style" value={settings.visualEffect} disabled={disabled} onChange={v => set('visualEffect', v)}
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'cinematic', label: 'Cinematic' },
+                  { value: 'high_contrast', label: 'Vintage / Film' },
+                  { value: 'black_and_white', label: 'Black & White' },
+                  { value: 'clean_bright', label: 'Clean & Bright' },
+                  { value: 'warm', label: 'Warm Glow' }
+                ]} />
+              <Sel id="effect-strength" label="Style Strength" value={settings.effectStrength} disabled={disabled} onChange={v => set('effectStrength', v)}
+                options={[ { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' } ]} />
+            </div>
+          </div>
+
+          {/* Watermark (Batch 11D) */}
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Watermark</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Add text over your entire timeline.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1">
+                <label className="form-label" htmlFor="wm-text">Watermark Text</label>
+                <input
+                  id="wm-text" type="text" placeholder="e.g. MyBrand" className="form-input" disabled={disabled}
+                  value={settings.watermarkText} onChange={(e) => handleWmTextChange(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            {settings.enableWatermark && (
+              <div className="pt-2 animate-fade-in border-t border-[var(--border-subtle)] mt-4">
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <Sel id="wm-pos-mode" label="Position Mode" value={settings.watermarkPositionMode} disabled={disabled} onChange={v => set('watermarkPositionMode', v)}
+                    options={[ { value: 'preset', label: 'Preset Position' }, { value: 'custom', label: 'Custom (X/Y %)' } ]} />
+                  
+                  {settings.watermarkPositionMode === 'preset' ? (
+                    <Sel id="wm-pos" label="Position" value={settings.watermarkPosition} disabled={disabled} onChange={v => set('watermarkPosition', v)}
+                      options={[
+                        { value: 'white_default', label: 'White Default (Bottom Center)' },
+                        { value: 'bottom_right', label: 'Bottom Right' },
+                        { value: 'bottom_left', label: 'Bottom Left' },
+                        { value: 'top_right', label: 'Top Right' },
+                        { value: 'top_left', label: 'Top Left' },
+                        { value: 'center', label: 'Center' }
+                      ]} />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="form-label" htmlFor="wm-x">X %</label>
+                        <input id="wm-x" type="number" min="0" max="100" className="form-input text-center" value={settings.watermarkX} onChange={e => set('watermarkX', parseInt(e.target.value) || 0)} disabled={disabled} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="form-label" htmlFor="wm-y">Y %</label>
+                        <input id="wm-y" type="number" min="0" max="100" className="form-input text-center" value={settings.watermarkY} onChange={e => set('watermarkY', parseInt(e.target.value) || 0)} disabled={disabled} />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <label className="form-label">Opacity ({settings.watermarkOpacity}%)</label>
+                    </div>
+                    <input type="range" min="10" max="100" className="w-full mt-2" value={settings.watermarkOpacity} onChange={e => set('watermarkOpacity', parseInt(e.target.value))} disabled={disabled} />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <label className="form-label">Size ({settings.watermarkSize}px base)</label>
+                    </div>
+                    <input type="range" min="10" max="80" className="w-full mt-2" value={settings.watermarkSize} onChange={e => set('watermarkSize', parseInt(e.target.value))} disabled={disabled} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Error display */}
           {errorMsg && (
             <div className="alert-error animate-fade-in">
@@ -532,9 +678,14 @@ export default function MediaTimelinePage() {
               )}
             </button>
             {isReady && status === 'idle' && (
-              <p className="text-[10px] text-center" style={{ color: 'var(--color-success)' }}>
-                Ready to generate media timeline.
-              </p>
+              <div className="space-y-1 mt-2">
+                <p className="text-[10px] text-center" style={{ color: 'var(--color-success)' }}>
+                  Ready to generate media timeline.
+                </p>
+                <p className="text-[10px] text-center px-2" style={{ color: 'var(--text-muted)' }}>
+                  Large Media Timeline projects may take longer to render depending on video clips, text overlays, and transitions.
+                </p>
+              </div>
             )}
           </div>
 
@@ -547,7 +698,7 @@ export default function MediaTimelinePage() {
             <div className="p-3 rounded-lg font-mono text-[10px] overflow-x-auto whitespace-pre" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
               start,end,asset,text<br/>
               0,5,1.png,"Opening line"<br/>
-              5,10,clip_1.mp4,""<br/>
+              5,10,clip_1.mp4,"Text over video"<br/>
               10,15,2.jpg,"Important point"<br/>
               15,20,clip_2.mp4,"Final moment"<br/>
               20,25,,"Text-only screen"

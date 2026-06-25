@@ -6,19 +6,25 @@
 
 ## 🧩 What does this app do?
 
-This app provides two professional workflows for automated video creation:
+This app provides three professional workflows for automated video creation:
 
 ### 1. Image Timeline (Photos to Video)
 You give it:
-1. 🎵 An **audio file** (or multiple audio files that will be merged into one) (MP3, WAV, or M4A)
+1. 🎵 An **audio file** (or multiple audio parts)
 2. 🖼️ A **ZIP file** of images named `1.jpg`, `2.jpg`, `3.jpg`…
 3. 📋 A **timestamp CSV file** that says when each image should appear
 
 ### 2. Video Timeline (Clips to Video)
 You give it:
-1. 🎵 An **audio file** (or multiple audio files that will be merged into one) (MP3, WAV, or M4A)
+1. 🎵 An **audio file** (or multiple audio parts)
 2. 🎬 A **ZIP file** of video clips named `1.mp4`, `2.mov`, `3.webm`…
 3. 📋 A **timeline CSV file** that specifies clip sequence and exact timings
+
+### 3. Media Timeline (Mixed Media & Text)
+You give it:
+1. 🎵 An **audio file** (or multiple audio parts)
+2. 📁 A **ZIP file** containing images and video clips.
+3. 📋 A **timeline CSV file** that specifies timings, assets, and text overlays.
 
 It generates a professional **MP4 video** precisely synced to your audio with optional transitions, watermarks, intro/outro bumpers, and stylistic filters.
 
@@ -119,25 +125,40 @@ Open **http://localhost:5173** in your browser.
 
 ## 📋 How to Format Your CSV
 
-Your timestamp CSV controls when each image appears. It must have these columns:
+Depending on the mode you are using, the required CSV format varies slightly.
+
+### Image Timeline / Video Timeline CSV
 
 | Column  | Required | Description |
 |---------|----------|-------------|
-| `image` | ✅ Yes | Filename in the ZIP (e.g. `1.jpg`) |
-| `start` | ✅ Yes | When the image appears |
-| `end`   | ✅ Yes | When the image disappears |
+| `image` / `video` | ✅ Yes | Filename in the ZIP (e.g. `1.jpg` or `clip.mp4`) |
+| `start` | ✅ Yes | When the asset appears |
+| `end`   | ✅ Yes | When the asset disappears |
 | `text`  | ❌ No  | Optional label (shown in the report) |
 
-### Example CSV
+### Media Timeline CSV
 
-```
-image,start,end,text
-1.jpg,00:00,00:02,First line here
-2.jpg,00:02,00:05,Second line here
-3.jpg,00:05,00:08,Third line here
-```
+The Media Timeline supports a mix of images, videos, and text-only screens.
 
-### Accepted Time Formats
+| Column  | Required | Description |
+|---------|----------|-------------|
+| `start` | ✅ Yes | Sequence start time in seconds (e.g. `0` or `5.5`) |
+| `end`   | ✅ Yes | Sequence end time in seconds |
+| `asset` | ⚠️ Conditional | Filename in the ZIP. Required unless `text` is provided. You can reuse the same asset multiple times. |
+| `text`  | ⚠️ Conditional | Text to overlay, or text to display on a blank background if `asset` is empty. |
+
+#### Example Media Timeline CSV
+```csv
+start,end,asset,text
+0,5,1.png,"Opening line"
+5,10,clip_1.mp4,"Text over video"
+10,15,2.jpg,"Important point"
+15,20,clip_2.mp4,"Final moment"
+20,25,,"Text-only screen"
+```
+*Note: Gaps in the Media Timeline are allowed and will be automatically filled with a neutral background.*
+
+### Accepted Time Formats (Image/Video Timeline)
 
 | Format | Example |
 |--------|---------|
