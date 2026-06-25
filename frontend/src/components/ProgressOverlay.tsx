@@ -1,15 +1,19 @@
-// components/ProgressOverlay.tsx – Premium generation progress modal
+// components/ProgressOverlay.tsx – Render progress modal, ground-up redesign
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { IconClock, IconXCircle } from './icons'
 import type { JobStatus } from '../types'
 import { getJobStatus, cancelJob } from '../utils/api'
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface ProgressOverlayProps {
   jobId:         string | null
   onJobComplete: (status: JobStatus) => void
   onCancelled:   () => void
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatTime(seconds: number): string {
   if (!seconds || seconds < 0) return '—'
@@ -18,31 +22,103 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-// Waveform activity indicator – 4 bars, subtle equalizer pulse
-function WaveformIndicator() {
+// ─── Frame-strip scanner ──────────────────────────────────────────────────────
+// A row of tiny video-frame rectangles with a bright scan line sweeping across.
+// Directly communicates "video frames being processed" — meaningful, not random.
+
+const FRAME_COUNT = 16
+
+function FrameScanner({ active }: { active: boolean }) {
   return (
-    <div className="flex items-end justify-center gap-[3px]" style={{ height: 20 }} aria-hidden>
-      {[0, 0.2, 0.1, 0.3].map((delay, i) => (
-        <div
-          key={i}
-          style={{
-            width: 3,
-            borderRadius: 2,
-            background: 'var(--accent-primary)',
-            animation: `waveBar 1.1s ease-in-out ${delay}s infinite`,
-            height: 4,
-          }}
-        />
-      ))}
+    <div
+      aria-hidden
+      style={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      {/* Label */}
+      <div style={{
+        fontSize: 9,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.10em',
+        color: 'var(--text-muted)',
+        textAlign: 'center',
+      }}>
+        {active ? 'Render pipeline active' : 'Pipeline complete'}
+      </div>
+
+      {/* Frame strip */}
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          gap: 3,
+          padding: '6px 8px',
+          borderRadius: 8,
+          background: 'var(--bg-input)',
+          border: '1px solid var(--border-subtle)',
+          overflow: 'hidden',
+        }}
+      >
+        {Array.from({ length: FRAME_COUNT }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              aspectRatio: '9/6',
+              borderRadius: 2,
+              background: 'var(--border-default)',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'background 0.3s',
+            }}
+          >
+            {/* Horizontal scanline inside each frame */}
+            <div style={{
+              position: 'absolute',
+              top: '40%',
+              left: 0,
+              right: 0,
+              height: 1,
+              background: 'var(--border-strong)',
+              opacity: 0.4,
+            }} />
+          </div>
+        ))}
+
+        {/* The traveling scan-glow that sweeps across the full strip */}
+        {active && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              width: 28,
+              background: 'linear-gradient(90deg, transparent 0%, var(--accent-primary) 40%, rgba(139,92,246,0.8) 60%, transparent 100%)',
+              opacity: 0.35,
+              borderRadius: 2,
+              animation: 'scanSweep 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }}
+          />
+        )}
+      </div>
     </div>
   )
 }
 
-// Three soft-fade dots
+// ─── Three fade-pulse dots ────────────────────────────────────────────────────
+
 function StatusDots() {
   return (
-    <span className="inline-flex items-center gap-[3px] ml-1" aria-hidden>
-      {[0, 0.25, 0.5].map((delay, i) => (
+    <span
+      aria-hidden
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 4, verticalAlign: 'middle' }}
+    >
+      {([0, 0.22, 0.44] as const).map((delay, i) => (
         <span
           key={i}
           style={{
@@ -50,14 +126,16 @@ function StatusDots() {
             width: 3,
             height: 3,
             borderRadius: '50%',
-            background: 'currentColor',
-            animation: `dotPulse 1.4s ease-in-out ${delay}s infinite`,
+            background: 'var(--accent-primary)',
+            animation: `dotFadePulse 1.5s ease-in-out ${delay}s infinite`,
           }}
         />
       ))}
     </span>
   )
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: ProgressOverlayProps) {
   const [jobStatus,   setJobStatus]   = useState<JobStatus | null>(null)
@@ -99,7 +177,7 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
   const handleCancelConfirm = async () => {
     if (!jobId) return
     setCancelling(true); setShowConfirm(false)
-    try { await cancelJob(jobId) } catch { /* polling will catch terminal state */ }
+    try { await cancelJob(jobId) } catch { /* polling catches terminal state */ }
   }
 
   const progress   = jobStatus?.progress ?? 0
@@ -109,250 +187,305 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
   const isTerminal = jobStatus?.status === 'completed' || jobStatus?.status === 'failed' || jobStatus?.status === 'cancelled'
   const isActive   = !isTerminal && !cancelling
 
-  const etaLabel = (remaining !== null && (remaining > 0 || progress > 5)) ? formatTime(remaining) : 'Calculating…'
+  const etaLabel = (remaining !== null && (remaining > 0 || progress > 5))
+    ? formatTime(remaining)
+    : 'Calculating…'
 
-  // Stage logic
-  const stageIndex =
-    isTerminal ? 3 :
-    progress < 10 ? 0 :
-    progress < 50 ? 1 :
-    progress < 88 ? 2 : 3
-  const stages = [
-    { label: 'Preparing',  short: 'Prep' },
-    { label: 'Processing', short: 'Proc' },
-    { label: 'Encoding',   short: 'Enc'  },
-    { label: 'Finalizing', short: 'Final'},
-  ]
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* Keyframe injection */}
+      {/* CSS keyframes scoped here so they coexist cleanly */}
       <style>{`
-        @keyframes waveBar {
-          0%, 100% { height: 4px; opacity: 0.5; }
-          50%       { height: 18px; opacity: 1; }
+        @keyframes scanSweep {
+          0%   { left: -32px; }
+          100% { left: calc(100% + 4px); }
         }
-        @keyframes dotPulse {
-          0%, 100% { opacity: 0.25; transform: scale(0.8); }
-          50%       { opacity: 1;    transform: scale(1.2); }
+        @keyframes dotFadePulse {
+          0%, 100% { opacity: 0.2; transform: scale(0.7); }
+          50%       { opacity: 1;   transform: scale(1.15); }
         }
-        @keyframes progressShimmer {
-          0%   { transform: translateX(-200%); }
-          100% { transform: translateX(300%); }
+        @keyframes progressFill {
+          0%   { transform: translateX(-120%); }
+          100% { transform: translateX(200%); }
+        }
+        @keyframes rpo-fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes rpo-slideUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
+      {/* ── Backdrop ───────────────────────────────────────────────────────── */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)' }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0, 0, 0, 0.68)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          animation: 'rpo-fadeIn 0.2s ease-out',
+        }}
       >
+
+        {/* ── Card ─────────────────────────────────────────────────────────── */}
         <div
-          className="relative w-[420px] max-w-[94vw] animate-slide-up"
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 20,
-            boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
-          }}
           role="dialog"
           aria-modal="true"
           aria-label="Generating Video"
+          style={{
+            width: 440,
+            maxWidth: '94vw',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 20,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.40), 0 4px 16px rgba(0,0,0,0.20)',
+            animation: 'rpo-slideUp 0.28s cubic-bezier(0.34,1.1,0.64,1)',
+            overflow: 'hidden',
+          }}
         >
-          {/* Top gradient line */}
-          <div
-            style={{
-              height: 3,
-              borderRadius: '20px 20px 0 0',
-              background: 'linear-gradient(90deg, var(--accent-primary) 0%, #8b5cf6 100%)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {isActive && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.7) 50%, transparent 100%)',
-                animation: 'progressShimmer 2s linear infinite',
-              }} />
-            )}
-          </div>
 
-          <div style={{ padding: '28px 32px 26px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Top accent bar — thin gradient, no glow */}
+          <div style={{
+            height: 2,
+            background: 'linear-gradient(90deg, var(--accent-primary) 0%, #8b5cf6 100%)',
+          }} />
 
-            {/* Header: icon-area + title + waveform OR status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              {/* Icon box */}
-              <div style={{
-                width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                background: 'var(--accent-subtle)',
-                border: '1px solid var(--accent-border)',
+          {/* ── Body ─────────────────────────────────────────────────────── */}
+          <div style={{ padding: '26px 28px 22px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+            {/* Zone 1 — Identity: title + step status */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: 17,
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                color: 'var(--text-primary)',
               }}>
-                {/* Waveform when active, checkmark when done, X when cancelling */}
-                {cancelling ? (
-                  <IconXCircle size={22} style={{ color: 'var(--color-error)' }} />
-                ) : isTerminal ? (
-                  <span style={{ fontSize: 22, color: 'var(--color-success)' }}>✓</span>
-                ) : (
-                  <WaveformIndicator />
-                )}
+                {cancelling ? 'Cancelling…' : 'Generating Video'}
+              </h3>
+              <div
+                aria-live="polite"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--accent-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  minHeight: 20,
+                }}
+              >
+                {step}
+                {isActive && <StatusDots />}
               </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                  {cancelling ? 'Cancelling…' : isTerminal ? 'Done' : 'Generating Video'}
-                </div>
-                <div
-                  style={{ fontSize: 12, color: 'var(--accent-primary)', marginTop: 3, fontWeight: 500, display: 'flex', alignItems: 'center' }}
-                  aria-live="polite"
-                >
-                  {step}
-                  {isActive && <StatusDots />}
-                </div>
-              </div>
-
-              {/* Live percentage badge */}
-              {!cancelling && (
-                <div style={{
-                  fontSize: 20, fontWeight: 800, tabularNums: true,
-                  color: 'var(--text-primary)', letterSpacing: '-0.03em', flexShrink: 0,
-                } as React.CSSProperties}>
-                  {progress}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>%</span>
-                </div>
-              )}
             </div>
 
-            {/* Progress bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{
-                width: '100%', height: 6, borderRadius: 99, overflow: 'hidden',
-                background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
-                position: 'relative',
-              }}>
+            {/* Zone 2 — Frame scanner (live-activity visual) */}
+            <FrameScanner active={isActive} />
+
+            {/* Zone 3 — Progress */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* Percentage + bar in one row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+
+                {/* Numeric % — compact, not giant */}
                 <div style={{
-                  height: '100%', borderRadius: 99,
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg, var(--accent-primary) 0%, #8b5cf6 100%)',
-                  transition: 'width 0.4s ease-out',
-                  position: 'relative', overflow: 'hidden',
+                  fontSize: 24,
+                  fontWeight: 800,
+                  letterSpacing: '-0.04em',
+                  color: 'var(--text-primary)',
+                  fontVariantNumeric: 'tabular-nums',
+                  flexShrink: 0,
+                  minWidth: 52,
                 }}>
-                  {isActive && (
-                    <div style={{
-                      position: 'absolute', inset: 0,
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)',
-                      animation: 'progressShimmer 1.8s linear infinite',
-                    }} />
-                  )}
+                  {progress}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>%</span>
+                </div>
+
+                {/* Bar */}
+                <div style={{
+                  flex: 1,
+                  height: 7,
+                  borderRadius: 99,
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-subtle)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, bottom: 0,
+                    width: `${progress}%`,
+                    borderRadius: 99,
+                    background: 'linear-gradient(90deg, var(--accent-primary) 0%, #8b5cf6 100%)',
+                    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                  }}>
+                    {/* Subtle shimmer inside fill only */}
+                    {isActive && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.28) 50%, transparent 80%)',
+                        animation: 'progressFill 1.8s linear infinite',
+                      }} />
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Stage indicators */}
-              {!cancelling && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 2 }}>
-                  {stages.map((st, i) => {
-                    const isStageActive = i === stageIndex
-                    const isStageComplete = i < stageIndex
-                    return (
-                      <div key={st.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, opacity: (isStageActive || isStageComplete) ? 1 : 0.35, transition: 'opacity 0.3s' }}>
-                        <div style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: isStageComplete ? 'var(--color-success)' : isStageActive ? 'var(--accent-primary)' : 'var(--border-default)',
-                          transition: 'background 0.3s',
-                        }} />
-                        <span style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isStageActive ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
-                          {st.short}
-                        </span>
-                      </div>
-                    )
-                  })}
+            {/* Zone 4 — Timing row */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 14px',
+              borderRadius: 10,
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-subtle)',
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <IconClock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <span style={{ color: 'var(--text-muted)' }}>Elapsed</span>
+                <strong style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {formatTime(elapsed)}
+                </strong>
+              </span>
+              <div style={{ width: 1, height: 16, background: 'var(--border-default)' }} />
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <IconClock size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <span style={{ color: 'var(--text-muted)' }}>Remaining</span>
+                <strong style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {etaLabel}
+                </strong>
+              </span>
+            </div>
+
+            {/* Zone 5 — Footer: note + poll error + abort */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: -6 }}>
+              <p style={{
+                margin: 0,
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+                lineHeight: 1.5,
+              }}>
+                Render time depends on resolution, effects, and your hardware.
+              </p>
+
+              {pollError && (
+                <div className="alert-error text-xs text-center animate-fade-in">
+                  ⚠ Connection lost — retrying…
+                </div>
+              )}
+
+              {!isTerminal && !cancelling && (
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    id="cancel-generation-btn"
+                    onClick={handleCancelClick}
+                    aria-label="Cancel video generation"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: 'var(--text-muted)',
+                      background: 'transparent',
+                      border: '1px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'color 0.15s, border-color 0.15s, background 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = 'var(--color-error)'
+                      e.currentTarget.style.borderColor = 'var(--color-error-border)'
+                      e.currentTarget.style.background = 'var(--color-error-bg)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = 'var(--text-muted)'
+                      e.currentTarget.style.borderColor = 'transparent'
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    <IconXCircle size={13} />
+                    Abort generation
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* Timing row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
-                <IconClock size={11} />
-                Elapsed <strong style={{ color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums', marginLeft: 3 }}>{formatTime(elapsed)}</strong>
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
-                <IconClock size={11} />
-                Remaining <strong style={{ color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums', marginLeft: 3 }}>{etaLabel}</strong>
-              </span>
-            </div>
-
-            {/* Note */}
-            <p style={{ fontSize: 10, textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
-              Long videos may take several minutes depending on resolution and your computer.
-            </p>
-
-            {/* Poll error */}
-            {pollError && (
-              <div className="alert-error animate-fade-in text-xs text-center">
-                ⚠ Connection lost — retrying…
-              </div>
-            )}
-
-            {/* Abort */}
-            {!isTerminal && !cancelling && (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button
-                  id="cancel-generation-btn"
-                  onClick={handleCancelClick}
-                  className="group"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    fontSize: 11, color: 'var(--text-muted)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    transition: 'color 0.15s',
-                  }}
-                  aria-label="Cancel video generation"
-                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-error)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                >
-                  <IconXCircle size={13} />
-                  Abort generation
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Cancel confirmation dialog */}
+        {/* ── Cancel confirmation dialog ───────────────────────────────────── */}
         {showConfirm && (
           <div
-            className="fixed inset-0 z-60 flex items-center justify-center animate-fade-in"
-            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 60,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(4px)',
+              animation: 'rpo-fadeIn 0.15s ease-out',
+            }}
           >
             <div
-              className="w-[320px] max-w-[92vw] rounded-xl p-6 space-y-5 shadow-2xl text-center animate-slide-up"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+              style={{
+                width: 320, maxWidth: '92vw',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 16,
+                padding: '24px 24px 20px',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
+                animation: 'rpo-slideUp 0.2s ease-out',
+                display: 'flex', flexDirection: 'column', gap: 16,
+                textAlign: 'center',
+              }}
             >
-              <div
-                className="w-11 h-11 mx-auto rounded-xl flex items-center justify-center text-lg"
-                style={{ background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)', color: 'var(--color-warning)' }}
-              >
+              {/* Warning icon */}
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, margin: '0 auto',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--color-warning-bg)',
+                border: '1px solid var(--color-warning-border)',
+                fontSize: 20,
+              }}>
                 ⚠
               </div>
-              <div className="space-y-1.5">
-                <h4 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Cancel generation?</h4>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+
+              <div>
+                <h4 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Cancel generation?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   All current progress will be lost.
                 </p>
               </div>
-              <div className="flex gap-2">
+
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   id="cancel-confirm-no-btn"
                   onClick={handleCancelDismiss}
-                  className="btn-secondary flex-1 py-2.5"
+                  className="btn-secondary"
+                  style={{ flex: 1, padding: '10px 0' }}
                 >
                   Keep going
                 </button>
                 <button
                   id="cancel-confirm-yes-btn"
                   onClick={handleCancelConfirm}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors"
                   style={{
+                    flex: 1,
+                    padding: '10px 0',
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    transition: 'opacity 0.15s',
                     background: 'var(--color-error-bg)',
                     border: '1px solid var(--color-error-border)',
                     color: 'var(--color-error)',
