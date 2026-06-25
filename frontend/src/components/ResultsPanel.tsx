@@ -1,4 +1,4 @@
-// components/ResultsPanel.tsx – Export results and video preview
+// components/ResultsPanel.tsx – Premium export results panel
 
 import React, { useState } from 'react'
 import {
@@ -51,91 +51,176 @@ function MessageList({ items, type }: { items: string[]; type: 'warning' | 'erro
 export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
   const [timelineOpen, setTimelineOpen] = useState(false)
 
-  const videoUrl     = result.output_video_url
-  const hasVideo     = result.success && videoUrl
-  const totalItems   = result.timeline_report.length
-  const totalWarns   = result.warnings.length
-  const lastItem     = result.timeline_report[result.timeline_report.length - 1]
+  const videoUrl      = result.output_video_url
+  const hasVideo      = result.success && videoUrl
+  const totalItems    = result.timeline_report.length
+  const totalWarns    = result.warnings.length
+  const lastItem      = result.timeline_report[result.timeline_report.length - 1]
   const totalDuration = lastItem ? lastItem.end : '0:00'
-  const hasIssues    = result.timeline_report.some(r => r.status !== 'ok')
+  const hasIssues     = result.timeline_report.some(r => r.status !== 'ok')
+  const filename      = result.output_filename ?? 'video.mp4'
 
   return (
     <div className="space-y-4 animate-slide-up">
 
-      {/* Status header */}
-      <div
-        className="flex items-center gap-3 px-4 py-3 rounded-xl"
-        style={{
-          background: result.success ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
-          border: `1px solid ${result.success ? 'var(--color-success-border)' : 'var(--color-error-border)'}`,
-        }}
-      >
+      {/* ── Success / fail banner ── */}
+      {result.success ? (
         <div
-          className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
           style={{
-            background: result.success ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
-            border: `1px solid ${result.success ? 'var(--color-success-border)' : 'var(--color-error-border)'}`,
-            color: result.success ? 'var(--color-success)' : 'var(--color-error)',
+            borderRadius: 16,
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-default)',
+            overflow: 'hidden',
           }}
         >
-          {result.success ? <IconCheck size={16} /> : <IconX size={16} />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-base font-bold tracking-tight" style={{ color: result.success ? 'var(--text-primary)' : 'var(--color-error)' }}>
-            {result.success ? 'Export Complete' : 'Generation Failed'}
-          </h4>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {result.success ? 'Your video is ready to preview and download.' : 'There were errors during generation. See details below.'}
-          </p>
-        </div>
-        {result.success && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {[settings.exportResolution, settings.aspectRatio].map(chip => (
-              <span
-                key={chip}
-                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded"
-                style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)' }}
-              >
-                {chip}
-              </span>
-            ))}
+          {/* Green top stripe */}
+          <div style={{ height: 3, background: 'var(--color-success)' }} />
+
+          <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+            {/* Check icon */}
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--color-success-bg)',
+              border: '1px solid var(--color-success-border)',
+            }}>
+              <IconCheck size={20} style={{ color: 'var(--color-success)' }} />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
+                Export Complete
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+                Your video is ready to preview and download.
+                {result.elapsed_seconds != null && (
+                  <span style={{ marginLeft: 6 }}>
+                    Completed in <strong style={{ color: 'var(--text-secondary)' }}>{result.elapsed_seconds}s</strong>.
+                  </span>
+                )}
+              </p>
+
+              {/* Metadata chips */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                {[settings.exportResolution, settings.aspectRatio, settings.renderProfile.replace('_', ' ')].map(chip => (
+                  <span
+                    key={chip}
+                    style={{
+                      fontSize: 10, fontFamily: 'monospace', fontWeight: 600,
+                      padding: '2px 8px', borderRadius: 6,
+                      background: 'var(--accent-subtle)',
+                      border: '1px solid var(--accent-border)',
+                      color: 'var(--accent-primary)',
+                    }}
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className="rounded-xl p-4 flex items-center gap-3"
+          style={{
+            background: 'var(--color-error-bg)',
+            border: '1px solid var(--color-error-border)',
+          }}
+        >
+          <div
+            className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
+            style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)', color: 'var(--color-error)' }}
+          >
+            <IconX size={16} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-error)' }}>Generation Failed</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>See error details below.</p>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
-      {result.errors.length > 0 && <MessageList items={result.errors} type="error" />}
+      {result.errors.length   > 0 && <MessageList items={result.errors}   type="error"   />}
       {result.warnings.length > 0 && <MessageList items={result.warnings} type="warning" />}
 
       {/* Video preview + download */}
       {hasVideo && (
-        <div className="space-y-3">
-          <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center" style={{ border: '1px solid var(--border-default)' }}>
+        <div
+          style={{
+            borderRadius: 16,
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-default)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Video */}
+          <div style={{ background: '#000', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <video
               src={videoUrl!}
               controls
-              className="w-full h-full object-contain"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
               aria-label="Generated video preview"
             />
           </div>
-          <div className="flex flex-col gap-2">
+
+          {/* Download row */}
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Filename chip */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+                File
+              </span>
+              <span
+                style={{
+                  fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  minWidth: 0, flex: 1,
+                }}
+                title={filename}
+              >
+                {filename}
+              </span>
+            </div>
+
+            {/* Download button */}
             <a
               href={videoUrl!}
-              download={result.output_filename ?? 'video.mp4'}
-              className="btn-primary w-full py-3.5 text-base font-bold shadow-sm group relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
-              aria-label={`Download video`}
+              download={filename}
+              id="download-video-btn"
+              aria-label="Download MP4"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '12px 20px',
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: 14,
+                color: '#fff',
+                background: 'var(--accent-primary)',
+                textDecoration: 'none',
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease, background 0.15s',
+                boxShadow: '0 4px 16px rgba(79,70,229,0.30)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(79,70,229,0.45)'
+                e.currentTarget.style.background = 'var(--accent-hover)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,70,229,0.30)'
+                e.currentTarget.style.background = 'var(--accent-primary)'
+              }}
             >
-              <div className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #fff, transparent)', animation: 'shimmer 2s infinite' }} />
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                <IconDownload size={18} className="transition-transform duration-300 group-hover:-translate-y-0.5" />
-                Download MP4
-              </span>
+              <IconDownload size={16} />
+              Download MP4
             </a>
-            <div className="text-center px-4">
-              <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }} title={result.output_filename ?? 'video.mp4'}>
-                Filename: <span className="font-mono">{result.output_filename ?? 'video.mp4'}</span>
-              </p>
-            </div>
           </div>
         </div>
       )}

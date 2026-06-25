@@ -513,28 +513,52 @@ export default function App() {
                 id="generate-btn"
                 onClick={handleGenerate}
                 disabled={!canGenerate}
-                className={`btn-primary w-full py-3 text-base font-bold rounded-xl transition-all group relative overflow-hidden ${
-                  canGenerate ? 'shadow-lg hover:scale-[1.01] hover:-translate-y-0.5 active:scale-[0.99]' : ''
-                }`}
-                style={{
-                  boxShadow: canGenerate ? '0 8px 24px rgba(79,70,229,0.35)' : 'none',
-                  fontSize: '15px',
-                }}
                 aria-label="Generate video"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: '13px 20px',
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  color: '#fff',
+                  background: canGenerate ? 'var(--accent-primary)' : 'var(--bg-input)',
+                  border: canGenerate ? 'none' : '1px solid var(--border-default)',
+                  cursor: canGenerate ? 'pointer' : 'not-allowed',
+                  opacity: canGenerate ? 1 : 0.45,
+                  transition: 'transform 0.18s ease, box-shadow 0.18s ease, background 0.15s',
+                  boxShadow: canGenerate ? '0 6px 20px rgba(79,70,229,0.32)' : 'none',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onMouseEnter={e => {
+                  if (!canGenerate) return
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 10px 28px rgba(79,70,229,0.45)'
+                  e.currentTarget.style.background = 'var(--accent-hover)'
+                }}
+                onMouseLeave={e => {
+                  if (!canGenerate) return
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(79,70,229,0.32)'
+                  e.currentTarget.style.background = 'var(--accent-primary)'
+                }}
+                onMouseDown={e => { if (canGenerate) e.currentTarget.style.transform = 'translateY(0) scale(0.98)' }}
+                onMouseUp={e   => { if (canGenerate) e.currentTarget.style.transform = 'translateY(-2px)' }}
               >
-                {canGenerate && !isLoading && (
-                  <div className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #fff, transparent)', animation: 'shimmer 2s infinite' }} />
-                )}
                 {isLoading ? (
-                  <span className="relative z-10 flex items-center justify-center gap-2">
+                  <>
                     <IconLoader size={18} className="animate-spin" />
                     Generating…
-                  </span>
+                  </>
                 ) : (
-                  <span className="relative z-10 flex items-center justify-center gap-2">
+                  <>
                     <IconZap size={18} />
                     Generate Video
-                  </span>
+                  </>
                 )}
               </button>
 
