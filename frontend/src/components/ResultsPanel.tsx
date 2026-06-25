@@ -81,13 +81,11 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
           {result.success ? <IconCheck size={16} /> : <IconX size={16} />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold" style={{ color: result.success ? 'var(--color-success)' : 'var(--color-error)' }}>
-            {result.success ? 'Video generated successfully' : 'Generation failed'}
-          </p>
-          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {result.elapsed_seconds != null
-              ? `Completed in ${result.elapsed_seconds}s`
-              : result.success ? 'Your video is ready' : 'See errors below'}
+          <h4 className="text-base font-bold tracking-tight" style={{ color: result.success ? 'var(--text-primary)' : 'var(--color-error)' }}>
+            {result.success ? 'Export Complete' : 'Generation Failed'}
+          </h4>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {result.success ? 'Your video is ready to preview and download.' : 'There were errors during generation. See details below.'}
           </p>
         </div>
         {result.success && (
@@ -120,15 +118,25 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
               aria-label="Generated video preview"
             />
           </div>
-          <a
-            href={videoUrl!}
-            download={result.output_filename ?? 'video.mp4'}
-            className="btn-primary w-full py-3"
-            aria-label={`Download ${result.output_filename ?? 'video.mp4'}`}
-          >
-            <IconDownload size={16} />
-            Download — {result.output_filename ?? 'video.mp4'}
-          </a>
+          <div className="flex flex-col gap-2">
+            <a
+              href={videoUrl!}
+              download={result.output_filename ?? 'video.mp4'}
+              className="btn-primary w-full py-3.5 text-base font-bold shadow-sm group relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              aria-label={`Download video`}
+            >
+              <div className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #fff, transparent)', animation: 'shimmer 2s infinite' }} />
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <IconDownload size={18} className="transition-transform duration-300 group-hover:-translate-y-0.5" />
+                Download MP4
+              </span>
+            </a>
+            <div className="text-center px-4">
+              <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }} title={result.output_filename ?? 'video.mp4'}>
+                Filename: <span className="font-mono">{result.output_filename ?? 'video.mp4'}</span>
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

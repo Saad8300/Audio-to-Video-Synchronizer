@@ -513,8 +513,8 @@ export default function App() {
                 id="generate-btn"
                 onClick={handleGenerate}
                 disabled={!canGenerate}
-                className={`btn-primary w-full py-3 text-base font-bold rounded-xl transition-all ${
-                  canGenerate ? 'shadow-lg hover:scale-[1.01] active:scale-[0.99]' : ''
+                className={`btn-primary w-full py-3 text-base font-bold rounded-xl transition-all group relative overflow-hidden ${
+                  canGenerate ? 'shadow-lg hover:scale-[1.01] hover:-translate-y-0.5 active:scale-[0.99]' : ''
                 }`}
                 style={{
                   boxShadow: canGenerate ? '0 8px 24px rgba(79,70,229,0.35)' : 'none',
@@ -522,13 +522,16 @@ export default function App() {
                 }}
                 aria-label="Generate video"
               >
+                {canGenerate && !isLoading && (
+                  <div className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, #fff, transparent)', animation: 'shimmer 2s infinite' }} />
+                )}
                 {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
+                  <span className="relative z-10 flex items-center justify-center gap-2">
                     <IconLoader size={18} className="animate-spin" />
                     Generating…
                   </span>
                 ) : (
-                  <span className="flex items-center justify-center gap-2">
+                  <span className="relative z-10 flex items-center justify-center gap-2">
                     <IconZap size={18} />
                     Generate Video
                   </span>

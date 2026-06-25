@@ -327,12 +327,13 @@ html:not(.dark) {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
-@keyframes ellipsis {
-  0% { content: ''; }
-  25% { content: '.'; }
-  50% { content: '..'; }
-  75% { content: '...'; }
-  100% { content: ''; }
+@keyframes dotFade {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
 }
 
 .animate-fade-in  { animation: fadeIn  0.25s ease-out; }
@@ -340,10 +341,19 @@ html:not(.dark) {
 .animate-spin     { animation: spin 1s linear infinite; }
 .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 .animate-shimmer { animation: shimmer 2s infinite linear; }
-.animated-dots::after {
-  content: '';
-  animation: ellipsis 1.5s infinite;
-  display: inline-block;
-  width: 1em;
-  text-align: left;
+
+.dot-1 { animation: dotFade 1.4s infinite; }
+.dot-2 { animation: dotFade 1.4s infinite 0.2s; }
+.dot-3 { animation: dotFade 1.4s infinite 0.4s; }
+
+.wave-bar {
+  width: 4px;
+  border-radius: 2px;
+  background-color: var(--accent-primary);
+  animation: wave 1.2s ease-in-out infinite;
+  transform-origin: bottom;
 }
+.wave-1 { animation-delay: 0s; }
+.wave-2 { animation-delay: 0.15s; }
+.wave-3 { animation-delay: 0.3s; }
+.wave-4 { animation-delay: 0.45s; }

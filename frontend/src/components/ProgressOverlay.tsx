@@ -81,36 +81,34 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}>
+      style={{ background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(8px)' }}>
 
       <div
-        className="relative w-[400px] max-w-[93vw] rounded-2xl shadow-2xl overflow-hidden animate-slide-up"
+        className="relative w-[400px] max-w-[93vw] rounded-[24px] shadow-2xl overflow-hidden animate-slide-up"
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
         role="dialog"
         aria-modal="true"
         aria-label="Generating Video"
       >
-        {/* Soft background glows */}
-        <div className="absolute -top-32 -left-32 w-64 h-64 rounded-full mix-blend-screen opacity-10 animate-pulse-slow pointer-events-none" style={{ background: 'radial-gradient(circle, var(--accent-primary) 0%, transparent 70%)' }} />
-        <div className="absolute -bottom-32 -right-32 w-64 h-64 rounded-full mix-blend-screen opacity-5 animate-pulse-slow pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)', animationDelay: '1.5s' }} />
-
         {/* Top accent line */}
-        <div className="h-0.5 w-full relative overflow-hidden" style={{ background: `linear-gradient(90deg, var(--accent-primary), #8b5cf6)` }}>
+        <div className="h-1 w-full relative overflow-hidden" style={{ background: `linear-gradient(90deg, var(--accent-primary), #8b5cf6)` }}>
           {!isTerminal && <div className="absolute inset-0 w-full h-full animate-shimmer" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)' }} />}
         </div>
 
         <div className="p-8 space-y-6 relative">
           {/* Icon + title */}
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-col items-center gap-4 text-center">
             <div
               className="relative w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}
             >
               {!isTerminal && (
-                <svg className="absolute inset-0 w-full h-full animate-spin pointer-events-none" viewBox="0 0 100 100" style={{ transformOrigin: 'center' }}>
-                  <circle cx="50" cy="50" r="48" fill="none" stroke="var(--border-default)" strokeWidth="3" />
-                  <circle cx="50" cy="50" r="48" fill="none" stroke="var(--accent-primary)" strokeWidth="3" strokeDasharray="80 220" strokeLinecap="round" />
-                </svg>
+                <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-20 pointer-events-none">
+                  <div className="wave-bar h-8 wave-1" />
+                  <div className="wave-bar h-8 wave-2" />
+                  <div className="wave-bar h-8 wave-3" />
+                  <div className="wave-bar h-8 wave-4" />
+                </div>
               )}
               <div className="relative">
                 {cancelling
@@ -123,15 +121,15 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
             </div>
 
             <div>
-              <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
                 {cancelling ? 'Cancelling…' : 'Generating Video'}
               </h3>
               <p
-                className="text-sm mt-0.5 min-h-[20px] transition-all duration-300"
+                className="text-sm mt-0.5 min-h-[20px] transition-all duration-300 font-medium"
                 style={{ color: 'var(--accent-primary)' }}
                 aria-live="polite"
               >
-                {step}{!isTerminal && !cancelling && <span className="animated-dots" />}
+                {step}{!isTerminal && !cancelling && <span className="inline-flex tracking-widest ml-0.5"><span className="dot-1">.</span><span className="dot-2">.</span><span className="dot-3">.</span></span>}
               </p>
             </div>
           </div>
