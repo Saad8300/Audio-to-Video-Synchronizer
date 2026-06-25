@@ -133,3 +133,16 @@ export interface JobStatus {
   output_filename:             string | null
   timeline_report:             TimelineRow[]
 }
+
+// ── Batch 10B — Video Timeline ────────────────────────────────────────────────
+
+export type ClipFillMode = 'loop' | 'trim_only' | 'freeze'
+
+export interface VideoTimelineSettings {
+  aspectRatio:      AspectRatio
+  exportResolution: ExportResolution
+  fitMode:          FitMode
+  fillMode:         ClipFillMode
+  renderProfile:    RenderProfile
+  outputName:       string
+}

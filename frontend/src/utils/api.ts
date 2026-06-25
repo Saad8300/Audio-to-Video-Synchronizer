@@ -1,6 +1,6 @@
 // utils/api.ts – API client for Audio Image Sync Studio backend
 
-import type { GenerateResponse, GenerateSettings, JobStatus } from '../types'
+import type { GenerateResponse, GenerateSettings, JobStatus, VideoTimelineSettings } from '../types'
 
 const BASE_URL = '' // Vite dev proxy handles /api → http://127.0.0.1:8000
 
@@ -111,6 +111,44 @@ export async function cancelJob(jobId: string): Promise<void> {
     const text = await res.text()
     throw new Error(`Cancel error ${res.status}: ${text}`)
   }
+}
+
+// ---------------------------------------------------------------------------
+// Video Timeline job API (Batch 10B)
+// ---------------------------------------------------------------------------
+
+/**
+ * Start a Video Timeline background job.
+ * Returns immediately with a job_id; poll getJobStatus() for updates.
+ */
+export async function startVideoTimelineJob(
+  audioFile:   File,
+  videosZip:   File,
+  timelineCsv: File,
+  settings:    VideoTimelineSettings,
+): Promise<{ job_id: string }> {
+  const form = new FormData()
+  form.append('audio_file',        audioFile)
+  form.append('videos_zip',        videosZip)
+  form.append('timeline_csv',      timelineCsv)
+  form.append('aspect_ratio',      settings.aspectRatio)
+  form.append('export_resolution', settings.exportResolution)
+  form.append('fit_mode',          settings.fitMode)
+  form.append('fill_mode',         settings.fillMode)
+  form.append('render_profile',    settings.renderProfile)
+  form.append('output_name',       settings.outputName || 'video_timeline')
+
+  const res = await fetch(`${BASE_URL}/api/jobs/start-video-timeline`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Server error ${res.status}: ${text}`)
+  }
+
+  return res.json() as Promise<{ job_id: string }>
 }
 
 // ---------------------------------------------------------------------------

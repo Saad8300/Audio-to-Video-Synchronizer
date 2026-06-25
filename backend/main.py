@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from video_generator import generate_video, GenerationCancelled
+from video_timeline_generator import generate_video_timeline, VideoTimelineCancelled
 from utils import seconds_to_mmss, FORMAT_DIMENSIONS
 
 # ---------------------------------------------------------------------------
@@ -52,6 +53,8 @@ VALID_EXPORT_RESOLUTIONS = {"720p", "1080p", "2K", "4K"}
 VALID_RENDER_PROFILES   = {"fast_preview", "balanced", "high_quality"}
 VALID_WM_POSITIONS      = {"top_left", "top_right", "bottom_left", "bottom_right", "center"}
 VALID_WM_SIZES          = {"small", "medium", "large"}
+VALID_FILL_MODES        = {"loop", "trim_only", "freeze"}
+ALLOWED_VIDEO_EXTS      = {".mp4", ".mov", ".webm"}
 
 # ---------------------------------------------------------------------------
 # In-memory job registry
@@ -442,6 +445,152 @@ async def jobs_cancel(job_id: str):
 
     logger.info("Cancel requested for job %s", job_id)
     return JSONResponse(content={"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Routes — Video Timeline job
+# ---------------------------------------------------------------------------
+
+@app.post("/api/jobs/start-video-timeline")
+async def jobs_start_video_timeline(
+    # Required uploads
+    audio_file:   UploadFile = File(...),
+    videos_zip:   UploadFile = File(...),
+    timeline_csv: UploadFile = File(...),
+    # Core settings
+    aspect_ratio:      str = Form("9:16"),
+    export_resolution: str = Form("1080p"),
+    fit_mode:          str = Form("cover"),
+    fill_mode:         str = Form("loop"),
+    render_profile:    str = Form("balanced"),
+    output_name:       Optional[str] = Form(None),
+):
+    """
+    Accept uploaded files and settings for Video Timeline mode.
+    Creates a background job; client polls GET /api/jobs/{job_id}/status.
+    """
+    # Validate
+    if aspect_ratio not in VALID_ASPECT_RATIOS:
+        raise HTTPException(400, f"Invalid aspect_ratio '{aspect_ratio}'.")
+    if export_resolution not in VALID_EXPORT_RESOLUTIONS:
+        raise HTTPException(400, f"Invalid export_resolution '{export_resolution}'.")
+    if render_profile not in VALID_RENDER_PROFILES:
+        raise HTTPException(400, f"Invalid render_profile '{render_profile}'.")
+    fill_mode_safe = fill_mode if fill_mode in VALID_FILL_MODES else "loop"
+
+    # Set up job temp dir
+    job_id   = uuid.uuid4().hex
+    job_temp = TEMP_DIR / job_id
+    job_temp.mkdir(parents=True, exist_ok=True)
+
+    # Save uploads
+    audio_ext  = Path(audio_file.filename).suffix if audio_file.filename else ".mp3"
+    audio_path = str(job_temp / f"audio{audio_ext}")
+    zip_path   = str(job_temp / "videos.zip")
+    csv_path   = str(job_temp / "timeline.csv")
+
+    for upload, dest in [
+        (audio_file, audio_path),
+        (videos_zip, zip_path),
+        (timeline_csv, csv_path),
+    ]:
+        content = await upload.read()
+        with open(dest, "wb") as f:
+            f.write(content)
+
+    # Output filename
+    safe_name       = output_name.strip() if output_name and output_name.strip() else "video_timeline"
+    safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
+    safe_name       = safe_name.strip().replace(" ", "_") or "video_timeline"
+    timestamp_str   = time.strftime("%Y%m%d_%H%M%S")
+    output_filename = f"{safe_name}_{timestamp_str}.mp4"
+    output_path     = str(OUTPUTS_DIR / output_filename)
+
+    # Register job
+    state = _new_job(job_id)
+    state["temp_dir"]        = str(job_temp)
+    state["output_filename"] = output_filename
+
+    def run_job():
+        with _jobs_lock:
+            state["status"]       = "running"
+            state["started_at"]   = time.time()
+            state["current_step"] = "Starting"
+            state["progress"]     = 3
+
+        def progress_callback(pct: int, step: str):
+            with _jobs_lock:
+                if state["status"] == "running":
+                    state["progress"]     = pct
+                    state["current_step"] = step
+
+        try:
+            result = generate_video_timeline(
+                audio_path=audio_path,
+                zip_path=zip_path,
+                csv_path=csv_path,
+                output_path=output_path,
+                temp_dir=str(job_temp),
+                aspect_ratio=aspect_ratio,
+                export_resolution=export_resolution,
+                fit_mode=fit_mode,
+                fill_mode=fill_mode_safe,
+                render_profile=render_profile,
+                cancel_event=state["cancel_event"],
+                progress_callback=progress_callback,
+            )
+
+            timeline_report = _format_timeline(result.get("timeline", []))
+
+            with _jobs_lock:
+                state["warnings"]        = result.get("warnings", [])
+                state["errors"]          = result.get("errors", [])
+                state["timeline_report"] = timeline_report
+                state["finished_at"]     = time.time()
+
+                if result.get("cancelled"):
+                    state["status"]       = "cancelled"
+                    state["current_step"] = "Cancelled"
+                    state["progress"]     = 0
+                elif result["success"] and os.path.isfile(output_path):
+                    state["status"]           = "completed"
+                    state["current_step"]     = "Complete"
+                    state["progress"]         = 100
+                    state["output_video_url"] = f"/outputs/{output_filename}"
+                else:
+                    state["status"]       = "failed"
+                    state["current_step"] = "Failed"
+
+        except VideoTimelineCancelled:
+            with _jobs_lock:
+                state["status"]       = "cancelled"
+                state["current_step"] = "Cancelled"
+                state["progress"]     = 0
+                state["finished_at"]  = time.time()
+            if os.path.isfile(output_path):
+                try: os.remove(output_path)
+                except Exception: pass
+
+        except Exception as exc:
+            logger.exception("Unhandled error in video timeline job %s", job_id)
+            with _jobs_lock:
+                state["status"]       = "failed"
+                state["current_step"] = "Failed"
+                state["errors"]       = [f"Internal server error: {str(exc)}"]
+                state["finished_at"]  = time.time()
+
+        finally:
+            try:
+                shutil.rmtree(str(job_temp), ignore_errors=True)
+            except Exception:
+                pass
+            logger.info("Video timeline job %s finished → status=%s", job_id, state["status"])
+
+    thread = threading.Thread(target=run_job, daemon=True, name=f"vtl-{job_id[:8]}")
+    thread.start()
+
+    logger.info("Video timeline job %s queued", job_id)
+    return JSONResponse(content={"job_id": job_id})
 
 
 # ---------------------------------------------------------------------------
