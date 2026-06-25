@@ -7,6 +7,8 @@ import EnhancementsPanel from './components/EnhancementsPanel'
 import CsvGuide from './components/CsvGuide'
 import ResultsPanel from './components/ResultsPanel'
 import ProgressOverlay from './components/ProgressOverlay'
+import AppModeSwitcher, { type AppMode } from './components/AppModeSwitcher'
+import VideoTimelinePage from './components/VideoTimelinePage'
 import {
   IconMusic,
   IconImage,
@@ -196,6 +198,15 @@ export default function App() {
   useEffect(() => { applyTheme(isDark) }, [isDark])
   useEffect(() => { applyTheme(getInitialDark()) }, [])
   const toggleTheme = () => setIsDark(d => !d)
+
+  // App mode (image | video) — persisted to localStorage
+  const [activeMode, setActiveMode] = useState<AppMode>(() => {
+    try { return (localStorage.getItem('appMode') as AppMode) || 'image' } catch { return 'image' }
+  })
+  const handleModeChange = (mode: AppMode) => {
+    setActiveMode(mode)
+    try { localStorage.setItem('appMode', mode) } catch { /* noop */ }
+  }
 
   // Required files
   const [audioFile, setAudioFile]   = useState<File | null>(null)
@@ -400,9 +411,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* ════════════════════════════════════════════════════════════
-          ALERTS
-      ════════════════════════════════════════════════════════════ */}
+      {/* ── Mode switcher ── */}
+      <AppModeSwitcher activeMode={activeMode} onChange={handleModeChange} />
+
+      {/* ── Alerts (always visible regardless of mode) ── */}
       {healthOk === false && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-4">
           <div className="alert-error">
@@ -430,8 +442,11 @@ export default function App() {
       )}
 
       {/* ════════════════════════════════════════════════════════════
-          MAIN WORKSPACE
+          PAGE CONTENT — switches between modes
       ════════════════════════════════════════════════════════════ */}
+      {activeMode === 'video' ? (
+        <VideoTimelinePage />
+      ) : (
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
         <div className="flex flex-col xl:flex-row gap-6 items-start">
 
@@ -653,6 +668,7 @@ export default function App() {
           </div>
         </div>
       </main>
+      )}
 
       {/* ── Footer ── */}
       <footer className="py-4 text-center" style={{ borderTop: '1px solid var(--border-subtle)' }}>
