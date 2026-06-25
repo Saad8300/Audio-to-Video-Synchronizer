@@ -69,9 +69,19 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
 
   const etaLabel = (remaining !== null && (remaining > 0 || progress > 5)) ? formatTime(remaining) : 'Calculating…'
 
+  const getStage = (p: number, t: boolean) => {
+    if (t) return 3;
+    if (p < 10) return 0; // Preparing
+    if (p < 50) return 1; // Processing
+    if (p < 90) return 2; // Encoding
+    return 3;             // Finalizing
+  }
+  const currentStageIndex = getStage(progress, isTerminal);
+  const stages = ['Preparing', 'Processing', 'Encoding', 'Finalizing'];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}>
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}>
 
       <div
         className="relative w-[400px] max-w-[93vw] rounded-2xl shadow-2xl overflow-hidden animate-slide-up"
@@ -80,28 +90,34 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
         aria-modal="true"
         aria-label="Generating Video"
       >
-        {/* Top accent line */}
-        <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, var(--accent-primary), #8b5cf6)` }} />
+        {/* Soft background glows */}
+        <div className="absolute -top-32 -left-32 w-64 h-64 rounded-full mix-blend-screen opacity-10 animate-pulse-slow pointer-events-none" style={{ background: 'radial-gradient(circle, var(--accent-primary) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-32 -right-32 w-64 h-64 rounded-full mix-blend-screen opacity-5 animate-pulse-slow pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)', animationDelay: '1.5s' }} />
 
-        <div className="p-8 space-y-6">
+        {/* Top accent line */}
+        <div className="h-0.5 w-full relative overflow-hidden" style={{ background: `linear-gradient(90deg, var(--accent-primary), #8b5cf6)` }}>
+          {!isTerminal && <div className="absolute inset-0 w-full h-full animate-shimmer" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)' }} />}
+        </div>
+
+        <div className="p-8 space-y-6 relative">
           {/* Icon + title */}
           <div className="flex flex-col items-center gap-3 text-center">
             <div
-              className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+              className="relative w-16 h-16 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}
             >
               {!isTerminal && (
-                <div
-                  className="absolute inset-0 rounded-2xl animate-pulse-slow"
-                  style={{ background: 'var(--accent-subtle)' }}
-                />
+                <svg className="absolute inset-0 w-full h-full animate-spin pointer-events-none" viewBox="0 0 100 100" style={{ transformOrigin: 'center' }}>
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="var(--border-default)" strokeWidth="3" />
+                  <circle cx="50" cy="50" r="48" fill="none" stroke="var(--accent-primary)" strokeWidth="3" strokeDasharray="80 220" strokeLinecap="round" />
+                </svg>
               )}
               <div className="relative">
                 {cancelling
-                  ? <IconXCircle size={26} style={{ color: 'var(--color-error)' }} />
+                  ? <IconXCircle size={28} style={{ color: 'var(--color-error)' }} />
                   : progress === 100
                   ? <span className="text-2xl" style={{ color: 'var(--color-success)' }}>✓</span>
-                  : <IconZap size={26} style={{ color: 'var(--accent-primary)' }} />
+                  : <IconZap size={28} style={{ color: 'var(--accent-primary)' }} />
                 }
               </div>
             </div>
@@ -115,10 +131,34 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
                 style={{ color: 'var(--accent-primary)' }}
                 aria-live="polite"
               >
-                {step}
+                {step}{!isTerminal && !cancelling && <span className="animated-dots" />}
               </p>
             </div>
           </div>
+
+          {/* Mini-stage row */}
+          {!cancelling && (
+            <div className="flex items-center justify-between px-2 pt-2 pb-1">
+              {stages.map((st, i) => {
+                const active = i === currentStageIndex;
+                const past = i < currentStageIndex;
+                return (
+                  <div key={st} className="flex flex-col items-center gap-1.5 transition-opacity duration-300" style={{ opacity: active || past ? 1 : 0.4 }}>
+                    <div
+                      className="w-2.5 h-2.5 rounded-full transition-colors duration-300"
+                      style={{
+                        background: active ? 'var(--accent-primary)' : past ? 'var(--color-success)' : 'var(--bg-input)',
+                        boxShadow: active ? '0 0 8px var(--accent-primary)' : 'none',
+                      }}
+                    />
+                    <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: active ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                      {st}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* Percentage + bar */}
           <div className="space-y-2">
@@ -127,16 +167,20 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled }: P
               <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>%</span>
             </div>
             <div
-              className="w-full h-1.5 rounded-full overflow-hidden"
+              className="w-full h-1.5 rounded-full overflow-hidden relative"
               style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)' }}
             >
               <div
-                className="h-full rounded-full transition-all duration-300 ease-out"
+                className="h-full rounded-full transition-all duration-300 ease-out relative overflow-hidden"
                 style={{
                   width: `${progress}%`,
                   background: 'linear-gradient(90deg, var(--accent-primary), #8b5cf6)',
                 }}
-              />
+              >
+                {!isTerminal && (
+                  <div className="absolute inset-0 w-full h-full animate-shimmer" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} />
+                )}
+              </div>
             </div>
           </div>
 
