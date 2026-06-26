@@ -509,6 +509,14 @@ async def jobs_start_video_timeline(
     watermark_opacity:       float = Form(0.65),
     watermark_size:          int   = Form(20),
     watermark_margin:        int   = Form(36),
+    # Batch 12A — motion
+    motion_style:            str   = Form("none"),
+    motion_intensity:        str   = Form("medium"),
+    # Background Music
+    background_music_file:   Optional[UploadFile] = File(None),
+    background_music_volume: float = Form(15.0),
+    background_music_loop:   bool  = Form(True),
+    background_music_fade:   bool  = Form(True),
 ):
     """
     Accept uploaded files and settings for Video Timeline mode (Batch 10B + 10C).
@@ -592,6 +600,18 @@ async def jobs_start_video_timeline(
         else:
             outro_path = None
 
+    # Save optional background music
+    bg_music_path: Optional[str] = None
+    if background_music_file and background_music_file.filename:
+        bg_ext = Path(background_music_file.filename).suffix or ".mp3"
+        bg_music_path = str(job_temp / f"bg_music{bg_ext}")
+        bg_data = await background_music_file.read()
+        if bg_data:
+            with open(bg_music_path, "wb") as f:
+                f.write(bg_data)
+        else:
+            bg_music_path = None
+
     # Output filename
     safe_name       = output_name.strip() if output_name and output_name.strip() else "video_timeline"
     safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
@@ -642,6 +662,12 @@ async def jobs_start_video_timeline(
                 watermark_opacity=watermark_opacity,
                 watermark_size=watermark_size,
                 watermark_margin=watermark_margin,
+                motion_style=motion_style,
+                motion_intensity=motion_intensity,
+                background_music_path=bg_music_path,
+                background_music_volume=background_music_volume,
+                background_music_loop=background_music_loop,
+                background_music_fade=background_music_fade,
                 intro_path=intro_path,
                 outro_path=outro_path,
                 cancel_event=state["cancel_event"],
@@ -739,6 +765,14 @@ async def jobs_start_media_timeline(
     watermark_opacity:       float = Form(0.65),
     watermark_size:          int   = Form(20),
     watermark_margin:        int   = Form(36),
+    # Batch 12A — motion
+    motion_style:            str   = Form("none"),
+    motion_intensity:        str   = Form("medium"),
+    # Background Music
+    background_music_file:   Optional[UploadFile] = File(None),
+    background_music_volume: float = Form(15.0),
+    background_music_loop:   bool  = Form(True),
+    background_music_fade:   bool  = Form(True),
     # Batch 11D — Intro / Outro
     intro_file:              Optional[UploadFile] = File(None),
     outro_file:              Optional[UploadFile] = File(None),
@@ -834,6 +868,18 @@ async def jobs_start_media_timeline(
         with open(outro_path, "wb") as f:
             f.write(await outro_file.read())
 
+    # Save optional background music
+    bg_music_path: Optional[str] = None
+    if background_music_file and background_music_file.filename:
+        bg_ext = Path(background_music_file.filename).suffix or ".mp3"
+        bg_music_path = str(job_temp / f"bg_music{bg_ext}")
+        bg_data = await background_music_file.read()
+        if bg_data:
+            with open(bg_music_path, "wb") as f:
+                f.write(bg_data)
+        else:
+            bg_music_path = None
+
     # Output filename
     safe_name       = output_name.strip() if output_name and output_name.strip() else "media_timeline"
     safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
@@ -890,6 +936,12 @@ async def jobs_start_media_timeline(
                 watermark_opacity=max(0.0, min(1.0, float(watermark_opacity))),
                 watermark_size=max(1, min(100, int(watermark_size))),
                 watermark_margin=max(5, min(int(watermark_margin), 200)),
+                motion_style=motion_style,
+                motion_intensity=motion_intensity,
+                background_music_path=bg_music_path,
+                background_music_volume=background_music_volume,
+                background_music_loop=background_music_loop,
+                background_music_fade=background_music_fade,
                 intro_path=intro_path,
                 outro_path=outro_path,
                 cancel_event=state["cancel_event"],

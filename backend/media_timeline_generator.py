@@ -36,6 +36,8 @@ from video_timeline_generator import (
     _make_watermark_overlay,
 )
 
+from media_helpers import apply_motion_to_clip, mix_background_music, pad_clip_to_size
+
 logger = logging.getLogger(__name__)
 
 # Pillow compatibility shim
@@ -470,6 +472,12 @@ def generate_media_timeline(
     watermark_opacity: float = 0.65,
     watermark_size: int = 20,
     watermark_margin: int = 36,
+    motion_style: str = "none",
+    motion_intensity: str = "medium",
+    background_music_path: Optional[str] = None,
+    background_music_volume: float = 15.0,
+    background_music_loop: bool = True,
+    background_music_fade: bool = True,
     intro_path: Optional[str] = None,
     outro_path: Optional[str] = None,
     cancel_event: threading.Event = None,
@@ -596,13 +604,20 @@ def generate_media_timeline(
                     else: # contain
                         base_clip = base_clip.resize(width=width) if src_ratio > target_ratio else base_clip.resize(height=height)
                         if base_clip.w != width or base_clip.h != height:
-                            from moviepy.editor import CompositeVideoClip
-                            bg = _make_black_clip(width, height, dur, fps)
-                            base_clip = CompositeVideoClip([bg, base_clip.set_position("center")])
+                            # We let apply_background_to_clip handle the padding later instead of doing it here
+                            pass
 
-            # Apply Visual Style (before text so text stays clear)
             if asset_type in ("video", "image"):
+                # Apply motion FIRST (modifies internal framing/cropping)
+                base_clip = apply_motion_to_clip(
+                    base_clip, motion_style, motion_intensity, width, height
+                )
+                
+                # Apply Visual Style (before background)
                 base_clip = _apply_visual_style_to_clip(base_clip, visual_effect, effect_strength)
+                
+                # Pad clip to exactly width x height
+                base_clip = pad_clip_to_size(base_clip, width, height)
                 
             # Overlay Text
             if text_str:
@@ -701,7 +716,21 @@ def generate_media_timeline(
             main_video = main_video.subclip(0, audio_dur)
             visual_dur = audio_dur
             
-        main_video = main_video.set_audio(main_audio.set_duration(visual_dur))
+        final_audio = main_audio.set_duration(visual_dur)
+        if background_music_path:
+            try:
+                final_audio, _ = mix_background_music(
+                    main_audio_clip=final_audio,
+                    music_path=background_music_path,
+                    final_duration=visual_dur,
+                    volume=background_music_volume,
+                    loop=background_music_loop,
+                    fade=background_music_fade
+                )
+            except Exception as m_e:
+                warnings.append(str(m_e))
+
+        main_video = main_video.set_audio(final_audio)
 
         # Watermark
         use_wm = bool(watermark_text.strip())

@@ -749,6 +749,14 @@ def generate_video_timeline(
     # Batch 10C — intro / outro
     intro_path:          Optional[str] = None,
     outro_path:          Optional[str] = None,
+    # Batch 12A — motion
+    motion_style:            str   = "none",
+    motion_intensity:        str   = "medium",
+    # Background Music
+    background_music_path:   Optional[str] = None,
+    background_music_volume: float = 15.0,
+    background_music_loop:   bool  = True,
+    background_music_fade:   bool  = True,
     # Cancellation
     cancel_event:        Optional[threading.Event]    = None,
     progress_callback:   Optional[Callable[[int, str], None]] = None,
@@ -853,8 +861,8 @@ def generate_video_timeline(
             if use_intro or use_outro or use_wm:
                 warnings_out.append("Long Video Timeline exports with watermark/intro/outro can take several minutes. Use 720p Fast Preview first for testing.")
 
-        # ── Step 4: Build all segment clips ───────────────────────────────────
         from moviepy.editor import concatenate_videoclips, AudioFileClip, CompositeVideoClip
+        from media_helpers import apply_motion_to_clip, mix_background_music, pad_clip_to_size
 
         report(15, "Preparing clips")
         all_clips: list = []
@@ -892,8 +900,14 @@ def generate_video_timeline(
                     row_label=row_label,
                     raw_clips_registry=raw_clips_registry,
                 )
+                # Apply motion FIRST (modifies internal framing/cropping)
+                clip = apply_motion_to_clip(
+                    clip, motion_style, motion_intensity, target_w, target_h
+                )
                 # Apply visual style per-frame
                 clip = _apply_visual_style_to_clip(clip, visual_effect, effect_strength)
+                # Pad clip to ensure it fits the exact output dimensions
+                clip = pad_clip_to_size(clip, target_w, target_h)
                 all_clips.append(clip)
             except VideoTimelineError as vte:
                 errors_out.append(str(vte))
@@ -1053,6 +1067,20 @@ def generate_video_timeline(
                 )
 
             final_audio = main_audio.subclip(0, min(main_audio.duration, final_video.duration))
+            
+            if background_music_path:
+                try:
+                    final_audio, bg_clip = mix_background_music(
+                        main_audio_clip=final_audio,
+                        music_path=background_music_path,
+                        final_duration=final_audio.duration,
+                        volume=background_music_volume,
+                        loop=background_music_loop,
+                        fade=background_music_fade
+                    )
+                except Exception as m_e:
+                    warnings_out.append(str(m_e))
+
             final_video = final_video.set_audio(final_audio)
 
         except Exception as e:

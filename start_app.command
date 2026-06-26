@@ -316,7 +316,14 @@ fi
 # =============================================================================
 echo ""
 echo -e "$(printf '═%.0s' {1..60})"
-echo -e "${GREEN}${BOLD}  🎉  Audio Image Sync Studio is running!${RESET}"
+if [ "$BACKEND_OK" -eq 1 ] && [ "$FRONTEND_OK" -eq 1 ]; then
+    echo -e "${GREEN}${BOLD}  🎉  Audio Image Sync Studio is running successfully!${RESET}"
+else
+    echo -e "${RED}${BOLD}  ⚠️  Audio Image Sync Studio started with errors!${RESET}"
+    if [ "$BACKEND_OK" -eq 0 ]; then
+        echo -e "${YELLOW}  Backend is offline. Video generation will not work!${RESET}"
+    fi
+fi
 echo -e "$(printf '═%.0s' {1..60})"
 echo ""
 echo -e "  🌐  App URL    :  ${CYAN}${FRONTEND_URL}${RESET}"

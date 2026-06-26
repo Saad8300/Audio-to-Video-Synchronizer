@@ -51,6 +51,14 @@ const DEFAULT_SETTINGS: MediaTimelineSettings = {
   watermarkOpacity:      65,
   watermarkSize:         20,
   watermarkMargin:       36,
+  // Batch 12A
+  motionStyle:         'none',
+  motionIntensity:     'medium',
+  // Background Music
+  backgroundMusicFile: null as File | null,
+  backgroundMusicVolume: 15,
+  backgroundMusicLoop: true,
+  backgroundMusicFade: true,
   enableIntro: false,
   enableOutro: false,
 }
@@ -204,10 +212,13 @@ function MediaTimelineResult({
 
   if (settings.transition !== 'none') chips.push(`Trans: ${settings.transition.replace('_', ' ')}`)
   if (settings.visualEffect !== 'none') chips.push(`Style: ${settings.visualEffect.replace('_', ' ')}`)
-  if (settings.enableWatermark) chips.push(`WM: on`)
-  if (settings.enableIntro) chips.push(`Intro: on`)
-  if (settings.enableOutro) chips.push(`Outro: on`)
-
+  chips.push(
+    ...(settings.watermarkText.trim() ? ['Watermark: on'] : []),
+    ...(settings.enableIntro ? ['Intro: on'] : []),
+    ...(settings.enableOutro ? ['Outro: on'] : []),
+    ...(settings.motionStyle !== 'none' ? [`Motion: ${settings.motionStyle.replace(/_/g, ' ')}`] : []),
+    ...(settings.backgroundMusicFile ? [`Bg Music: On`, `Vol: ${settings.backgroundMusicVolume}%`, `Loop: ${settings.backgroundMusicLoop ? 'On' : 'Off'}`, `Fade: ${settings.backgroundMusicFade ? 'On' : 'Off'}`] : []),
+  )
   if (result.visual_duration) chips.push(`Visual: ${result.visual_duration.toFixed(2)}s`)
   if (result.audio_duration) chips.push(`Audio: ${result.audio_duration.toFixed(2)}s`)
 
@@ -536,6 +547,84 @@ export default function MediaTimelinePage() {
                   { value: 'right',  label: 'Right' }
                 ]} />
             </div>
+          </div>
+
+          {/* ── Motion Style ── */}
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Motion Style</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Apply motion to your media.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Sel id="mt-motion-style" label="Motion Style" value={settings.motionStyle} disabled={disabled} onChange={v => set('motionStyle', v as any)}
+                options={[
+                  { value: 'none',             label: 'None' },
+                  { value: 'slow_zoom_in',     label: 'Subtle Zoom In' },
+                  { value: 'slow_zoom_out',    label: 'Subtle Zoom Out' },
+                  { value: 'pan_left',         label: 'Slow Pan Left' },
+                  { value: 'pan_right',        label: 'Slow Pan Right' },
+                  { value: 'pan_up',           label: 'Slow Pan Up' },
+                  { value: 'pan_down',         label: 'Slow Pan Down' },
+                  { value: 'ken_burns',        label: 'Ken Burns' },
+                  { value: 'dynamic_shorts',   label: 'Dynamic Shorts Motion' },
+                  { value: 'subtle_random',    label: 'Gentle Handheld' },
+                ]}
+              />
+
+              {settings.motionStyle !== 'none' && (
+                <Sel id="mt-motion-intensity" label="Intensity" value={settings.motionIntensity} disabled={disabled} onChange={v => set('motionIntensity', v as any)}
+                  options={[
+                    { value: 'low',    label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'high',   label: 'High' },
+                  ]}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* ── Background Music ── */}
+          <div className="card p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Background Music</h2>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Optional music track mixed under the main voice audio.</p>
+            </div>
+            
+            <MediaDropZone
+              id="mt-bg-music-upload"
+              label="Upload Music"
+              description="mp3, wav, m4a, aac"
+              accept="audio/mpeg,audio/wav,audio/aac,audio/x-m4a,audio/mp4,.m4a"
+              icon={<IconMusic size={14} />}
+              file={settings.backgroundMusicFile}
+              onChange={(f) => set('backgroundMusicFile', f as any)}
+              disabled={disabled}
+            />
+
+            {settings.backgroundMusicFile && (
+              <div className="pt-2 border-t border-[var(--border-subtle)] space-y-3">
+                <div className="space-y-1 mt-2">
+                  <div className="flex justify-between items-center">
+                    <label className="form-label mb-0">Music Volume</label>
+                    <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{settings.backgroundMusicVolume}%</span>
+                  </div>
+                  <input type="range" min={0} max={100} value={settings.backgroundMusicVolume}
+                    onChange={e => set('backgroundMusicVolume', Number(e.target.value) as any)}
+                    className="w-full" disabled={disabled} />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--text-primary)', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                    <input type="checkbox" checked={settings.backgroundMusicLoop} onChange={e => set('backgroundMusicLoop', e.target.checked as any)} disabled={disabled} />
+                    Loop music to full video length
+                  </label>
+                  <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--text-primary)', cursor: disabled ? 'not-allowed' : 'pointer' }}>
+                    <input type="checkbox" checked={settings.backgroundMusicFade} onChange={e => set('backgroundMusicFade', e.target.checked as any)} disabled={disabled} />
+                    Fade music in/out
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Advanced Enhancements (Batch 11D) */}

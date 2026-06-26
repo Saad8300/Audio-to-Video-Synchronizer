@@ -154,6 +154,18 @@ export async function startVideoTimelineJob(
   form.append('visual_effect',       settings.visualEffect)
   form.append('effect_strength',     settings.effectStrength)
 
+  // Batch 12A — Motion
+  form.append('motion_style',         settings.motionStyle)
+  form.append('motion_intensity',     settings.motionIntensity)
+
+  // Background Music
+  if (settings.backgroundMusicFile) {
+    form.append('background_music_file', settings.backgroundMusicFile)
+  }
+  form.append('background_music_volume', String(settings.backgroundMusicVolume))
+  form.append('background_music_loop',   String(settings.backgroundMusicLoop))
+  form.append('background_music_fade',   String(settings.backgroundMusicFade))
+
   // Batch 10C — watermark (auto-enable when text exists)
   const wmActive = settings.watermarkText.trim().length > 0
   if (wmActive) {
@@ -252,6 +264,14 @@ export async function startMediaTimelineJob(
     watermarkOpacity:      number
     watermarkSize:         number
     watermarkMargin:       number
+    enableIntro:           boolean
+    enableOutro:           boolean
+    motionStyle:           string
+    motionIntensity:       string
+    backgroundMusicFile:   File | null
+    backgroundMusicVolume: number
+    backgroundMusicLoop:   boolean
+    backgroundMusicFade:   boolean
   },
   introFile?:  File | null,
   outroFile?:  File | null,
@@ -281,6 +301,18 @@ export async function startMediaTimelineJob(
   form.append('transition_duration', settings.transitionDuration)
   form.append('visual_effect',       settings.visualEffect)
   form.append('effect_strength',     settings.effectStrength)
+
+  // Batch 12A — Motion
+  form.append('motion_style',         settings.motionStyle)
+  form.append('motion_intensity',     settings.motionIntensity)
+
+  // Background Music
+  if (settings.backgroundMusicFile) {
+    form.append('background_music_file', settings.backgroundMusicFile)
+  }
+  form.append('background_music_volume', String(settings.backgroundMusicVolume))
+  form.append('background_music_loop',   String(settings.backgroundMusicLoop))
+  form.append('background_music_fade',   String(settings.backgroundMusicFade))
 
   if (introFile) form.append('intro_file', introFile)
   if (outroFile) form.append('outro_file', outroFile)

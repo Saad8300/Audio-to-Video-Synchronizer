@@ -60,6 +60,8 @@ export type VisualEffect =
 
 export type EffectStrength = 'low' | 'medium' | 'high'
 
+// Removed Background visual style options based on correction.
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface GenerateSettings {
@@ -157,6 +159,16 @@ export interface VideoTimelineSettings {
   visualEffect:        VisualEffect
   effectStrength:      EffectStrength
 
+  // Batch 12A — Motion
+  motionStyle:         MotionEffect
+  motionIntensity:     MotionIntensity
+
+  // Background Music
+  backgroundMusicFile:   File | null
+  backgroundMusicVolume: number
+  backgroundMusicLoop:   boolean
+  backgroundMusicFade:   boolean
+
   // Batch 10C — watermark
   enableWatermark:       boolean
   watermarkText:         string
@@ -204,6 +216,16 @@ export interface MediaTimelineSettings {
   transitionDuration:    TransitionDuration
   visualEffect:          VisualEffect
   effectStrength:        EffectStrength
+  
+  // Batch 12A — Motion
+  motionStyle:           MotionEffect
+  motionIntensity:       MotionIntensity
+  
+  // Background Music
+  backgroundMusicFile:   File | null
+  backgroundMusicVolume: number
+  backgroundMusicLoop:   boolean
+  backgroundMusicFade:   boolean
   enableWatermark:       boolean
   watermarkText:         string
   watermarkPositionMode: WatermarkPositionMode
