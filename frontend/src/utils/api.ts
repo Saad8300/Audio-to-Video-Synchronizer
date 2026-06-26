@@ -4,6 +4,35 @@ import type { GenerateResponse, GenerateSettings, JobStatus, VideoTimelineSettin
 
 const BASE_URL = '' // Vite dev proxy handles /api → http://127.0.0.1:8000
 
+
+function parseErrorResponse(status: number, text: string): string {
+  try {
+    const data = JSON.parse(text)
+    if (data.detail) {
+      if (typeof data.detail === 'string') return data.detail
+      if (Array.isArray(data.detail)) {
+        const msgs = data.detail.map((err: any) => {
+          if (err.type === "missing" && err.loc) {
+            const field = err.loc[err.loc.length - 1]
+            if (field === "audio_zip") return "Please upload an Audio Parts ZIP."
+            if (field === "audio_file") return "Please upload a main audio file."
+            return `Missing required field: ${field}`
+          }
+          const loc = err.loc ? err.loc.join('.') : 'Field'
+          return `${loc}: ${err.msg}`
+        })
+        return msgs.join(' | ')
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  if (status === 413) return "Payload too large. Please upload smaller files."
+  if (status >= 500) return "Internal server error. Please check backend logs."
+  return `Server error ${status}: ${text}`
+}
+
+
 export async function checkHealth(): Promise<boolean> {
   try {
     const res = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(5000) })
@@ -92,7 +121,7 @@ export async function startJob(
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Server error ${res.status}: ${text}`)
+    throw new Error(parseErrorResponse(res.status, text))
   }
 
   return res.json() as Promise<{ job_id: string }>
@@ -105,7 +134,7 @@ export async function getJobStatus(jobId: string): Promise<JobStatus> {
   })
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Status error ${res.status}: ${text}`)
+    throw new Error(parseErrorResponse(res.status, text))
   }
   return res.json() as Promise<JobStatus>
 }
@@ -118,7 +147,7 @@ export async function cancelJob(jobId: string): Promise<void> {
   })
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Cancel error ${res.status}: ${text}`)
+    throw new Error(parseErrorResponse(res.status, text))
   }
 }
 
@@ -204,7 +233,7 @@ export async function startVideoTimelineJob(
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Server error ${res.status}: ${text}`)
+    throw new Error(parseErrorResponse(res.status, text))
   }
 
   return res.json() as Promise<{ job_id: string }>
@@ -238,7 +267,7 @@ export async function generateVideo(
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Server error ${res.status}: ${text}`)
+    throw new Error(parseErrorResponse(res.status, text))
   }
 
   return res.json() as Promise<GenerateResponse>
@@ -364,7 +393,7 @@ export async function startMediaTimelineJob(
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Server error ${res.status}: ${text}`)
+    throw new Error(parseErrorResponse(res.status, text))
   }
 
   return res.json() as Promise<{ job_id: string }>

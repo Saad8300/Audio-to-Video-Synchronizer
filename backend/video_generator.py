@@ -722,11 +722,13 @@ def generate_video(
     # ------------------------------------------------------------------
     _progress(30, "Validating images and timeline")
     used_images = {r["image"] for r in rows}
-    unused = extracted_files - used_images
+    unused = sorted(list(extracted_files - used_images))
     if unused:
-        warnings.append(
-            f"The following images in the ZIP are not referenced in the CSV: {', '.join(sorted(unused))}"
-        )
+        if len(unused) > 3:
+            preview = ", ".join(unused[:3])
+            warnings.append(f"There are {len(unused)} extra files in your ZIP that are not listed in the CSV (e.g. {preview}, and {len(unused) - 3} more). They were skipped.")
+        else:
+            warnings.append(f"The following files in your ZIP are not listed in the CSV and were skipped: {', '.join(unused)}")
     _check_cancel()
 
     # ------------------------------------------------------------------

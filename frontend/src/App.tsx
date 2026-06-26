@@ -28,13 +28,13 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   aspectRatio:      '9:16',
   exportResolution: '1080p',
   fitMode:          'cover',
-  transition:       'fade',
-  zoomEffect:       'slow_zoom_in',
+  transition:       'none',
+  zoomEffect:       'none',
   renderProfile:    'balanced',
   outputName:       'my_video',
   // Batch 9A — motion & style
   stylePreset:         'clean_default',
-  motionEffect:        'slow_zoom_in',
+  motionEffect:        'none',
   motionIntensity:     'medium',
   transitionDuration:  '0.5',
   visualEffect:        'none',
@@ -502,47 +502,31 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-3">
-                  <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg">
-                    <button
-                      className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                      onClick={() => setAudioInputMode('single')}
-                    >
-                      Single File
-                    </button>
-                    <button
-                      className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                      onClick={() => setAudioInputMode('zip')}
-                    >
-                      Parts ZIP
-                    </button>
-                  </div>
-                  {audioInputMode === 'single' ? (
-                    <FileDropZone
-                      id="audio-upload-single"
-                      label="Main Audio"
-                      description="Upload one main audio file"
-                      accept="audio/*,.mp3,.wav,.m4a,.aac"
-                      icon={<IconMusic size={14} />}
-                      file={audioFile}
-                      onChange={setAudioFile}
-                      disabled={isLoading}
-                      required
-                    />
-                  ) : (
-                    <FileDropZone
-                      id="audio-upload-zip"
-                      label="Audio Parts ZIP"
-                      description="ZIP of 1.mp3, 2.mp3..."
-                      accept=".zip,application/zip"
-                      icon={<IconFileText size={14} />}
-                      file={audioZip}
-                      onChange={setAudioZip}
-                      disabled={isLoading}
-                      required
-                    />
-                  )}
-                </div>
+                {audioInputMode === 'single' ? (
+                  <FileDropZone
+                    id="audio-upload-single"
+                    label="Main Audio"
+                    description="Upload one main audio file"
+                    accept="audio/*,.mp3,.wav,.m4a,.aac"
+                    icon={<IconMusic size={14} />}
+                    file={audioFile}
+                    onChange={setAudioFile}
+                    disabled={isLoading}
+                    required
+                  />
+                ) : (
+                  <FileDropZone
+                    id="audio-upload-zip"
+                    label="Audio Parts ZIP"
+                    description="ZIP of 1.mp3, 2.mp3..."
+                    accept=".zip,application/zip"
+                    icon={<IconFileText size={14} />}
+                    file={audioZip}
+                    onChange={setAudioZip}
+                    disabled={isLoading}
+                    required
+                  />
+                )}
                 <FileDropZone
                   id="images-upload"
                   label="Images ZIP"
@@ -567,7 +551,23 @@ export default function App() {
                 />
               </div>
 
-              <div>
+              <div className="flex justify-start">
+                <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg w-full sm:w-1/3">
+                  <button
+                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                    onClick={() => setAudioInputMode('single')}
+                  >
+                    Single File
+                  </button>
+                  <button
+                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                    onClick={() => setAudioInputMode('zip')}
+                  >
+                    Parts ZIP
+                  </button>
+                </div>
+              </div>
+              <div className="pt-2">
                 <div className="flex items-center gap-2 mt-1 mb-3">
                   <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Optional Appends</span>
                   <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />

@@ -157,7 +157,7 @@ def prepare_zip_audio(
         try:
             merged = concatenate_audioclips(clips)
             # WAV/PCM — works on all standard FFmpeg builds, no libfdk_aac required
-            merged.write_audiofile(merged_path, codec="pcm_s16le", logger=None)
+            merged.write_audiofile(merged_path, fps=44100, codec="pcm_s16le", logger=None)
             logger.info("Merged audio written: %s", merged_path)
         except Exception as e:
             raise ValueError(
@@ -240,7 +240,7 @@ async def prepare_multiple_audio(
         merged_path = str(job_temp / "merged_audio.wav")
         try:
             merged = concatenate_audioclips(clips)
-            merged.write_audiofile(merged_path, codec="pcm_s16le", logger=None)
+            merged.write_audiofile(merged_path, fps=44100, codec="pcm_s16le", logger=None)
         except Exception as e:
             raise ValueError(f"Audio merge failed. Detail: {e}")
         finally:

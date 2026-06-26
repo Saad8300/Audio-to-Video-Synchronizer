@@ -411,21 +411,6 @@ export default function MediaTimelinePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-3">
-                <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg">
-                  <button
-                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                    onClick={() => setAudioInputMode('single')}
-                  >
-                    Single File
-                  </button>
-                  <button
-                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-                    onClick={() => setAudioInputMode('zip')}
-                  >
-                    Parts ZIP
-                  </button>
-                </div>
                 {audioInputMode === 'single' ? (
                   <MediaDropZone
                     id="mt-audio-single"
@@ -451,30 +436,46 @@ export default function MediaTimelinePage() {
                     disabled={disabled}
                   />
                 )}
+                <MediaDropZone
+                  id="media-zip"
+                  label="Media ZIP"
+                  description="ZIP with images and videos."
+                  accept="application/zip,application/x-zip-compressed,.zip"
+                  icon={<IconGrid size={18} />}
+                  file={mediaZip}
+                  onChange={setMediaZip}
+                  required
+                  disabled={disabled}
+                />
+                <MediaDropZone
+                  id="timeline-csv"
+                  label="Timeline CSV"
+                  description="CSV controlling the timeline."
+                  accept="text/csv,.csv"
+                  icon={<IconFileText size={18} />}
+                  file={timelineCsv}
+                  onChange={setTimelineCsv}
+                  required
+                  disabled={disabled}
+                />
               </div>
-              <MediaDropZone
-                id="media-zip"
-                label="Media ZIP"
-                description="ZIP with images and videos."
-                accept="application/zip,application/x-zip-compressed,.zip"
-                icon={<IconGrid size={18} />}
-                file={mediaZip}
-                onChange={setMediaZip}
-                required
-                disabled={disabled}
-              />
-              <MediaDropZone
-                id="timeline-csv"
-                label="Timeline CSV"
-                description="CSV controlling the timeline."
-                accept="text/csv,.csv"
-                icon={<IconFileText size={18} />}
-                file={timelineCsv}
-                onChange={setTimelineCsv}
-                required
-                disabled={disabled}
-              />
-            </div>
+
+              <div className="flex justify-start">
+                <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg w-full sm:w-1/3">
+                  <button
+                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                    onClick={() => setAudioInputMode('single')}
+                  >
+                    Single File
+                  </button>
+                  <button
+                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                    onClick={() => setAudioInputMode('zip')}
+                  >
+                    Parts ZIP
+                  </button>
+                </div>
+              </div>
             
             <div>
               <div className="flex items-center gap-2 mt-1 mb-3">
