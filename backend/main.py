@@ -24,6 +24,7 @@ from video_generator import generate_video, GenerationCancelled
 from video_timeline_generator import generate_video_timeline, VideoTimelineCancelled
 from media_timeline_generator import generate_media_timeline, MediaTimelineCancelled
 from utils import seconds_to_mmss, FORMAT_DIMENSIONS
+from audio_helpers import prepare_single_audio, prepare_zip_audio
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -133,8 +134,12 @@ async def health_check():
 
 @app.post("/api/jobs/start")
 async def jobs_start(
+    # Audio — mode selector + two upload slots
+    audio_input_mode: str = Form("single"),          # 'single' | 'zip'
+    audio_file:       Optional[UploadFile] = File(None),   # for mode=single
+    audio_zip:        Optional[UploadFile] = File(None),   # for mode=zip
+    audio_files:      Optional[List[UploadFile]] = File(None), # backward compatibility
     # Required uploads
-    audio_files:     List[UploadFile] = File(...),
     images_zip:      UploadFile = File(...),
     timestamp_csv:   UploadFile = File(...),
     # Core video settings
@@ -248,35 +253,37 @@ async def jobs_start(
         with open(dest, "wb") as f:
             f.write(content)
 
-    # Use .wav for merged audio — avoids libfdk_aac / AAC encoder dependency
-    audio_path = str(job_temp / "merged_audio.wav")
-    if len(audio_files) == 1:
-        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".mp3"
-        audio_path = str(job_temp / f"audio{audio_ext}")
-        content = await audio_files[0].read()
-        with open(audio_path, "wb") as f:
-            f.write(content)
+    # ── Prepare main audio via shared helper ──────────────────────────────
+    mode = audio_input_mode.strip().lower()
+    
+    if mode == "single" and audio_file is not None and audio_file.filename:
+        try:
+            audio_path, _audio_meta = prepare_single_audio(
+                await audio_file.read(), audio_file.filename, job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    elif mode == "zip" and audio_zip is not None and audio_zip.filename:
+        try:
+            audio_path, _audio_meta = prepare_zip_audio(
+                await audio_zip.read(), job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    elif audio_files is not None and len(audio_files) > 0 and audio_files[0].filename:
+        try:
+            audio_path, _audio_meta = await prepare_multiple_audio(
+                audio_files, job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
     else:
-        from moviepy.editor import AudioFileClip, concatenate_audioclips
-        
-        def natural_sort_key(s):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', str(s))]
-            
-        sorted_files = sorted(audio_files, key=lambda f: natural_sort_key(f.filename or ""))
-        
-        clips = []
-        for i, af in enumerate(sorted_files):
-            ext = Path(af.filename).suffix if af.filename else ".mp3"
-            tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
-            content = await af.read()
-            with open(tmp_path, "wb") as f:
-                f.write(content)
-            clips.append(AudioFileClip(tmp_path))
-        merged = concatenate_audioclips(clips)
-        # Write as WAV/PCM — universally supported, no libfdk_aac needed
-        merged.write_audiofile(audio_path, codec="pcm_s16le", logger=None)
-        for c in clips: c.close()
-        merged.close()
+        if mode == "single":
+            raise HTTPException(400, "Please upload a main audio file.")
+        elif mode == "zip":
+            raise HTTPException(400, "Please upload an Audio Parts ZIP.")
+        else:
+            raise HTTPException(400, "Invalid audio input mode.")
 
     # Save optional uploads
     intro_path: Optional[str] = None
@@ -486,8 +493,12 @@ async def jobs_cancel(job_id: str):
 
 @app.post("/api/jobs/start-video-timeline")
 async def jobs_start_video_timeline(
+    # Audio — mode selector + two upload slots
+    audio_input_mode: str = Form("single"),          # 'single' | 'zip'
+    audio_file:       Optional[UploadFile] = File(None),
+    audio_zip:        Optional[UploadFile] = File(None),
+    audio_files:      Optional[List[UploadFile]] = File(None),
     # Required uploads
-    audio_files:  List[UploadFile] = File(...),
     videos_zip:   UploadFile = File(...),
     timeline_csv: UploadFile = File(...),
     # Optional uploads
@@ -554,35 +565,37 @@ async def jobs_start_video_timeline(
         with open(dest, "wb") as f:
             f.write(content)
 
-    # Use .wav for merged audio — avoids libfdk_aac / AAC encoder dependency
-    audio_path = str(job_temp / "merged_audio.wav")
-    if len(audio_files) == 1:
-        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".mp3"
-        audio_path = str(job_temp / f"audio{audio_ext}")
-        content = await audio_files[0].read()
-        with open(audio_path, "wb") as f:
-            f.write(content)
+    # ── Prepare main audio via shared helper ──────────────────────────────
+    vt_mode = audio_input_mode.strip().lower()
+
+    if vt_mode == "single" and audio_file is not None and audio_file.filename:
+        try:
+            audio_path, _audio_meta = prepare_single_audio(
+                await audio_file.read(), audio_file.filename, job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    elif vt_mode == "zip" and audio_zip is not None and audio_zip.filename:
+        try:
+            audio_path, _audio_meta = prepare_zip_audio(
+                await audio_zip.read(), job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    elif audio_files is not None and len(audio_files) > 0 and audio_files[0].filename:
+        try:
+            audio_path, _audio_meta = await prepare_multiple_audio(
+                audio_files, job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
     else:
-        from moviepy.editor import AudioFileClip, concatenate_audioclips
-        
-        def natural_sort_key(s):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', str(s))]
-            
-        sorted_files = sorted(audio_files, key=lambda f: natural_sort_key(f.filename or ""))
-        
-        clips = []
-        for i, af in enumerate(sorted_files):
-            ext = Path(af.filename).suffix if af.filename else ".mp3"
-            tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
-            content = await af.read()
-            with open(tmp_path, "wb") as f:
-                f.write(content)
-            clips.append(AudioFileClip(tmp_path))
-        merged = concatenate_audioclips(clips)
-        # Write as WAV/PCM — universally supported, no libfdk_aac needed
-        merged.write_audiofile(audio_path, codec="pcm_s16le", logger=None)
-        for c in clips: c.close()
-        merged.close()
+        if vt_mode == "single":
+            raise HTTPException(400, "Please upload a main audio file.")
+        elif vt_mode == "zip":
+            raise HTTPException(400, "Please upload an Audio Parts ZIP.")
+        else:
+            raise HTTPException(400, "Invalid audio input mode.")
 
     # Save optional intro/outro
     intro_path: Optional[str] = None
@@ -742,8 +755,12 @@ async def jobs_start_video_timeline(
 
 @app.post("/api/jobs/start-media-timeline")
 async def jobs_start_media_timeline(
+    # Audio — mode selector + two upload slots
+    audio_input_mode: str = Form("single"),          # 'single' | 'zip'
+    audio_file:       Optional[UploadFile] = File(None),
+    audio_zip:        Optional[UploadFile] = File(None),
+    audio_files:      Optional[List[UploadFile]] = File(None),
     # Required uploads
-    audio_files:  List[UploadFile] = File(...),
     media_zip:    UploadFile = File(...),
     timeline_csv: UploadFile = File(...),
     # Core settings
@@ -817,54 +834,37 @@ async def jobs_start_media_timeline(
         with open(dest, "wb") as f:
             f.write(content)
 
-    if not audio_files or len(audio_files) == 0 or (len(audio_files) == 1 and not audio_files[0].filename):
-        raise HTTPException(400, "Please upload a main audio file or audio parts.")
+    # ── Prepare main audio via shared helper ──────────────────────────────
+    mt_mode = audio_input_mode.strip().lower()
 
-    # Use .wav for merged audio — avoids libfdk_aac / AAC encoder dependency
-    audio_path = str(job_temp / "merged_audio.wav")
-    if len(audio_files) == 1:
-        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".mp3"
-        audio_path = str(job_temp / f"audio{audio_ext}")
-        content = await audio_files[0].read()
-        with open(audio_path, "wb") as f:
-            f.write(content)
-    else:
-        from moviepy.editor import AudioFileClip, concatenate_audioclips
-        
-        def natural_sort_key(s):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', str(s))]
-            
-        sorted_files = sorted(audio_files, key=lambda f: natural_sort_key(f.filename or ""))
-        
-        clips = []
-        for i, af in enumerate(sorted_files):
-            ext = Path(af.filename).suffix if af.filename else ".mp3"
-            tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
-            content = await af.read()
-            with open(tmp_path, "wb") as f:
-                f.write(content)
-            
-            try:
-                clip = AudioFileClip(tmp_path)
-                clips.append(clip)
-            except Exception as e:
-                for c in clips:
-                    try: c.close()
-                    except: pass
-                raise HTTPException(400, f"Audio part \"{af.filename}\" could not be processed. {str(e)}")
-                
+    if mt_mode == "single" and audio_file is not None and audio_file.filename:
         try:
-            merged = concatenate_audioclips(clips)
-            # Write as WAV/PCM — universally supported, no libfdk_aac needed
-            merged.write_audiofile(audio_path, codec="pcm_s16le", logger=None)
-        except Exception as e:
-            raise HTTPException(500, f"Audio merge failed. Please check your audio files and try again. Detail: {e}")
-        finally:
-            for c in clips:
-                try: c.close()
-                except: pass
-            try: merged.close()
-            except: pass
+            audio_path, _audio_meta = prepare_single_audio(
+                await audio_file.read(), audio_file.filename, job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    elif mt_mode == "zip" and audio_zip is not None and audio_zip.filename:
+        try:
+            audio_path, _audio_meta = prepare_zip_audio(
+                await audio_zip.read(), job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    elif audio_files is not None and len(audio_files) > 0 and audio_files[0].filename:
+        try:
+            audio_path, _audio_meta = await prepare_multiple_audio(
+                audio_files, job_temp
+            )
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    else:
+        if mt_mode == "single":
+            raise HTTPException(400, "Please upload a main audio file.")
+        elif mt_mode == "zip":
+            raise HTTPException(400, "Please upload an Audio Parts ZIP.")
+        else:
+            raise HTTPException(400, "Invalid audio input mode.")
 
     # Save optional intro/outro
     intro_path, outro_path = None, None

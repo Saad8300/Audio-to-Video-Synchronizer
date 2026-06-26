@@ -215,7 +215,9 @@ export default function App() {
   }
 
   // Required files
-  const [audioFiles, setAudioFiles] = useState<File[]>([])
+  const [audioInputMode, setAudioInputMode] = useState<'single' | 'zip'>('single')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioZip,  setAudioZip]  = useState<File | null>(null)
   const [imagesZip, setImagesZip]   = useState<File | null>(null)
   const [csvFile,   setCsvFile]     = useState<File | null>(null)
   const [audioDuration, setAudioDuration] = useState<number | null>(null)
@@ -238,33 +240,22 @@ export default function App() {
   // Health check
   useEffect(() => { checkHealth().then(setHealthOk) }, [])
 
-  // Audio duration detection
+  // Audio duration detection (single file only)
   useEffect(() => {
-    if (audioFiles.length === 0) { setAudioDuration(null); return }
-    let totalDuration = 0;
-    let loadedCount = 0;
-    let hasError = false;
+    if (audioInputMode !== 'single' || !audioFile) { setAudioDuration(null); return }
+    const url = URL.createObjectURL(audioFile);
+    const audio = new Audio(url);
+    audio.onloadedmetadata = () => {
+      setAudioDuration(audio.duration);
+      URL.revokeObjectURL(url);
+    };
+    audio.onerror = () => {
+      setAudioDuration(null);
+      URL.revokeObjectURL(url);
+    };
+  }, [audioFile, audioInputMode])
 
-    audioFiles.forEach(f => {
-      const url = URL.createObjectURL(f);
-      const audio = new Audio(url);
-      audio.onloadedmetadata = () => {
-        if (!hasError) {
-          totalDuration += audio.duration;
-          loadedCount++;
-          if (loadedCount === audioFiles.length) setAudioDuration(totalDuration);
-        }
-        URL.revokeObjectURL(url);
-      };
-      audio.onerror = () => {
-        hasError = true;
-        setAudioDuration(null);
-        URL.revokeObjectURL(url);
-      };
-    });
-  }, [audioFiles])
-
-  const canGenerate = audioFiles.length > 0 && imagesZip !== null && csvFile !== null
+  const canGenerate = (audioInputMode === 'single' ? audioFile !== null : audioZip !== null) && imagesZip !== null && csvFile !== null
     && status !== 'uploading' && status !== 'generating' && status !== 'cancelling'
   const isLoading   = status === 'uploading' || status === 'generating' || status === 'cancelling'
 
@@ -273,14 +264,14 @@ export default function App() {
     result     ? 5 :
     isLoading  ? 4 :
     canGenerate? 4 :
-    audioFiles.length > 0 || imagesZip || csvFile ? 2 : 1
+    (audioInputMode === 'single' ? !!audioFile : !!audioZip) || imagesZip || csvFile ? 2 : 1
 
   // Generate
   const handleGenerate = async () => {
-    if (audioFiles.length === 0 || !imagesZip || !csvFile) return
+    if ((audioInputMode === 'single' ? !audioFile : !audioZip) || !imagesZip || !csvFile) return
     setStatus('uploading')
     try {
-      const { job_id } = await startJob(audioFiles, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
+      const { job_id } = await startJob(audioInputMode, audioFile, audioZip, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
       setCurrentJobId(job_id); setStatus('generating')
     } catch (err) {
       setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
@@ -511,18 +502,47 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <FileDropZone
-                  id="audio-upload"
-                  label="Main Audio"
-                  description="Upload one file or multiple audio parts"
-                  accept="audio/*,.mp3,.wav,.m4a,.aac"
-                  icon={<IconMusic size={14} />}
-                  files={audioFiles}
-                  onFilesChange={setAudioFiles}
-                  multiple
-                  disabled={isLoading}
-                  required
-                />
+                <div className="space-y-3">
+                  <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg">
+                    <button
+                      className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      onClick={() => setAudioInputMode('single')}
+                    >
+                      Single File
+                    </button>
+                    <button
+                      className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      onClick={() => setAudioInputMode('zip')}
+                    >
+                      Parts ZIP
+                    </button>
+                  </div>
+                  {audioInputMode === 'single' ? (
+                    <FileDropZone
+                      id="audio-upload-single"
+                      label="Main Audio"
+                      description="Upload one main audio file"
+                      accept="audio/*,.mp3,.wav,.m4a,.aac"
+                      icon={<IconMusic size={14} />}
+                      file={audioFile}
+                      onChange={setAudioFile}
+                      disabled={isLoading}
+                      required
+                    />
+                  ) : (
+                    <FileDropZone
+                      id="audio-upload-zip"
+                      label="Audio Parts ZIP"
+                      description="ZIP of 1.mp3, 2.mp3..."
+                      accept=".zip,application/zip"
+                      icon={<IconFileText size={14} />}
+                      file={audioZip}
+                      onChange={setAudioZip}
+                      disabled={isLoading}
+                      required
+                    />
+                  )}
+                </div>
                 <FileDropZone
                   id="images-upload"
                   label="Images ZIP"
@@ -837,7 +857,7 @@ export default function App() {
               {!canGenerate && !isLoading && (
                 <div className="flex items-center gap-3 flex-wrap mt-3">
                   {[
-                    { label: 'Audio',     hasFile: audioFiles.length > 0 },
+                    { label: 'Audio',     hasFile: (audioInputMode === 'single' ? !!audioFile : !!audioZip) },
                     { label: 'Images',    hasFile: !!imagesZip },
                     { label: 'CSV',       hasFile: !!csvFile   },
                   ].filter(f => !f.hasFile).map(f => (

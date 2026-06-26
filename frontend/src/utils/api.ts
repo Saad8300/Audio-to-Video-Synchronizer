@@ -22,7 +22,9 @@ export async function checkHealth(): Promise<boolean> {
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
 export async function startJob(
-  audioFiles:   File[],
+  audioInputMode: 'single' | 'zip',
+  audioFile:    File | null,
+  audioZip:     File | null,
   imagesZip:    File,
   timestampCsv: File,
   settings:     GenerateSettings,
@@ -33,7 +35,13 @@ export async function startJob(
   const form = new FormData()
 
   // Required
-  audioFiles.forEach(f => form.append('audio_files', f))
+  form.append('audio_input_mode', audioInputMode)
+  if (audioInputMode === 'single' && audioFile) {
+    form.append('audio_file', audioFile)
+  } else if (audioInputMode === 'zip' && audioZip) {
+    form.append('audio_zip', audioZip)
+  }
+  
   form.append('images_zip',     imagesZip)
   form.append('timestamp_csv',  timestampCsv)
 
@@ -123,7 +131,9 @@ export async function cancelJob(jobId: string): Promise<void> {
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
 export async function startVideoTimelineJob(
-  audioFiles:  File[],
+  audioInputMode: 'single' | 'zip',
+  audioFile:   File | null,
+  audioZip:    File | null,
   videosZip:   File,
   timelineCsv: File,
   settings:    VideoTimelineSettings,
@@ -133,7 +143,13 @@ export async function startVideoTimelineJob(
   const form = new FormData()
 
   // Required uploads
-  audioFiles.forEach(f => form.append('audio_files', f))
+  form.append('audio_input_mode', audioInputMode)
+  if (audioInputMode === 'single' && audioFile) {
+    form.append('audio_file', audioFile)
+  } else if (audioInputMode === 'zip' && audioZip) {
+    form.append('audio_zip', audioZip)
+  }
+
   form.append('videos_zip',   videosZip)
   form.append('timeline_csv', timelineCsv)
 
@@ -237,7 +253,9 @@ export async function generateVideo(
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
 export async function startMediaTimelineJob(
-  audioFiles:  File[],
+  audioInputMode: 'single' | 'zip',
+  audioFile:   File | null,
+  audioZip:    File | null,
   mediaZip:    File,
   timelineCsv: File,
   settings:    {
@@ -281,7 +299,13 @@ export async function startMediaTimelineJob(
 ): Promise<{ job_id: string }> {
   const form = new FormData()
 
-  audioFiles.forEach(f => form.append('audio_files', f))
+  form.append('audio_input_mode', audioInputMode)
+  if (audioInputMode === 'single' && audioFile) {
+    form.append('audio_file', audioFile)
+  } else if (audioInputMode === 'zip' && audioZip) {
+    form.append('audio_zip', audioZip)
+  }
+  
   form.append('media_zip',    mediaZip)
   form.append('timeline_csv', timelineCsv)
 

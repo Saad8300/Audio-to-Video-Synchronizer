@@ -287,7 +287,9 @@ function MediaTimelineResult({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function MediaTimelinePage() {
-  const [audioFiles, setAudioFiles] = useState<File[]>([])
+  const [audioInputMode, setAudioInputMode] = useState<'single' | 'zip'>('single')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioZip,  setAudioZip]  = useState<File | null>(null)
   const [mediaZip, setMediaZip] = useState<File | null>(null)
   const [timelineCsv, setTimelineCsv] = useState<File | null>(null)
   const [introFile, setIntroFile] = useState<File | null>(null)
@@ -319,7 +321,7 @@ export default function MediaTimelinePage() {
   }
 
   const disabled = status === 'uploading' || status === 'generating' || status === 'cancelling'
-  const isReady  = audioFiles.length > 0 && mediaZip && timelineCsv && !disabled
+  const isReady  = (audioInputMode === 'single' ? !!audioFile : !!audioZip) && !!mediaZip && !!timelineCsv && !disabled
 
   const handleJobComplete = useCallback((statusData: JobStatus) => {
     setJobStatus(statusData)
@@ -364,7 +366,9 @@ export default function MediaTimelinePage() {
 
     try {
       const res = await startMediaTimelineJob(
-        audioFiles,
+        audioInputMode,
+        audioFile,
+        audioZip,
         mediaZip,
         timelineCsv,
         settings,
@@ -407,18 +411,47 @@ export default function MediaTimelinePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <MediaDropZone
-                id="main-audio"
-                label="Main Audio"
-                description="Upload one or more audio files."
-                accept="audio/mpeg,audio/wav,audio/aac,audio/x-m4a,audio/mp4,.m4a"
-                icon={<IconMusic size={18} />}
-                files={audioFiles}
-                onFilesChange={setAudioFiles}
-                multiple
-                required
-                disabled={disabled}
-              />
+              <div className="space-y-3">
+                <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg">
+                  <button
+                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                    onClick={() => setAudioInputMode('single')}
+                  >
+                    Single File
+                  </button>
+                  <button
+                    className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                    onClick={() => setAudioInputMode('zip')}
+                  >
+                    Parts ZIP
+                  </button>
+                </div>
+                {audioInputMode === 'single' ? (
+                  <MediaDropZone
+                    id="mt-audio-single"
+                    label="Main Audio"
+                    description="Upload one main audio file."
+                    accept="audio/mpeg,audio/wav,audio/aac,audio/x-m4a,audio/mp4,.m4a"
+                    icon={<IconMusic size={18} />}
+                    file={audioFile}
+                    onChange={setAudioFile}
+                    required
+                    disabled={disabled}
+                  />
+                ) : (
+                  <MediaDropZone
+                    id="mt-audio-zip"
+                    label="Audio Parts ZIP"
+                    description="ZIP of 1.mp3, 2.mp3..."
+                    accept="application/zip,application/x-zip-compressed,.zip"
+                    icon={<IconFileText size={18} />}
+                    file={audioZip}
+                    onChange={setAudioZip}
+                    required
+                    disabled={disabled}
+                  />
+                )}
+              </div>
               <MediaDropZone
                 id="media-zip"
                 label="Media ZIP"

@@ -336,7 +336,9 @@ function VideoTimelineResult({
 
 export default function VideoTimelinePage() {
   // Files
-  const [audioFiles, setAudioFiles] = useState<File[]>([])
+  const [audioInputMode, setAudioInputMode] = useState<'single' | 'zip'>('single')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioZip,  setAudioZip]  = useState<File | null>(null)
   const [videosZip, setVideosZip] = useState<File | null>(null)
   const [csvFile,   setCsvFile]   = useState<File | null>(null)
   const [introFile, setIntroFile] = useState<File | null>(null)
@@ -369,32 +371,21 @@ export default function VideoTimelinePage() {
 
   // Calculate audio duration
   useEffect(() => {
-    if (audioFiles.length === 0) {
+    if (audioInputMode !== 'single' || !audioFile) {
       setAudioDur(null)
       return
     }
-    let totalDur = 0
-    let loaded = 0
-    let hasErr = false
-
-    audioFiles.forEach(f => {
-      const url = URL.createObjectURL(f)
-      const audio = new Audio(url)
-      audio.addEventListener('loadedmetadata', () => {
-        if (!hasErr) {
-          totalDur += audio.duration
-          loaded++
-          if (loaded === audioFiles.length) setAudioDur(totalDur)
-        }
-        URL.revokeObjectURL(url)
-      })
-      audio.addEventListener('error', () => {
-        hasErr = true
-        setAudioDur(null)
-        URL.revokeObjectURL(url)
-      })
+    const url = URL.createObjectURL(audioFile)
+    const audio = new Audio(url)
+    audio.addEventListener('loadedmetadata', () => {
+      setAudioDur(audio.duration)
+      URL.revokeObjectURL(url)
     })
-  }, [audioFiles])
+    audio.addEventListener('error', () => {
+      setAudioDur(null)
+      URL.revokeObjectURL(url)
+    })
+  }, [audioFile, audioInputMode])
 
   // Calculate visual duration from CSV
   useEffect(() => {
@@ -461,7 +452,7 @@ export default function VideoTimelinePage() {
   const [result,       setResult]       = useState<GenerateResponse | null>(null)
   const [cancelledMsg, setCancelledMsg] = useState<string | null>(null)
 
-  const canGenerate = audioFiles.length > 0 && !!videosZip && !!csvFile
+  const canGenerate = (audioInputMode === 'single' ? !!audioFile : !!audioZip) && !!videosZip && !!csvFile
     && status !== 'uploading' && status !== 'generating' && status !== 'cancelling'
   const isLoading   = status === 'uploading' || status === 'generating' || status === 'cancelling'
 
@@ -476,11 +467,11 @@ export default function VideoTimelinePage() {
 
   // Generate
   const handleGenerate = async () => {
-    if (audioFiles.length === 0 || !videosZip || !csvFile) return
+    if ((audioInputMode === 'single' ? !audioFile : !audioZip) || !videosZip || !csvFile) return
     setResult(null); setCancelledMsg(null); setStatus('uploading')
     try {
       const { job_id } = await startVideoTimelineJob(
-        audioFiles, videosZip, csvFile, settings,
+        audioInputMode, audioFile, audioZip, videosZip, csvFile, settings,
         introFile, outroFile,
       )
       setCurrentJobId(job_id); setStatus('generating')
@@ -561,8 +552,29 @@ export default function VideoTimelinePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <VideoDropZone id="vt-audio-upload" label="Main Audio" description="Upload one file or multiple audio parts" accept="audio/*,.mp3,.wav,.m4a,.aac"
-                  icon={<IconMusic size={18} />} files={audioFiles} onFilesChange={setAudioFiles} multiple disabled={isLoading} required />
+                <div className="space-y-3">
+                  <div className="flex gap-2 p-1 bg-[var(--bg-input)] rounded-lg">
+                    <button
+                      className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'single' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      onClick={() => setAudioInputMode('single')}
+                    >
+                      Single File
+                    </button>
+                    <button
+                      className={`flex-1 text-[11px] font-medium py-1.5 rounded-md transition-colors ${audioInputMode === 'zip' ? 'bg-[var(--bg-elevated)] shadow-sm text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                      onClick={() => setAudioInputMode('zip')}
+                    >
+                      Parts ZIP
+                    </button>
+                  </div>
+                  {audioInputMode === 'single' ? (
+                    <VideoDropZone id="vt-audio-upload-single" label="Main Audio" description="Upload one main audio file" accept="audio/*,.mp3,.wav,.m4a,.aac"
+                      icon={<IconMusic size={18} />} file={audioFile} onChange={setAudioFile} disabled={isLoading} required />
+                  ) : (
+                    <VideoDropZone id="vt-audio-upload-zip" label="Audio Parts ZIP" description="ZIP of 1.mp3, 2.mp3..." accept=".zip,application/zip"
+                      icon={<IconFileText size={18} />} file={audioZip} onChange={setAudioZip} disabled={isLoading} required />
+                  )}
+                </div>
                 <VideoDropZone id="vt-videos-upload" label="Videos ZIP" description="ZIP of .mp4, .mov, .webm clips" accept=".zip,application/zip"
                   icon={<IconVideo size={18} />} file={videosZip} onChange={setVideosZip} disabled={isLoading} required />
                 <VideoDropZone id="vt-csv-upload" label="Timeline CSV" description="start, end, video columns" accept=".csv,text/csv"
@@ -898,7 +910,7 @@ export default function VideoTimelinePage() {
               {/* Missing files note */}
               {!canGenerate && !isLoading && (
                 <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
-                  {[{ label: 'Audio', hasFile: audioFiles.length > 0 }, { label: 'Videos ZIP', hasFile: !!videosZip }, { label: 'CSV', hasFile: !!csvFile }]
+                  {[{ label: 'Audio', hasFile: audioInputMode === 'single' ? !!audioFile : !!audioZip }, { label: 'Videos ZIP', hasFile: !!videosZip }, { label: 'CSV', hasFile: !!csvFile }]
                     .filter(f => !f.hasFile)
                     .map(f => (
                       <span key={f.label} className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-error)' }}>
