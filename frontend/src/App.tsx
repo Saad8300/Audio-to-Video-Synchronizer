@@ -195,25 +195,6 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
   )
 }
 
-// ── File requirement indicator ──────────────────────────────────────────────
-
-function FileReq({ label, file, files = [] }: { label: string; file?: File | null; files?: File[] }) {
-  const hasFile = (file !== undefined && file !== null) || files.length > 0;
-  return (
-    <div className="flex items-center gap-1.5 text-[11px]" style={{ color: hasFile ? 'var(--color-success)' : 'var(--text-muted)' }}>
-      <span
-        className="w-3.5 h-3.5 rounded flex items-center justify-center text-[8px] font-bold shrink-0"
-        style={{
-          background: hasFile ? 'var(--color-success-bg)' : 'var(--bg-input)',
-          border: `1px solid ${hasFile ? 'var(--color-success-border)' : 'var(--border-default)'}`,
-        }}
-      >
-        {hasFile ? '✓' : '○'}
-      </span>
-      {label}
-    </div>
-  )
-}
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
@@ -527,13 +508,6 @@ export default function App() {
                   <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Source Files</h2>
                   <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Three required files to generate your video</p>
                 </div>
-                <div className="hidden sm:flex items-center gap-1.5">
-                  <FileReq label="Audio"  files={audioFiles} />
-                  <span style={{ color: 'var(--border-default)' }}>·</span>
-                  <FileReq label="Images" file={imagesZip} />
-                  <span style={{ color: 'var(--border-default)' }}>·</span>
-                  <FileReq label="CSV"    file={csvFile} />
-                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -660,7 +634,9 @@ export default function App() {
                     { value: 'calm_educational', label: 'Calm Educational' },
                     { value: 'dramatic_shorts', label: 'Dramatic Shorts' }
                   ]} />
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <Sel id="motion-effect" label="Motion Effect" value={settings.motionEffect} disabled={isLoading} onChange={v => setSettings({...settings, motionEffect: v as any, zoomEffect: v === 'slow_zoom_in' ? 'slow_zoom_in' : 'none'})}
                   options={[
                     { value: 'none', label: 'None' }, { value: 'slow_zoom_in', label: 'Slow Zoom In' }, { value: 'slow_zoom_out', label: 'Slow Zoom Out' },

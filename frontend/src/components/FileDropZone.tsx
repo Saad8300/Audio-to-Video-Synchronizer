@@ -86,16 +86,11 @@ export default function FileDropZone({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id} className="form-label mb-0">{label}</label>
+        <label htmlFor={id} className="form-label mb-0 flex items-center gap-1">
+          {label}
+          {required && !hasFile && <span className="text-xs font-bold" style={{ color: 'var(--color-error)' }}>*</span>}
+        </label>
         <div className="flex items-center gap-1.5">
-          {required && !hasFile && (
-            <span
-              className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-              style={{ color: 'var(--color-error)', background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}
-            >
-              Required
-            </span>
-          )}
           {hasFile && (
             <button
               type="button"
