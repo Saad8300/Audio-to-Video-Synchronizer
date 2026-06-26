@@ -65,23 +65,31 @@ brew install ffmpeg
 5. Your browser opens at **http://localhost:5173** ✨
 
 ### Windows Users
-1. Open the project folder in Windows Explorer
-2. Double-click `start_windows.bat`
-3. Two command prompt windows will open for the backend and frontend
-4. Open **http://localhost:5173** in your browser
 
-That's it! The script handles everything:
-- Creates the Python virtual environment
-- Installs Python packages
-- Installs npm packages
-- Starts the backend and frontend
-- Waits until both are ready
-- Opens your browser
+**First time only (run as Administrator):**
+```
+install_windows.bat
+```
+This automatically installs Python, Node.js, FFmpeg, and all project dependencies.
+
+**Daily start:**
+```
+start_windows.bat
+```
+
+**Daily stop:**
+```
+stop_windows.bat
+```
+
+App opens at **http://localhost:5173**
+
+> 📖 See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for the full setup guide, troubleshooting, and common errors.
 
 ### To Stop the App
 
 **Mac Users:** Double-click `stop_app.command` — it cleanly stops everything.
-**Windows Users:** Close the two command prompt windows or run `stop_windows.bat`.
+**Windows Users:** Run `stop_windows.bat`.
 
 ---
 
