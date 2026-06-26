@@ -1057,12 +1057,21 @@ def generate_video(
     # ------------------------------------------------------------------
     _progress(88, "Encoding video")
     try:
+        # Strict Pre-Export Audio Verification
+        if video.audio is None:
+            logger.error("CRITICAL: Final video clip has no audio track attached before export.")
+            errors.append("Visual generation completed but the audio track was unexpectedly dropped before export. Generation aborted.")
+            return {"success": False, "timeline": timeline, "warnings": warnings, "errors": errors, "cancelled": False}
+        else:
+            logger.info("Final clip has audio: true")
+            logger.info(f"Final visual duration: {video.duration:.2f}s, Final audio duration: {video.audio.duration:.2f}s")
+
         video.write_videofile(
             output_path,
             fps=fps,
             codec="libx264",
             audio_codec="aac",
-            temp_audiofile=os.path.join(temp_dir, "temp_audio.wav"),
+            temp_audiofile=os.path.join(temp_dir, "temp_audio.mp4"),
             remove_temp=True,
             preset=preset,
             bitrate=video_bitrate,

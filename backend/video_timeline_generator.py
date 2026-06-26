@@ -1104,9 +1104,19 @@ def generate_video_timeline(
         crf           = profile["crf"]
         preset_name   = profile["preset"]
         audio_bitrate = profile["audio_bitrate"]
-        temp_audio_f  = os.path.join(temp_dir, "temp_audio.wav")
+        temp_audio_f  = os.path.join(temp_dir, "temp_audio.mp4")
 
         try:
+            if final_video.audio is None:
+                logger.error("CRITICAL: Final video clip has no audio track attached before export.")
+                return {
+                    "success": False, "warnings": warnings_out,
+                    "errors": ["Visual generation completed but the audio track was unexpectedly dropped before export. Generation aborted."],
+                    "timeline": timeline_out, "cancelled": False
+                }
+            else:
+                logger.info("Final clip has audio: true")
+                logger.info(f"Final visual duration: {final_video.duration:.2f}s, Final audio duration: {final_video.audio.duration:.2f}s")
             final_video.write_videofile(
                 output_path,
                 fps=fps,

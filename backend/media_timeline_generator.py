@@ -799,6 +799,21 @@ def generate_media_timeline(
         
         logger_func = "bar" if not progress_callback else None
         
+        if main_video.audio is None:
+            logger.error("CRITICAL: Final video clip has no audio track attached before export.")
+            return {
+                "success": False,
+                "timeline": timeline_report,
+                "warnings": warnings,
+                "errors": ["Visual generation completed but the audio track was unexpectedly dropped before export. Generation aborted."],
+                "cancelled": False
+            }
+        else:
+            logger.info("Final clip has audio: true")
+            logger.info(f"Final visual duration: {main_video.duration:.2f}s, Final audio duration: {main_video.audio.duration:.2f}s")
+            
+        temp_audio_f = os.path.join(temp_dir, "temp_audio.mp4")
+        
         main_video.write_videofile(
             output_path,
             fps=fps,
@@ -806,6 +821,8 @@ def generate_media_timeline(
             preset=prof["preset"],
             ffmpeg_params=["-crf", str(prof["crf"]), "-pix_fmt", "yuv420p"],
             audio_codec="aac",
+            temp_audiofile=temp_audio_f,
+            remove_temp=True,
             audio_bitrate=prof["audio_bitrate"],
             threads=max(1, os.cpu_count() - 1),
             logger=logger_func

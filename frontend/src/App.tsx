@@ -8,6 +8,7 @@ import ProgressOverlay from './components/ProgressOverlay'
 import AppModeSwitcher, { type AppMode } from './components/AppModeSwitcher'
 import VideoTimelinePage from './components/VideoTimelinePage'
 import MediaTimelinePage from './components/MediaTimelinePage'
+import StudioHomePage from './components/StudioHomePage'
 import {
   IconMusic,
   IconImage,
@@ -198,6 +199,9 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
+export type ViewMode = 'home' | AppMode
+
+
 export default function App() {
   // Theme
   const [isDark, setIsDark] = useState<boolean>(getInitialDark)
@@ -205,13 +209,25 @@ export default function App() {
   useEffect(() => { applyTheme(getInitialDark()) }, [])
   const toggleTheme = () => setIsDark(d => !d)
 
-  // App mode (image | video) — persisted to localStorage
-  const [activeMode, setActiveMode] = useState<AppMode>(() => {
-    try { return (localStorage.getItem('appMode') as AppMode) || 'image' } catch { return 'image' }
+
+
+  const [activeView, setActiveView] = useState<ViewMode>(() => {
+    try {
+      const hasLaunched = localStorage.getItem('hasLaunchedV2')
+      if (!hasLaunched) {
+        localStorage.setItem('hasLaunchedV2', 'true')
+        return 'home'
+      }
+      const saved = localStorage.getItem('appMode') as ViewMode
+      return ['image', 'video', 'media'].includes(saved) ? saved : 'home'
+    } catch { return 'home' }
   })
-  const handleModeChange = (mode: AppMode) => {
-    setActiveMode(mode)
-    try { localStorage.setItem('appMode', mode) } catch { /* noop */ }
+
+  const handleModeChange = (mode: ViewMode) => {
+    setActiveView(mode)
+    if (mode !== 'home') {
+      try { localStorage.setItem('appMode', mode) } catch { /* noop */ }
+    }
   }
 
   // Required files
@@ -439,9 +455,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Mode switcher ── */}
-      <AppModeSwitcher activeMode={activeMode} onChange={handleModeChange} />
-
       {/* ── Alerts (always visible regardless of mode) ── */}
       {healthOk === false && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-4">
@@ -469,9 +482,14 @@ export default function App() {
       {/* ════════════════════════════════════════════════════════════
           PAGE CONTENT — switches between modes
       ════════════════════════════════════════════════════════════ */}
-      {activeMode === 'media' ? (
+      {activeView === 'home' ? (
+        <StudioHomePage onSelectTool={handleModeChange} />
+      ) : (
+        <>
+          <AppModeSwitcher activeMode={activeView as AppMode} onChange={handleModeChange as any} />
+      {activeView === 'media' ? (
         <MediaTimelinePage />
-      ) : activeMode === 'video' ? (
+      ) : activeView === 'video' ? (
         <VideoTimelinePage />
       ) : (
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
@@ -882,7 +900,9 @@ export default function App() {
           </div>
 
         </div>
-      </main>
+        </main>
+      )}
+      </>
       )}
 
       {/* ── Footer ── */}

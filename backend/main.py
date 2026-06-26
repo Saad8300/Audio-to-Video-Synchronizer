@@ -7,6 +7,24 @@ Batch 3: export resolution, render profiles, watermark.
 
 import os
 import uuid
+
+import subprocess
+
+def _verify_mp4_audio(filepath: str) -> bool:
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "a:0",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0",
+            filepath
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return result.stdout.strip().lower() == "audio"
+    except Exception as e:
+        logger.error(f"FFprobe check failed for {filepath}: {e}")
+        return False
+
 import shutil
 import logging
 import time
@@ -392,10 +410,17 @@ async def jobs_start(
                     state["current_step"] = "Cancelled"
                     state["progress"]     = 0
                 elif result["success"] and os.path.isfile(output_path):
-                    state["status"]            = "completed"
-                    state["current_step"]      = "Complete"
-                    state["progress"]          = 100
-                    state["output_video_url"]  = f"/outputs/{output_filename}"
+                    if not _verify_mp4_audio(output_path):
+                        state["status"]       = "failed"
+                        state["current_step"] = "Failed"
+                        state["errors"].append("Final video was created without an audio track. Please check the audio pipeline.")
+                        logger.error(f"Job failed audio verification: {output_path}")
+                    else:
+                        state["status"]            = "completed"
+                        state["current_step"]      = "Complete"
+                        state["progress"]          = 100
+                        state["output_video_url"]  = f"/outputs/{output_filename}"
+                        logger.info(f"Final MP4 audio stream verified: true")
                 else:
                     state["status"]       = "failed"
                     state["current_step"] = "Failed"
@@ -709,10 +734,17 @@ async def jobs_start_video_timeline(
                     state["current_step"] = "Cancelled"
                     state["progress"]     = 0
                 elif result["success"] and os.path.isfile(output_path):
-                    state["status"]           = "completed"
-                    state["current_step"]     = "Complete"
-                    state["progress"]         = 100
-                    state["output_video_url"] = f"/outputs/{output_filename}"
+                    if not _verify_mp4_audio(output_path):
+                        state["status"]       = "failed"
+                        state["current_step"] = "Failed"
+                        state["errors"].append("Final video was created without an audio track. Please check the audio pipeline.")
+                        logger.error(f"Job failed audio verification: {output_path}")
+                    else:
+                        state["status"]           = "completed"
+                        state["current_step"]     = "Complete"
+                        state["progress"]         = 100
+                        state["output_video_url"] = f"/outputs/{output_filename}"
+                        logger.info(f"Final MP4 audio stream verified: true")
                 else:
                     state["status"]       = "failed"
                     state["current_step"] = "Failed"
@@ -974,10 +1006,17 @@ async def jobs_start_media_timeline(
                     state["current_step"] = "Cancelled"
                     state["progress"]     = 0
                 elif result["success"] and os.path.isfile(output_path):
-                    state["status"]           = "completed"
-                    state["current_step"]     = "Complete"
-                    state["progress"]         = 100
-                    state["output_video_url"] = f"/outputs/{output_filename}"
+                    if not _verify_mp4_audio(output_path):
+                        state["status"]       = "failed"
+                        state["current_step"] = "Failed"
+                        state["errors"].append("Final video was created without an audio track. Please check the audio pipeline.")
+                        logger.error(f"Job failed audio verification: {output_path}")
+                    else:
+                        state["status"]           = "completed"
+                        state["current_step"]     = "Complete"
+                        state["progress"]         = 100
+                        state["output_video_url"] = f"/outputs/{output_filename}"
+                        logger.info(f"Final MP4 audio stream verified: true")
                 else:
                     state["status"]       = "failed"
                     state["current_step"] = "Failed"
