@@ -1,4 +1,4 @@
-// components/FileDropZone.tsx – Compact professional drag-and-drop upload area
+// components/FileDropZone.tsx – Premium drag-and-drop upload component
 
 import React, { useCallback, useRef, useState } from 'react'
 import { IconCheck, IconX } from './icons'
@@ -74,41 +74,59 @@ export default function FileDropZone({
   }
 
   const hasFile = (file !== undefined && file !== null) || files.length > 0
+  const showMultipleFiles = files.length > 1
   const zoneClass = [
     'dropzone',
-    compact ? 'px-3 py-2.5' : 'px-4 py-3',
+    compact ? 'px-3 py-3' : 'px-4 py-3.5',
     dragging && !disabled ? 'dropzone-active' : '',
     hasFile ? 'dropzone-filled' : '',
     disabled ? 'opacity-50 pointer-events-none' : '',
   ].filter(Boolean).join(' ')
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={id} className="form-label mb-0">{label}</label>
-        {required && !hasFile && (
-          <span
-            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{ color: 'var(--color-error)', background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}
-          >
-            Required
-          </span>
-        )}
-        {hasFile && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onChange) onChange(null);
-              if (onFilesChange) onFilesChange([]);
-            }}
-            className="btn-ghost p-0.5 rounded-md text-[10px]"
-            aria-label={`Remove ${label}`}
-            title="Remove file"
-          >
-            <IconX size={12} />
-          </button>
-        )}
+        <div className="flex items-center gap-1.5">
+          {required && !hasFile && (
+            <span
+              className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+              style={{ color: 'var(--color-error)', background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}
+            >
+              Required
+            </span>
+          )}
+          {hasFile && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onChange) onChange(null);
+                if (onFilesChange) onFilesChange([]);
+              }}
+              className="w-5 h-5 rounded-md flex items-center justify-center transition-colors"
+              style={{
+                color: 'var(--text-muted)',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-default)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = 'var(--color-error)'
+                e.currentTarget.style.borderColor = 'var(--color-error-border)'
+                e.currentTarget.style.background = 'var(--color-error-bg)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--text-muted)'
+                e.currentTarget.style.borderColor = 'var(--border-default)'
+                e.currentTarget.style.background = 'var(--bg-input)'
+              }}
+              aria-label={`Remove ${label}`}
+              title="Remove file"
+            >
+              <IconX size={10} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div
@@ -135,22 +153,28 @@ export default function FileDropZone({
         />
 
         {hasFile ? (
-          <div className="flex items-center gap-2.5 w-full animate-fade-in">
+          <div className="flex items-center gap-3 w-full animate-pop-in">
             <div
-              className="w-7 h-7 rounded-md shrink-0 flex items-center justify-center"
-              style={{ background: 'var(--color-success-bg)', border: '1px solid var(--color-success-border)', color: 'var(--color-success)' }}
+              className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
+              style={{
+                background: 'var(--color-success-bg)',
+                border: '1px solid var(--color-success-border)',
+                color: 'var(--color-success)',
+              }}
             >
-              <IconCheck size={13} />
+              <IconCheck size={14} />
             </div>
             <div className="flex-1 min-w-0">
-              {files.length > 1 ? (
+              {showMultipleFiles ? (
                 <>
-                  <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-success)' }}>
-                    {files.length} audio parts selected
+                  <p className="text-xs font-semibold" style={{ color: 'var(--color-success)' }}>
+                    {files.length} files selected
                   </p>
-                  <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
-                    {files.slice(0, 2).map(f => f.name).join(' → ')}
-                    {files.length > 2 && ` (+ ${files.length - 2} more)`}
+                  <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
+                    {files.slice(0, 2).map(f => f.name).join(', ')}
+                    {files.length > 2 && (
+                      <span style={{ color: 'var(--accent-primary)' }}> +{files.length - 2} more</span>
+                    )}
                   </p>
                 </>
               ) : (
@@ -158,7 +182,7 @@ export default function FileDropZone({
                   <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-success)' }}>
                     {file ? file.name : files[0]?.name}
                   </p>
-                  <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-[10px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {formatSize(file ? file.size : (files[0]?.size ?? 0))}
                   </p>
                 </>
@@ -166,18 +190,22 @@ export default function FileDropZone({
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2.5 w-full">
+          <div className="flex items-center gap-3 w-full">
             <div
-              className="w-7 h-7 rounded-md shrink-0 flex items-center justify-center transition-colors"
-              style={{ background: 'var(--bg-input)', border: '1px solid var(--border-input)', color: 'var(--text-muted)' }}
+              className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center transition-colors"
+              style={{
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-input)',
+                color: 'var(--text-muted)',
+              }}
             >
               {icon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate" style={{ color: 'var(--text-secondary)' }}>
-                Drop or <span style={{ color: 'var(--accent-primary)' }}>browse</span>
+              <p className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                Drop or <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>browse</span>
               </p>
-              <p className="text-[10px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{description}</p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{description}</p>
             </div>
           </div>
         )}

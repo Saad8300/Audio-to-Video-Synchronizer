@@ -466,6 +466,7 @@ def generate_media_timeline(
     effect_strength: str = "medium",
     watermark_text: str = "",
     watermark_position_mode: str = "preset",
+    watermark_coordinate_mode: str = "design_canvas",
     watermark_position: str = "bottom_right",
     watermark_x: int = 50,
     watermark_y: int = 50,
@@ -744,11 +745,13 @@ def generate_media_timeline(
                     text=watermark_text,
                     position_mode=watermark_position_mode,
                     position=watermark_position,
+                    coordinate_mode=watermark_coordinate_mode,
+                    aspect_ratio=aspect_ratio,
                     x_pos=watermark_x, y_pos=watermark_y,
                     opacity=watermark_opacity,
                     size=watermark_size, margin=watermark_margin,
                 )
-                if watermark_position_mode == "custom":
+                if watermark_position_mode == "custom" and watermark_coordinate_mode == "final_pixels":
                     # basic safety check for warning
                     if watermark_x < 0 or watermark_y < 0 or watermark_x > width * 0.9 or watermark_y > height * 0.9:
                         warnings.append("Watermark custom X/Y places the watermark partly outside the frame.")

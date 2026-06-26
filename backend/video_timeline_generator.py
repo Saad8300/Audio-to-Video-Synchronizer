@@ -26,6 +26,8 @@ from typing import Optional, Callable, Any
 
 logger = logging.getLogger(__name__)
 
+from media_helpers import resolve_watermark_position
+
 # ---------------------------------------------------------------------------
 # Tables
 # ---------------------------------------------------------------------------
@@ -587,6 +589,7 @@ def _apply_transition_to_pair(
 def _make_watermark_overlay(
     target_w: int, target_h: int, text: str,
     position_mode: str = "preset", position: str = "bottom_right",
+    coordinate_mode: str = "design_canvas", aspect_ratio: str = "16:9",
     x_pos: int = 50, y_pos: int = 50,
     opacity: float = 0.65, size: int = 20, margin: int = 36,
 ):
@@ -645,7 +648,9 @@ def _make_watermark_overlay(
     is_white_default = (position_mode == "preset" and position.lower().replace("-", "_") == "white_default")
 
     if position_mode == "custom":
-        x, y = x_pos, y_pos
+        x, y = resolve_watermark_position(
+            x_pos, y_pos, coordinate_mode, aspect_ratio, target_w, target_h, "custom"
+        )
     else:
         pos = position.lower().replace("-", "_")
         if pos == "white_default":
@@ -740,6 +745,7 @@ def generate_video_timeline(
     # Batch 10C — watermark
     watermark_text:          str   = "",
     watermark_position_mode: str   = "preset",
+    watermark_coordinate_mode: str = "design_canvas",
     watermark_position:      str   = "bottom_right",
     watermark_x:             int   = 50,
     watermark_y:             int   = 50,
@@ -1000,6 +1006,8 @@ def generate_video_timeline(
                     text=watermark_text,
                     position_mode=watermark_position_mode,
                     position=watermark_position,
+                    coordinate_mode=watermark_coordinate_mode,
+                    aspect_ratio=aspect_ratio,
                     x_pos=watermark_x,   y_pos=watermark_y,
                     opacity=watermark_opacity,
                     size=watermark_size, margin=watermark_margin,

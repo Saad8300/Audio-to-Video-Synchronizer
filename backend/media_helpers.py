@@ -9,6 +9,56 @@ INTENSITY_FACTOR = {
     "high": 1.5,
 }
 
+def resolve_watermark_position(
+    x: int,
+    y: int,
+    coordinate_mode: str,
+    aspect_ratio: str,
+    final_width: int,
+    final_height: int,
+    position_preset: str
+):
+    """
+    Returns (final_x, final_y) tuple for watermark placement.
+    Handles 'design_canvas' scaling, 'final_pixels' fallback, and presets.
+    """
+    if position_preset != "custom":
+        if position_preset == "white_default":
+            # For white_default, we usually handle it inside the generator but returning raw names is fine if generator parses strings
+            return ("center", int(final_height * 0.85))
+        elif position_preset == "bottom_right":
+            return ("right", "bottom")
+        elif position_preset == "bottom_left":
+            return ("left", "bottom")
+        elif position_preset == "top_right":
+            return ("right", "top")
+        elif position_preset == "top_left":
+            return ("left", "top")
+        elif position_preset == "center":
+            return ("center", "center")
+        
+        # Fallback for unknown preset
+        return ("right", "bottom")
+    
+    if coordinate_mode == "design_canvas":
+        # Determine reference canvas
+        if aspect_ratio == "9:16":
+            design_w, design_h = 1080, 1920
+        elif aspect_ratio == "16:9":
+            design_w, design_h = 1920, 1080
+        elif aspect_ratio == "1:1":
+            design_w, design_h = 1080, 1080
+        else:
+            # Fallback
+            design_w, design_h = final_width, final_height
+        
+        final_x = int(x / design_w * final_width)
+        final_y = int(y / design_h * final_height)
+        return (final_x, final_y)
+    else:
+        # final_pixels
+        return (x, y)
+
 def mix_background_music(
     main_audio_clip,
     music_path: str,

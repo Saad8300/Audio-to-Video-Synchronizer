@@ -23,6 +23,7 @@ export type ZoomEffect       = 'none' | 'slow_zoom_in'
 export type RenderProfile    = 'fast_preview' | 'balanced' | 'high_quality'
 export type WatermarkPosition     = 'white_default' | 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right' | 'center'
 export type WatermarkPositionMode = 'preset' | 'custom'
+export type WatermarkCoordinateMode = 'design_canvas' | 'final_pixels'
 
 // ── Batch 9A — new motion / style types ─────────────────────────────────────
 
@@ -88,10 +89,11 @@ export interface GenerateSettings {
   musicFade:     boolean
 
   // Batch 3 — watermark
-  enableWatermark:       boolean
-  watermarkText:         string
-  watermarkPositionMode: WatermarkPositionMode
-  watermarkPosition:     WatermarkPosition
+  enableWatermark:         boolean
+  watermarkText:           string
+  watermarkPositionMode:   WatermarkPositionMode
+  watermarkCoordinateMode: WatermarkCoordinateMode
+  watermarkPosition:       WatermarkPosition
   watermarkX:            number
   watermarkY:            number
   watermarkOpacity:      number   // 10–100 (integer percentage in UI, /100 before sending)
@@ -170,10 +172,11 @@ export interface VideoTimelineSettings {
   backgroundMusicFade:   boolean
 
   // Batch 10C — watermark
-  enableWatermark:       boolean
-  watermarkText:         string
-  watermarkPositionMode: WatermarkPositionMode
-  watermarkPosition:     WatermarkPosition
+  enableWatermark:         boolean
+  watermarkText:           string
+  watermarkPositionMode:   WatermarkPositionMode
+  watermarkCoordinateMode: WatermarkCoordinateMode
+  watermarkPosition:       WatermarkPosition
   watermarkX:            number
   watermarkY:            number
   watermarkOpacity:      number
@@ -226,10 +229,11 @@ export interface MediaTimelineSettings {
   backgroundMusicVolume: number
   backgroundMusicLoop:   boolean
   backgroundMusicFade:   boolean
-  enableWatermark:       boolean
-  watermarkText:         string
-  watermarkPositionMode: WatermarkPositionMode
-  watermarkPosition:     WatermarkPosition
+  enableWatermark:         boolean
+  watermarkText:           string
+  watermarkPositionMode:   WatermarkPositionMode
+  watermarkCoordinateMode: WatermarkCoordinateMode
+  watermarkPosition:       WatermarkPosition
   watermarkX:            number
   watermarkY:            number
   watermarkOpacity:      number

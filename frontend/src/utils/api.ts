@@ -58,6 +58,7 @@ export async function startJob(
   form.append('enable_watermark',        watermarkActive ? 'true' : 'false')
   form.append('watermark_text',          settings.watermarkText)
   form.append('watermark_position_mode', settings.watermarkPositionMode)
+  form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
   form.append('watermark_position',      settings.watermarkPosition)
   form.append('watermark_x',             String(settings.watermarkX))
   form.append('watermark_y',             String(settings.watermarkY))
@@ -171,6 +172,7 @@ export async function startVideoTimelineJob(
   if (wmActive) {
     form.append('watermark_text',          settings.watermarkText)
     form.append('watermark_position_mode', settings.watermarkPositionMode)
+    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
     form.append('watermark_position',      settings.watermarkPosition)
     form.append('watermark_x',             String(settings.watermarkX))
     form.append('watermark_y',             String(settings.watermarkY))
@@ -258,6 +260,7 @@ export async function startMediaTimelineJob(
     enableWatermark:       boolean
     watermarkText:         string
     watermarkPositionMode: string
+    watermarkCoordinateMode: string
     watermarkPosition:     string
     watermarkX:            number
     watermarkY:            number
@@ -321,6 +324,7 @@ export async function startMediaTimelineJob(
   if (wmActive) {
     form.append('watermark_text',          settings.watermarkText)
     form.append('watermark_position_mode', settings.watermarkPositionMode)
+    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
     form.append('watermark_position',      settings.watermarkPosition)
     form.append('watermark_x',             String(settings.watermarkX))
     form.append('watermark_y',             String(settings.watermarkY))

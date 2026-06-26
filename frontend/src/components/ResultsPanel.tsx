@@ -26,26 +26,34 @@ function MessageList({ items, type }: { items: string[]; type: 'warning' | 'erro
   const isWarn = type === 'warning'
   return (
     <div
-      className="rounded-lg p-3.5 space-y-2"
+      className="rounded-xl p-4 space-y-2"
       style={{
         background: isWarn ? 'var(--color-warning-bg)' : 'var(--color-error-bg)',
         border: `1px solid ${isWarn ? 'var(--color-warning-border)' : 'var(--color-error-border)'}`,
       }}
     >
-      <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)' }}>
+      <div className="flex items-center gap-2 text-xs font-bold" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)' }}>
         {isWarn ? <IconAlertTriangle size={13} /> : <IconX size={13} />}
         {items.length} {isWarn ? 'Warning' : 'Error'}{items.length > 1 ? 's' : ''}
       </div>
-      <ul className="space-y-1">
+      <ul className="space-y-1.5">
         {items.map((msg, i) => (
-          <li key={i} className="text-xs flex items-start gap-1.5" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)', opacity: 0.85 }}>
-            <span className="shrink-0 mt-0.5">·</span>
+          <li key={i} className="text-xs flex items-start gap-2" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)', opacity: 0.9 }}>
+            <span className="shrink-0 mt-0.5 text-[10px]">·</span>
             <span>{msg}</span>
           </li>
         ))}
       </ul>
     </div>
   )
+}
+
+const CHIP_LABELS: Record<string, string> = {
+  exportResolution: 'Res',
+  renderProfile: 'Profile',
+  motionEffect: 'Motion',
+  transition: 'Transition',
+  visualEffect: 'Visual',
 }
 
 export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
@@ -60,67 +68,63 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
   const hasIssues     = result.timeline_report.some(r => r.status !== 'ok')
   const filename      = result.output_filename ?? 'video.mp4'
 
+  const metaChips = [
+    { key: 'exportResolution', label: 'Res', value: settings.exportResolution },
+    { key: 'renderProfile',    label: 'Profile', value: settings.renderProfile.replace(/_/g, ' ') },
+    { key: 'motionEffect',     label: 'Motion', value: settings.motionEffect.replace(/_/g, ' ') },
+    { key: 'transition',       label: 'Transition', value: settings.transition.replace(/_/g, ' ') },
+    { key: 'visualEffect',     label: 'Visual', value: settings.visualEffect.replace(/_/g, ' ') },
+  ]
+
   return (
     <div className="space-y-4 animate-slide-up">
 
       {/* ── Success / fail banner ── */}
       {result.success ? (
-        <div
-          style={{
-            borderRadius: 16,
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-default)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Green top stripe */}
-          <div style={{ height: 3, background: 'var(--color-success)' }} />
+        <div style={{
+          borderRadius: 18,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-default)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-card)',
+        }}>
+          {/* Gradient top stripe */}
+          <div style={{ height: 4, background: 'linear-gradient(90deg, #10b981, #34d399, #06b6d4)' }} />
 
           <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'flex-start', gap: 16 }}>
             {/* Check icon */}
             <div style={{
-              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              width: 48, height: 48, borderRadius: 14, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--color-success-bg)',
               border: '1px solid var(--color-success-border)',
             }}>
-              <IconCheck size={20} style={{ color: 'var(--color-success)' }} />
+              <IconCheck size={22} style={{ color: 'var(--color-success)' }} />
             </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
                 Export Complete
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
-                Your video is ready to preview and download.
+                Video ready to preview and download.
                 {result.elapsed_seconds != null && (
                   <span style={{ marginLeft: 6 }}>
-                    Completed in <strong style={{ color: 'var(--text-secondary)' }}>{result.elapsed_seconds}s</strong>.
+                    Completed in <strong style={{ color: 'var(--color-success)' }}>{result.elapsed_seconds}s</strong>.
                   </span>
                 )}
               </p>
 
               {/* Metadata chips */}
-              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                {[
-                  `Res: ${settings.exportResolution}`,
-                  `Profile: ${settings.renderProfile.replace(/_/g, ' ')}`,
-                  `Motion: ${settings.motionEffect.replace(/_/g, ' ')}`,
-                  `Transition: ${settings.transition.replace(/_/g, ' ')}`,
-                  `Visual: ${settings.visualEffect.replace(/_/g, ' ')}`
-                ].map(chip => (
+              <div style={{ display: 'flex', gap: 5, marginTop: 10, flexWrap: 'wrap' }}>
+                {metaChips.map(chip => (
                   <span
-                    key={chip}
-                    style={{
-                      fontSize: 10, fontFamily: 'monospace', fontWeight: 600,
-                      padding: '2px 8px', borderRadius: 6,
-                      background: 'var(--accent-subtle)',
-                      border: '1px solid var(--accent-border)',
-                      color: 'var(--accent-primary)',
-                      textTransform: 'capitalize'
-                    }}
+                    key={chip.key}
+                    className="meta-chip"
                   >
-                    {chip}
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{chip.label}</span>
+                    <span style={{ color: 'var(--border-default)' }}>·</span>
+                    <span style={{ textTransform: 'capitalize' }}>{chip.value}</span>
                   </span>
                 ))}
               </div>
@@ -129,21 +133,22 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
         </div>
       ) : (
         <div
-          className="rounded-xl p-4 flex items-center gap-3"
+          className="rounded-2xl p-5 flex items-start gap-4"
           style={{
             background: 'var(--color-error-bg)',
             border: '1px solid var(--color-error-border)',
           }}
         >
-          <div
-            className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
-            style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)', color: 'var(--color-error)' }}
-          >
-            <IconX size={16} />
+          <div style={{
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)',
+          }}>
+            <IconX size={18} style={{ color: 'var(--color-error)' }} />
           </div>
           <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--color-error)' }}>Generation Failed</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>See error details below.</p>
+            <p className="font-bold text-sm" style={{ color: 'var(--color-error)' }}>Generation Failed</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>See the error details below for more information.</p>
           </div>
         </div>
       )}
@@ -154,16 +159,15 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
 
       {/* Video preview + download */}
       {hasVideo && (
-        <div
-          style={{
-            borderRadius: 16,
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-default)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Video */}
-          <div style={{ background: '#000', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          borderRadius: 18,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-default)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-card)',
+        }}>
+          {/* Video container */}
+          <div style={{ background: '#000', aspectRatio: '16/9', position: 'relative' }}>
             <video
               src={videoUrl!}
               controls
@@ -173,20 +177,21 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
           </div>
 
           {/* Download row */}
-          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Filename chip */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
-                File
+          <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Filename */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontSize: 9, color: 'var(--text-muted)', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0,
+              }}>
+                Output file
               </span>
-              <span
-                style={{
-                  fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  minWidth: 0, flex: 1,
-                }}
-                title={filename}
-              >
+              <span style={{
+                flex: 1, fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'ui-monospace, monospace',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                padding: '2px 8px', borderRadius: 6,
+                background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
+              }} title={filename}>
                 {filename}
               </span>
             </div>
@@ -198,34 +203,25 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
               id="download-video-btn"
               aria-label="Download MP4"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                padding: '12px 20px',
-                borderRadius: 10,
-                fontWeight: 700,
-                fontSize: 14,
-                color: '#fff',
-                background: 'var(--accent-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '13px 20px', borderRadius: 12,
+                fontWeight: 700, fontSize: 14, color: '#fff',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                 textDecoration: 'none',
-                transition: 'transform 0.18s ease, box-shadow 0.18s ease, background 0.15s',
-                boxShadow: '0 4px 16px rgba(79,70,229,0.30)',
-                position: 'relative',
-                overflow: 'hidden',
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+                boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
+                position: 'relative', overflow: 'hidden',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(79,70,229,0.45)'
-                e.currentTarget.style.background = 'var(--accent-hover)'
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(99,102,241,0.50)'
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(79,70,229,0.30)'
-                e.currentTarget.style.background = 'var(--accent-primary)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)'
               }}
             >
-              <IconDownload size={16} />
+              <IconDownload size={17} />
               Download MP4
             </a>
           </div>
@@ -234,17 +230,17 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
 
       {/* Timeline report */}
       {result.timeline_report.length > 0 && (
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}>
+        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)' }}>
           <button
             onClick={() => setTimelineOpen(v => !v)}
-            className="w-full flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors"
+            className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors"
             style={{ background: timelineOpen ? 'var(--accent-subtle)' : 'transparent' }}
             aria-expanded={timelineOpen}
           >
             <div className="flex items-center gap-2.5">
               <IconVideo size={14} style={{ color: 'var(--text-muted)' }} />
               <div>
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>Timeline Report</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>Timeline Report</span>
                 <div className="flex items-center gap-1.5 mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{totalItems} clips</span>
                   <span>·</span>
@@ -260,7 +256,7 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
               </div>
             </div>
             <span
-              className="text-[10px] font-bold transition-transform duration-200 shrink-0"
+              className="text-[11px] font-bold transition-transform duration-200 shrink-0"
               style={{ color: 'var(--text-muted)', transform: timelineOpen ? 'rotate(180deg)' : 'none' }}
             >
               ▾
@@ -268,13 +264,13 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
           </button>
 
           {timelineOpen && (
-            <div className="px-4 pb-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-              <div className="overflow-x-auto rounded-lg mt-3" style={{ border: '1px solid var(--border-subtle)' }}>
+            <div className="px-4 pb-4 animate-slide-down" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <div className="overflow-x-auto rounded-xl mt-3" style={{ border: '1px solid var(--border-subtle)' }}>
                 <table className="w-full text-xs">
                   <thead>
-                    <tr style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <tr style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)' }}>
                       {['Image', 'Start', 'End', 'Duration', 'Text', 'Status'].map(h => (
-                        <th key={h} className="px-3 py-2.5 text-left font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontSize: '9px' }}>
+                        <th key={h} className="px-3 py-2.5 text-left font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontSize: '9px' }}>
                           {h}
                         </th>
                       ))}
@@ -294,7 +290,7 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
                         <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-muted)' }}>{row.end}</td>
                         <td className="px-3 py-2 font-mono" style={{ color: 'var(--text-muted)' }}>{row.duration}</td>
                         <td className="px-3 py-2 max-w-[160px] truncate" style={{ color: 'var(--text-muted)' }}>
-                          {row.text || <span style={{ opacity: 0.4, fontStyle: 'italic' }}>—</span>}
+                          {row.text || <span style={{ opacity: 0.35, fontStyle: 'italic' }}>—</span>}
                         </td>
                         <td className="px-3 py-2">
                           <StatusBadge status={row.status} />
@@ -302,7 +298,7 @@ export default function ResultsPanel({ result, settings }: ResultsPanelProps) {
                       </tr>
                     ))}
                     {result.timeline_report.length > 100 && (
-                      <tr style={{ background: 'var(--bg-input)' }}>
+                      <tr style={{ background: 'var(--bg-elevated)' }}>
                         <td colSpan={6} className="px-3 py-3 text-center text-[10px] italic" style={{ color: 'var(--text-muted)' }}>
                           + {result.timeline_report.length - 100} more items hidden for performance.
                         </td>

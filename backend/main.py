@@ -156,6 +156,7 @@ async def jobs_start(
     enable_watermark:        str   = Form("false"),
     watermark_text:          str   = Form(""),
     watermark_position_mode: str   = Form("preset"),
+    watermark_coordinate_mode: str = Form("design_canvas"),
     watermark_position:      str   = Form("bottom_right"),
     watermark_x:             int   = Form(50),
     watermark_y:             int   = Form(50),
@@ -215,6 +216,7 @@ async def jobs_start(
     # ── Validate / normalise watermark ──────────────────────────────────────
     wm_text     = watermark_text.strip()[:100]           # cap at 100 chars
     wm_mode     = watermark_position_mode.strip().lower()
+    wm_coord_mode = watermark_coordinate_mode.strip().lower()
     if wm_mode not in {"preset", "custom"}:
         wm_mode = "preset"
     wm_position = watermark_position.lower().replace("-", "_")
@@ -349,6 +351,7 @@ async def jobs_start(
                 enable_watermark=wm_enabled,
                 watermark_text=wm_text,
                 watermark_position_mode=wm_mode,
+                watermark_coordinate_mode=wm_coord_mode,
                 watermark_position=wm_position,
                 watermark_x=wm_x,
                 watermark_y=wm_y,
@@ -503,6 +506,7 @@ async def jobs_start_video_timeline(
     # Batch 10C — watermark
     watermark_text:          str   = Form(""),
     watermark_position_mode: str   = Form("preset"),
+    watermark_coordinate_mode: str = Form("design_canvas"),
     watermark_position:      str   = Form("bottom_right"),
     watermark_x:             int   = Form(50),
     watermark_y:             int   = Form(50),
@@ -656,6 +660,7 @@ async def jobs_start_video_timeline(
                 effect_strength=effect_strength,
                 watermark_text=watermark_text,
                 watermark_position_mode=watermark_position_mode,
+                watermark_coordinate_mode=watermark_coordinate_mode,
                 watermark_position=watermark_position,
                 watermark_x=watermark_x,
                 watermark_y=watermark_y,
@@ -759,6 +764,7 @@ async def jobs_start_media_timeline(
     # Batch 11D — Watermark
     watermark_text:          str   = Form(""),
     watermark_position_mode: str   = Form("preset"),
+    watermark_coordinate_mode: str = Form("design_canvas"),
     watermark_position:      str   = Form("bottom_right"),
     watermark_x:             int   = Form(50),
     watermark_y:             int   = Form(50),
@@ -930,6 +936,7 @@ async def jobs_start_media_timeline(
                 effect_strength=effect_strength,
                 watermark_text=watermark_text.strip(),
                 watermark_position_mode=watermark_position_mode.strip().lower(),
+                watermark_coordinate_mode=watermark_coordinate_mode.strip().lower(),
                 watermark_position=watermark_position.lower().replace("-", "_"),
                 watermark_x=int(watermark_x),
                 watermark_y=int(watermark_y),

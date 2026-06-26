@@ -45,6 +45,7 @@ const DEFAULT_SETTINGS: MediaTimelineSettings = {
   enableWatermark:       false,
   watermarkText:         '',
   watermarkPositionMode: 'preset',
+  watermarkCoordinateMode: 'design_canvas',
   watermarkPosition:     'white_default',
   watermarkX:            50,
   watermarkY:            50,
@@ -442,8 +443,11 @@ export default function MediaTimelinePage() {
               />
             </div>
             
-            <div className="pt-2 border-t border-[var(--border-subtle)]">
-              <h3 className="text-[11px] font-bold text-[var(--text-secondary)] mb-3">Optional Appends</h3>
+            <div>
+              <div className="flex items-center gap-2 mt-1 mb-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Optional Appends</span>
+                <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <MediaDropZone id="mt-intro-upload" label="Intro Video" description="Appended before timeline" accept="video/mp4,video/quicktime,video/webm"
                   icon={<IconFilm size={14} />} file={introFile} onChange={handleIntroChange} disabled={disabled} />
@@ -602,7 +606,11 @@ export default function MediaTimelinePage() {
             />
 
             {settings.backgroundMusicFile && (
-              <div className="pt-2 border-t border-[var(--border-subtle)] space-y-3">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mt-1 mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Music Controls</span>
+                  <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+                </div>
                 <div className="space-y-1 mt-2">
                   <div className="flex justify-between items-center">
                     <label className="form-label mb-0">Music Volume</label>
@@ -676,10 +684,14 @@ export default function MediaTimelinePage() {
             </div>
             
             {settings.enableWatermark && (
-              <div className="pt-2 animate-fade-in border-t border-[var(--border-subtle)] mt-4">
+              <div className="animate-fade-in mt-4">
+                <div className="flex items-center gap-2 mt-1 mb-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Watermark Options</span>
+                  <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+                </div>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <Sel id="wm-pos-mode" label="Position Mode" value={settings.watermarkPositionMode} disabled={disabled} onChange={v => set('watermarkPositionMode', v)}
-                    options={[ { value: 'preset', label: 'Preset Position' }, { value: 'custom', label: 'Custom (X/Y %)' } ]} />
+                    options={[ { value: 'preset', label: 'Preset Position' }, { value: 'custom', label: 'Custom (X/Y px)' } ]} />
                   
                   {settings.watermarkPositionMode === 'preset' ? (
                     <Sel id="wm-pos" label="Position" value={settings.watermarkPosition} disabled={disabled} onChange={v => set('watermarkPosition', v)}
@@ -692,14 +704,40 @@ export default function MediaTimelinePage() {
                         { value: 'center', label: 'Center' }
                       ]} />
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <label className="form-label" htmlFor="wm-x">X %</label>
-                        <input id="wm-x" type="number" min="0" max="100" className="form-input text-center" value={settings.watermarkX} onChange={e => set('watermarkX', parseInt(e.target.value) || 0)} disabled={disabled} />
+                    <div className="flex flex-col gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="form-label" htmlFor="wm-x">X px</label>
+                          <input id="wm-x" type="number" className="form-input text-center" value={settings.watermarkX} onChange={e => set('watermarkX', parseInt(e.target.value) || 0)} disabled={disabled} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="form-label" htmlFor="wm-y">Y px</label>
+                          <input id="wm-y" type="number" className="form-input text-center" value={settings.watermarkY} onChange={e => set('watermarkY', parseInt(e.target.value) || 0)} disabled={disabled} />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="form-label" htmlFor="wm-y">Y %</label>
-                        <input id="wm-y" type="number" min="0" max="100" className="form-input text-center" value={settings.watermarkY} onChange={e => set('watermarkY', parseInt(e.target.value) || 0)} disabled={disabled} />
+                      
+                      <div className="space-y-1 mt-1">
+                        <label className="form-label" htmlFor="wm-coord-mode">Coordinate Mode</label>
+                        <select id="wm-coord-mode" value={settings.watermarkCoordinateMode} onChange={e => set('watermarkCoordinateMode', e.target.value as any)} className="form-select" disabled={disabled}>
+                          <option value="design_canvas">Design Canvas X/Y</option>
+                          <option value="final_pixels">Final Export Pixels</option>
+                        </select>
+                      </div>
+                      
+                      <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                        {settings.watermarkCoordinateMode === 'design_canvas' ? (
+                          <>
+                            {settings.aspectRatio === '9:16' && "X/Y are based on a 1080x1920 design canvas and automatically scale to 720p, 1080p, 2K, and 4K."}
+                            {settings.aspectRatio === '16:9' && "X/Y are based on a 1920x1080 design canvas and automatically scale to 720p, 1080p, 2K, and 4K."}
+                            {settings.aspectRatio === '1:1' && "X/Y are based on a 1080x1080 design canvas and automatically scale to 720p, 1080p, 2K, and 4K."}
+                          </>
+                        ) : (
+                          <>
+                            X/Y use the final export resolution directly. You may need different values for 720p, 1080p, 2K, and 4K.
+                            <br/><br/>
+                            <span style={{ color: 'var(--text-primary)' }}>Recommended: Use Design Canvas X/Y for consistent placement across resolutions.</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -746,17 +784,20 @@ export default function MediaTimelinePage() {
             <button
               onClick={handleGenerate}
               disabled={!isReady}
-              className={`w-full relative overflow-hidden transition-all duration-300 flex items-center justify-center gap-2 rounded-xl text-sm font-bold shadow-sm active:scale-[0.98] ${
+              className={`w-full relative overflow-hidden transition-all duration-300 flex items-center justify-center gap-2 rounded-xl text-sm font-bold active:scale-[0.98] ${
                 isReady
-                  ? 'hover:brightness-110 hover:shadow active:brightness-95'
+                  ? 'active:brightness-95'
                   : 'opacity-50 cursor-not-allowed'
               }`}
               style={{
                 height: 52,
-                background: isReady ? 'var(--accent-primary)' : 'var(--bg-input)',
+                background: isReady ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'var(--bg-elevated)',
+                boxShadow: isReady ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
                 color: isReady ? '#fff' : 'var(--text-muted)',
                 border: isReady ? 'none' : '1px solid var(--border-default)'
               }}
+              onMouseEnter={e => { if (isReady) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(99,102,241,0.55)' }}
+              onMouseLeave={e => { if (isReady) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
             >
               {status === 'uploading' ? (
                 <><IconLoader size={16} /> Uploading...</>
