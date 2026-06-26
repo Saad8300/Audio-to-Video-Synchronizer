@@ -5,7 +5,7 @@ import FileDropZone from './components/FileDropZone'
 import CsvGuide from './components/CsvGuide'
 import ResultsPanel from './components/ResultsPanel'
 import ProgressOverlay from './components/ProgressOverlay'
-import AppModeSwitcher, { type AppMode } from './components/AppModeSwitcher'
+import { type AppMode } from './components/AppModeSwitcher'
 import VideoTimelinePage from './components/VideoTimelinePage'
 import MediaTimelinePage from './components/MediaTimelinePage'
 import StudioHomePage from './components/StudioHomePage'
@@ -211,17 +211,7 @@ export default function App() {
 
 
 
-  const [activeView, setActiveView] = useState<ViewMode>(() => {
-    try {
-      const hasLaunched = localStorage.getItem('hasLaunchedV2')
-      if (!hasLaunched) {
-        localStorage.setItem('hasLaunchedV2', 'true')
-        return 'home'
-      }
-      const saved = localStorage.getItem('appMode') as ViewMode
-      return ['image', 'video', 'media'].includes(saved) ? saved : 'home'
-    } catch { return 'home' }
-  })
+  const [activeView, setActiveView] = useState<ViewMode>('home')
 
   const handleModeChange = (mode: ViewMode) => {
     setActiveView(mode)
@@ -411,10 +401,27 @@ export default function App() {
             </div>
           </div>
 
-          {/* Centre: workflow bar */}
-          <div className="hidden md:block flex-1 max-w-md">
-            <WorkflowBar step={workflowStep} />
-          </div>
+          {/* Centre: workflow bar & back button */}
+          {activeView !== 'home' && (
+            <>
+              <div className="flex shrink-0">
+                <button
+                  onClick={() => handleModeChange('home')}
+                  className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+                  style={{ color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                >
+                  <span aria-hidden="true">&larr;</span>
+                  <span className="hidden sm:inline">Back to Studio Home</span>
+                  <span className="sm:hidden">Home</span>
+                </button>
+              </div>
+              <div className="hidden lg:block flex-1 max-w-md">
+                <WorkflowBar step={workflowStep} />
+              </div>
+            </>
+          )}
 
           {/* Right: status + theme */}
           <div className="flex items-center gap-2.5 shrink-0">
@@ -486,7 +493,7 @@ export default function App() {
         <StudioHomePage onSelectTool={handleModeChange} />
       ) : (
         <>
-          <AppModeSwitcher activeMode={activeView as AppMode} onChange={handleModeChange as any} />
+
       {activeView === 'media' ? (
         <MediaTimelinePage />
       ) : activeView === 'video' ? (
