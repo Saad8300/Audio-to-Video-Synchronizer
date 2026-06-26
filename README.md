@@ -150,13 +150,20 @@ The Media Timeline supports a mix of images, videos, and text-only screens.
 #### Example Media Timeline CSV
 ```csv
 start,end,asset,text
-0,5,1.png,"Opening line"
-5,10,clip_1.mp4,"Text over video"
-10,15,2.jpg,"Important point"
-15,20,clip_2.mp4,"Final moment"
+0,5,1.png,"Opening image"
+5,10,1.mp4,"First video clip"
+10,15,2.jpg,"Second image"
+15,20,2.mp4,"Second video clip"
 20,25,,"Text-only screen"
 ```
 *Note: Gaps in the Media Timeline are allowed and will be automatically filled with a neutral background.*
+
+#### Filename Guidelines
+* Put images and videos inside the Media ZIP.
+* Use exact filenames in the `asset` column.
+* Videos can be named simply as `1.mp4`, `2.mp4`, `3.mp4`.
+* Images can be named `1.png`, `2.jpg`, etc.
+* The app reads the extension to decide whether it is an image or video.
 
 ### Accepted Time Formats (Image/Video Timeline)
 

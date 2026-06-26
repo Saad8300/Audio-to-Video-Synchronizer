@@ -22,7 +22,7 @@ import { startMediaTimelineJob } from '../utils/api'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CSV_TEMPLATE = `start,end,asset,text\n0,5,1.png,"Opening line"\n5,10,clip_1.mp4,"Text over video"\n10,15,2.jpg,"Important point"\n15,20,clip_2.mp4,"Final moment"\n20,25,,"Text-only screen"\n`
+const CSV_TEMPLATE = `start,end,asset,text\n0,5,1.png,"Opening image"\n5,10,1.mp4,"First video clip"\n10,15,2.jpg,"Second image"\n15,20,2.mp4,"Second video clip"\n20,25,,"Text-only screen"\n`
 
 const DEFAULT_SETTINGS: MediaTimelineSettings = {
   aspectRatio:      '9:16',
@@ -786,10 +786,10 @@ export default function MediaTimelinePage() {
             
             <div className="p-3 rounded-lg font-mono text-[10px] overflow-x-auto whitespace-pre" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
               start,end,asset,text<br/>
-              0,5,1.png,"Opening line"<br/>
-              5,10,clip_1.mp4,"Text over video"<br/>
-              10,15,2.jpg,"Important point"<br/>
-              15,20,clip_2.mp4,"Final moment"<br/>
+              0,5,1.png,"Opening image"<br/>
+              5,10,1.mp4,"First video clip"<br/>
+              10,15,2.jpg,"Second image"<br/>
+              15,20,2.mp4,"Second video clip"<br/>
               20,25,,"Text-only screen"
             </div>
 
@@ -806,7 +806,19 @@ export default function MediaTimelinePage() {
               <ul className="text-[10px] space-y-1.5" style={{ color: 'var(--text-muted)' }}>
                 <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">start</code> = row start time in seconds</li>
                 <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">end</code> = row end time in seconds</li>
-                <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">asset</code> = filename inside Media ZIP</li>
+                <li className="space-y-1">
+                  <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">asset</code> = exact filename inside Media ZIP.<br/>
+                  <div className="mt-1 p-2 rounded bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                    <span className="font-semibold block mb-1" style={{ color: 'var(--text-primary)' }}>Note: The asset value must exactly match the filename inside your Media ZIP.</span>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[9px]">
+                      <li>Images and videos can both use simple numbered filenames (e.g., <code>1.png</code>, <code>2.jpg</code>, <code>1.mp4</code>, <code>2.mp4</code>).</li>
+                      <li>The app decides media type from the file extension.</li>
+                      <li><code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>, <code>.webp</code> are treated as images.</li>
+                      <li><code>.mp4</code>, <code>.mov</code>, <code>.webm</code> are treated as videos.</li>
+                      <li>Old names like <code>clip_1.mp4</code> still work if that exact filename exists in the ZIP.</li>
+                    </ul>
+                  </div>
+                </li>
                 <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">text</code> = optional text overlay or text-only screen</li>
               </ul>
               

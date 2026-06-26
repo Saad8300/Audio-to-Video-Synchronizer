@@ -373,7 +373,7 @@ def parse_media_csv(csv_path: str, media_map: dict[str, str]) -> tuple[list[dict
                 
             asset_path = media_map.get(asset_str.lower())
             if not asset_path:
-                errors.append(f"CSV row {idx} references \"{asset_str}\", but it was not found in the Media ZIP.")
+                errors.append(f"CSV row {idx} references \"{asset_str}\", but it was not found in the Media ZIP. Make sure the asset name in the CSV exactly matches the filename inside the ZIP.")
                 continue
                 
             if ext in VIDEO_EXTS:
