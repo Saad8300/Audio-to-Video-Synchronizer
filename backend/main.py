@@ -248,9 +248,10 @@ async def jobs_start(
         with open(dest, "wb") as f:
             f.write(content)
 
-    audio_path = str(job_temp / "merged_audio.m4a")
+    # Use .wav for merged audio — avoids libfdk_aac / AAC encoder dependency
+    audio_path = str(job_temp / "merged_audio.wav")
     if len(audio_files) == 1:
-        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
+        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".mp3"
         audio_path = str(job_temp / f"audio{audio_ext}")
         content = await audio_files[0].read()
         with open(audio_path, "wb") as f:
@@ -265,14 +266,15 @@ async def jobs_start(
         
         clips = []
         for i, af in enumerate(sorted_files):
-            ext = Path(af.filename).suffix if af.filename else ".m4a"
+            ext = Path(af.filename).suffix if af.filename else ".mp3"
             tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
             content = await af.read()
             with open(tmp_path, "wb") as f:
                 f.write(content)
             clips.append(AudioFileClip(tmp_path))
         merged = concatenate_audioclips(clips)
-        merged.write_audiofile(audio_path, logger=None)
+        # Write as WAV/PCM — universally supported, no libfdk_aac needed
+        merged.write_audiofile(audio_path, codec="pcm_s16le", logger=None)
         for c in clips: c.close()
         merged.close()
 
@@ -552,9 +554,10 @@ async def jobs_start_video_timeline(
         with open(dest, "wb") as f:
             f.write(content)
 
-    audio_path = str(job_temp / "merged_audio.m4a")
+    # Use .wav for merged audio — avoids libfdk_aac / AAC encoder dependency
+    audio_path = str(job_temp / "merged_audio.wav")
     if len(audio_files) == 1:
-        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
+        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".mp3"
         audio_path = str(job_temp / f"audio{audio_ext}")
         content = await audio_files[0].read()
         with open(audio_path, "wb") as f:
@@ -569,14 +572,15 @@ async def jobs_start_video_timeline(
         
         clips = []
         for i, af in enumerate(sorted_files):
-            ext = Path(af.filename).suffix if af.filename else ".m4a"
+            ext = Path(af.filename).suffix if af.filename else ".mp3"
             tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
             content = await af.read()
             with open(tmp_path, "wb") as f:
                 f.write(content)
             clips.append(AudioFileClip(tmp_path))
         merged = concatenate_audioclips(clips)
-        merged.write_audiofile(audio_path, logger=None)
+        # Write as WAV/PCM — universally supported, no libfdk_aac needed
+        merged.write_audiofile(audio_path, codec="pcm_s16le", logger=None)
         for c in clips: c.close()
         merged.close()
 
@@ -816,9 +820,10 @@ async def jobs_start_media_timeline(
     if not audio_files or len(audio_files) == 0 or (len(audio_files) == 1 and not audio_files[0].filename):
         raise HTTPException(400, "Please upload a main audio file or audio parts.")
 
-    audio_path = str(job_temp / "merged_audio.m4a")
+    # Use .wav for merged audio — avoids libfdk_aac / AAC encoder dependency
+    audio_path = str(job_temp / "merged_audio.wav")
     if len(audio_files) == 1:
-        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".m4a"
+        audio_ext  = Path(audio_files[0].filename).suffix if audio_files[0].filename else ".mp3"
         audio_path = str(job_temp / f"audio{audio_ext}")
         content = await audio_files[0].read()
         with open(audio_path, "wb") as f:
@@ -833,7 +838,7 @@ async def jobs_start_media_timeline(
         
         clips = []
         for i, af in enumerate(sorted_files):
-            ext = Path(af.filename).suffix if af.filename else ".m4a"
+            ext = Path(af.filename).suffix if af.filename else ".mp3"
             tmp_path = str(job_temp / f"temp_audio_{i}{ext}")
             content = await af.read()
             with open(tmp_path, "wb") as f:
@@ -850,9 +855,10 @@ async def jobs_start_media_timeline(
                 
         try:
             merged = concatenate_audioclips(clips)
-            merged.write_audiofile(audio_path, logger=None)
+            # Write as WAV/PCM — universally supported, no libfdk_aac needed
+            merged.write_audiofile(audio_path, codec="pcm_s16le", logger=None)
         except Exception as e:
-            raise HTTPException(500, f"Failed to merge audio files: {e}")
+            raise HTTPException(500, f"Audio merge failed. Please check your audio files and try again. Detail: {e}")
         finally:
             for c in clips:
                 try: c.close()

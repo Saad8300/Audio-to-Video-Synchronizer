@@ -1104,7 +1104,7 @@ def generate_video_timeline(
         crf           = profile["crf"]
         preset_name   = profile["preset"]
         audio_bitrate = profile["audio_bitrate"]
-        temp_audio_f  = os.path.join(temp_dir, "temp_audio.m4a")
+        temp_audio_f  = os.path.join(temp_dir, "temp_audio.wav")
 
         try:
             final_video.write_videofile(

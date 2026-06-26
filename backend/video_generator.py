@@ -1060,7 +1060,7 @@ def generate_video(
             fps=fps,
             codec="libx264",
             audio_codec="aac",
-            temp_audiofile=os.path.join(temp_dir, "temp_audio.m4a"),
+            temp_audiofile=os.path.join(temp_dir, "temp_audio.wav"),
             remove_temp=True,
             preset=preset,
             bitrate=video_bitrate,
