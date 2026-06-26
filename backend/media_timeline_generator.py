@@ -527,6 +527,10 @@ def generate_media_timeline(
             dur = row["duration"]
             c_type = row["type"]
             
+            if dur <= 0:
+                warnings.append(f"Skipping row with invalid duration: {dur}s")
+                continue
+            
             if c_type == "gap":
                 if not any("Timeline contains gaps." in w for w in warnings):
                     warnings.append("Timeline contains gaps. Neutral filler clips were added.")
@@ -558,11 +562,9 @@ def generate_media_timeline(
                                 base_clip = raw.fx(loop, duration=dur)
                             elif fill_mode == "freeze":
                                 freeze = raw.to_ImageClip(t=v_dur - 0.1).set_duration(dur - v_dur)
-                                from moviepy.editor import concatenate_videoclips
                                 base_clip = concatenate_videoclips([raw, freeze], method="chain")
                             else: # trim_only -> leaves black
                                 padding = _make_black_clip(raw.w, raw.h, dur - v_dur, fps)
-                                from moviepy.editor import concatenate_videoclips
                                 base_clip = concatenate_videoclips([raw, padding], method="chain")
                         else:
                             base_clip = raw.subclip(0, dur)
@@ -750,7 +752,6 @@ def generate_media_timeline(
                     # basic safety check for warning
                     if watermark_x < 0 or watermark_y < 0 or watermark_x > width * 0.9 or watermark_y > height * 0.9:
                         warnings.append("Watermark custom X/Y places the watermark partly outside the frame.")
-                from moviepy.editor import ImageClip, CompositeVideoClip
                 wm_clip = ImageClip(wm_overlay, ismask=False).set_duration(visual_dur).set_fps(fps)
                 
                 # Extract audio to preserve it during visual composite

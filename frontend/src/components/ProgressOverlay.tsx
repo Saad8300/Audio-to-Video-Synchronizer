@@ -45,14 +45,27 @@ const PROFILE_LABEL: Record<RenderProfile, string> = {
 
 const FRAME_COUNT = 16
 
-function FrameScanner({ active }: { active: boolean }) {
+function FrameScanner({ active, status }: { active: boolean, status?: string }) {
+  let label = 'Render pipeline active'
+  let color = 'var(--text-muted)'
+  if (!active) {
+    if (status === 'failed') {
+      label = 'Generation failed'
+      color = '#ef4444' // red-500
+    } else if (status === 'cancelled') {
+      label = 'Generation cancelled'
+    } else {
+      label = 'Pipeline complete'
+    }
+  }
+
   return (
     <div aria-hidden style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{
         fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.10em', color: 'var(--text-muted)', textAlign: 'center',
+        letterSpacing: '0.10em', color, textAlign: 'center',
       }}>
-        {active ? 'Render pipeline active' : 'Pipeline complete'}
+        {label}
       </div>
       <div style={{
         position: 'relative', display: 'flex', gap: 3,
@@ -255,16 +268,16 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, ren
                   margin: 0, fontSize: 17, fontWeight: 700,
                   letterSpacing: '-0.02em', color: 'var(--text-primary)',
                 }}>
-                  {cancelling ? 'Cancelling…' : 'Generating Video'}
+                  {cancelling ? 'Cancelling…' : (jobStatus?.status === 'failed' ? 'Generation Failed' : 'Generating Video')}
                 </h3>
                 <div
                   aria-live="polite"
                   style={{
-                    fontSize: 13, fontWeight: 500, color: 'var(--accent-primary)',
+                    fontSize: 13, fontWeight: 500, color: jobStatus?.status === 'failed' ? '#ef4444' : 'var(--accent-primary)',
                     display: 'flex', alignItems: 'center', minHeight: 20,
                   }}
                 >
-                  {step}
+                  {jobStatus?.status === 'failed' && jobStatus?.errors?.length ? jobStatus.errors[0] : step}
                   {isActive && <StatusDots />}
                 </div>
               </div>
@@ -279,7 +292,7 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, ren
               )}
 
               {/* Zone 3 — Frame scanner */}
-              <FrameScanner active={isActive} />
+              <FrameScanner active={isActive} status={jobStatus?.status} />
 
               {/* Zone 4 — Progress */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
