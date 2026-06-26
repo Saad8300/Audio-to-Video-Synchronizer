@@ -502,7 +502,6 @@ export default function VideoTimelinePage() {
   }
 
   const handleJobComplete = useCallback((jobStatus: JobStatus) => {
-    setCurrentJobId(null)
     if (jobStatus.status === 'completed') {
       setResult({
         success: true,
@@ -549,11 +548,12 @@ export default function VideoTimelinePage() {
   return (
     <>
       {/* Progress overlay (reused) */}
-      {isLoading && currentJobId && (
+      {currentJobId && (
         <ProgressOverlay
           jobId={currentJobId}
           onJobComplete={handleJobComplete}
           onCancelled={handleCancelled}
+          onClose={() => setCurrentJobId(null)}
           renderSpec={{ resolution: settings.exportResolution, renderProfile: settings.renderProfile }}
         />
       )}

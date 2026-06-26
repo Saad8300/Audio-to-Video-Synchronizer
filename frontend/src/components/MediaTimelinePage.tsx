@@ -850,6 +850,7 @@ export default function MediaTimelinePage() {
           jobId={jobId}
           onJobComplete={handleJobComplete}
           onCancelled={handleCancelled}
+          onClose={() => setJobId(null)}
           renderSpec={{ resolution: settings.exportResolution, renderProfile: settings.renderProfile }}
         />
       )}

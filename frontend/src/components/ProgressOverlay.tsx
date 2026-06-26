@@ -2,7 +2,7 @@
 // Added: 4-sided animated border, render spec chips, renderSpec prop
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
-import { IconClock, IconXCircle } from './icons'
+import { IconClock, IconXCircle, IconDownload, IconCheck } from './icons'
 import type { JobStatus, ExportResolution, RenderProfile } from '../types'
 import { getJobStatus, cancelJob } from '../utils/api'
 
@@ -17,6 +17,7 @@ interface ProgressOverlayProps {
   jobId:         string | null
   onJobComplete: (status: JobStatus) => void
   onCancelled:   () => void
+  onClose?:      () => void
   renderSpec?:   RenderSpec
 }
 
@@ -131,7 +132,7 @@ function SpecChip({ label }: { label: string }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, renderSpec }: ProgressOverlayProps) {
+export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onClose, renderSpec }: ProgressOverlayProps) {
   const [jobStatus,   setJobStatus]   = useState<JobStatus | null>(null)
   const [pollError,   setPollError]   = useState<string | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -381,6 +382,45 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, ren
                     >
                       <IconXCircle size={13} />
                       Abort generation
+                    </button>
+                  </div>
+                )}
+
+                {isTerminal && onClose && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 4 }}>
+                    {jobStatus?.status === 'completed' && jobStatus?.output_video_url && (
+                      <a
+                        href={jobStatus.output_video_url}
+                        download={jobStatus.output_filename ?? 'video.mp4'}
+                        onClick={() => {
+                          // Allow the download to trigger, then close the modal
+                          setTimeout(onClose, 100);
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '8px 16px', borderRadius: 8, textDecoration: 'none',
+                          fontSize: 13, fontWeight: 600, color: '#fff',
+                          background: 'linear-gradient(180deg, var(--accent-primary) 0%, #7c3aed 100%)',
+                          border: '1px solid #6d28d9',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <IconDownload size={14} />
+                        Download Video
+                      </a>
+                    )}
+                    <button
+                      onClick={onClose}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '8px 16px', borderRadius: 8,
+                        fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+                        background: 'var(--bg-input)', border: '1px solid var(--border-strong)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {jobStatus?.status === 'failed' ? 'Close' : 'View Result'}
                     </button>
                   </div>
                 )}

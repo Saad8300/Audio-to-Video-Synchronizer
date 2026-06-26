@@ -285,7 +285,6 @@ export default function App() {
   }
 
   const handleJobComplete = useCallback((jobStatus: JobStatus) => {
-    setCurrentJobId(null)
     if (jobStatus.status === 'completed') {
       setResult({
         success: true,
@@ -322,11 +321,12 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
 
       {/* ── Progress overlay ── */}
-      {isLoading && currentJobId && (
+      {currentJobId && (
         <ProgressOverlay
           jobId={currentJobId}
           onJobComplete={handleJobComplete}
           onCancelled={handleCancelled}
+          onClose={() => setCurrentJobId(null)}
           renderSpec={{
             resolution:    settings.exportResolution,
             renderProfile: settings.renderProfile,
