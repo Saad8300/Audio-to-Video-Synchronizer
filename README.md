@@ -26,6 +26,15 @@ You give it:
 2. 📁 A **ZIP file** containing images and video clips.
 3. 📋 A **timeline CSV file** that specifies timings, assets, and text overlays.
 
+### 4. Audio Merger
+Combine multiple audio files into one clean track in exact sequence. Audio filenames do not matter — add them in the order you want them merged.
+
+### 5. Script Timestamp
+Upload voice audio to generate a timestamped script or CSV automatically using local **Whisper AI**. 
+- Runs entirely locally via the Python backend — no cloud APIs
+- Outputs include Simple Timestamps, Detailed Timestamps, Scene Plans, SRT Captions, and SyncFrame Timeline CSVs
+- Ideal for long audio processing
+
 It generates a professional **MP4 video** precisely synced to your audio with optional transitions, watermarks, intro/outro bumpers, and stylistic filters.
 
 ---

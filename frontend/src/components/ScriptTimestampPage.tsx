@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
   IconMusic,
   IconUpload,
@@ -8,17 +8,7 @@ import {
   IconAlertTriangle,
   IconDownload,
 } from './icons'
-import {
-  createLocalProvider,
-  generateDemoTranscription,
-  MODELS,
-} from '../services/transcription/localTranscriptionProvider'
-import {
-  formatOutput,
-  formatCsv,
-  type OutputMode,
-} from '../services/transcription/formatterService'
-import type { TranscriptionResult, TranscriptionStatus } from '../services/transcription/providerTypes'
+import type { JobStatus } from '../types'
 
 function IconMic({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
   return (
@@ -42,12 +32,29 @@ function IconCopy({ size = 16 }: { size?: number }) {
 
 type AppStatus = 'idle' | 'transcribing' | 'done' | 'error'
 
-const OUTPUT_MODES: { value: OutputMode; label: string; desc: string }[] = [
+const OUTPUT_MODES: { value: string; label: string; desc: string }[] = [
   { value: 'simple',   label: 'Simple Timestamp Script', desc: '[0:00] Line here' },
   { value: 'detailed', label: 'Detailed Timestamp Script', desc: '[0:00 - 0:04] Line here' },
   { value: 'scene',    label: 'Scene Plan', desc: 'Scene 1 | 0:00 - 0:04 | Line here' },
   { value: 'srt',      label: 'SRT Captions', desc: 'Standard subtitle format' },
   { value: 'csv',      label: 'Timeline CSV', desc: 'start,end,text — for SyncFrame timelines' },
+]
+
+const MODELS = [
+  { value: 'tiny',  label: 'Whisper Tiny — fastest' },
+  { value: 'base',  label: 'Whisper Base — balanced' },
+  { value: 'small', label: 'Whisper Small — better accuracy, slower' },
+]
+
+const STYLES = [
+  { value: 'standard', label: 'Standard Mode', desc: 'Keep natural sentences' },
+  { value: 'visual_beat', label: 'Visual Beat Mode', desc: 'Shorter lines for image/video changes' },
+]
+
+const INTENSITIES = [
+  { value: 'normal', label: 'Normal', desc: 'Minimal splitting' },
+  { value: 'detailed', label: 'Detailed', desc: 'Moderate splitting on punctuation' },
+  { value: 'aggressive', label: 'Aggressive', desc: 'Split more aggressively' },
 ]
 
 const LANGUAGES = [
@@ -83,15 +90,19 @@ function formatDuration(s: number) {
 export default function ScriptTimestampPage() {
   const [audioFile, setAudioFile]   = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [modelKey, setModelKey]     = useState<string>('multilingual')
+  
+  const [modelKey, setModelKey]     = useState('base')
   const [language, setLanguage]     = useState('auto')
-  const [outputMode, setOutputMode] = useState<OutputMode>('simple')
+  const [outputStyle, setOutputStyle] = useState('standard')
+  const [segmentationIntensity, setSegmentationIntensity] = useState('detailed')
+  const [outputMode, setOutputMode] = useState('simple')
+  
   const [status, setStatus]         = useState<AppStatus>('idle')
   const [progress, setProgress]     = useState(0)
   const [statusMsg, setStatusMsg]   = useState('')
   const [errorMsg, setErrorMsg]     = useState('')
-  const [result, setResult]         = useState<TranscriptionResult | null>(null)
-  const [output, setOutput]         = useState('')
+  const [jobId, setJobId]           = useState<string | null>(null)
+  const [result, setResult]         = useState<any | null>(null)
   const [copied, setCopied]         = useState(false)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,76 +116,88 @@ export default function ScriptTimestampPage() {
     setAudioFile(file)
     setErrorMsg('')
     setResult(null)
-    setOutput('')
     setStatus('idle')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleGenerate = useCallback(async () => {
-    const isDemo = modelKey === 'demo'
-    if (!audioFile && !isDemo) {
+  const handleGenerate = async () => {
+    if (!audioFile) {
       setErrorMsg('Please upload an audio file.')
       return
     }
     setStatus('transcribing')
     setErrorMsg('')
     setProgress(0)
-    setStatusMsg('Preparing…')
+    setStatusMsg('Uploading audio…')
     setResult(null)
-    setOutput('')
+    setJobId(null)
 
-    const onProgress = (_s: TranscriptionStatus, msg: string, p?: number) => {
-      setStatusMsg(msg)
-      if (p !== undefined) setProgress(p)
-    }
+    const formData = new FormData()
+    formData.append('audio_file', audioFile)
+    formData.append('model_name', modelKey)
+    formData.append('language', language)
+    formData.append('output_style', outputStyle)
+    formData.append('segmentation_intensity', segmentationIntensity)
+    formData.append('output_format', outputMode)
 
     try {
-      let transcriptionResult: TranscriptionResult
-
-      if (isDemo) {
-        onProgress('preparing', 'Demo mode — generating sample output…', 10)
-        await new Promise(r => setTimeout(r, 600))
-        onProgress('loading_model', 'Loading demo data…', 50)
-        await new Promise(r => setTimeout(r, 400))
-        onProgress('processing', 'Formatting…', 90)
-        await new Promise(r => setTimeout(r, 300))
-        const durationGuess = audioFile ? audioFile.size / 16000 : 60
-        transcriptionResult = generateDemoTranscription(Math.max(30, Math.min(durationGuess, 120)))
-        onProgress('complete', 'Demo complete!', 100)
-      } else {
-        const descriptor = MODELS[modelKey] ?? MODELS['multilingual']
-        const provider = createLocalProvider(descriptor.id, descriptor.dtype)
-        transcriptionResult = await provider.transcribe(audioFile!, language, onProgress)
+      const res = await fetch('http://127.0.0.1:8000/api/jobs/start-script-timestamp', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        throw new Error('Backend transcription failed. Please check your audio file and try again.')
       }
-
-      const formatted = formatOutput({ mode: outputMode, segments: transcriptionResult.segments })
-      setResult(transcriptionResult)
-      setOutput(formatted)
-      setStatus('done')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(err)
-      if (msg.includes('Model load failed') || msg.includes('load')) {
-        setErrorMsg('Transcription model failed to load. Please try again or switch to Demo Mode.')
-      } else if (msg.toLowerCase().includes('cancelled') || msg.toLowerCase().includes('abort')) {
-        setErrorMsg('Transcription cancelled.')
-      } else {
-        setErrorMsg('Transcription failed. Please check your audio file and try again.')
-      }
+      const data = await res.json()
+      setJobId(data.job_id)
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Backend is offline. Start the app backend and try again.')
       setStatus('error')
-    }
-  }, [audioFile, modelKey, language, outputMode])
-
-  const handleOutputModeChange = (mode: OutputMode) => {
-    setOutputMode(mode)
-    if (result) {
-      setOutput(formatOutput({ mode, segments: result.segments }))
     }
   }
 
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>
+    if (status === 'transcribing' && jobId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}/status`)
+          if (!res.ok) throw new Error('Failed to fetch status')
+          const data = await res.json()
+          
+          if (data.status === 'completed') {
+            clearInterval(interval)
+            const rep = data.timeline_report?.[0]
+            if (rep) {
+              setResult(rep)
+              setStatus('done')
+            } else {
+              setErrorMsg('No output received.')
+              setStatus('error')
+            }
+          } else if (data.status === 'error') {
+            clearInterval(interval)
+            setErrorMsg(data.errors?.[0] || 'Transcription failed.')
+            setStatus('error')
+          } else if (data.status === 'cancelled') {
+            clearInterval(interval)
+            setErrorMsg('Transcription cancelled.')
+            setStatus('error')
+          } else {
+            setProgress(data.progress || 0)
+            setStatusMsg(data.current_step || 'Processing…')
+          }
+        } catch (err) {
+          // just retry next poll
+        }
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [status, jobId])
+
   const handleCopy = async () => {
-    if (!output) return
-    await navigator.clipboard.writeText(output)
+    if (!result?.text) return
+    await navigator.clipboard.writeText(result.text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -188,13 +211,11 @@ export default function ScriptTimestampPage() {
     a.remove(); URL.revokeObjectURL(url)
   }
 
-  const canGenerate = (!!audioFile || modelKey === 'demo') && status !== 'transcribing'
+  const canGenerate = !!audioFile && status !== 'transcribing'
   const baseName = audioFile ? audioFile.name.replace(/\.[^.]+$/, '') : 'transcript'
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 space-y-6 animate-fade-in">
-
-      {/* Page Header */}
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
@@ -216,10 +237,7 @@ export default function ScriptTimestampPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        {/* Left */}
         <div className="lg:col-span-8 space-y-6">
-
           {/* Upload */}
           <div className="card p-5">
             <h2 className="text-sm font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Upload Audio File</h2>
@@ -240,7 +258,7 @@ export default function ScriptTimestampPage() {
                     <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{formatBytes(audioFile.size)}</p>
                   </div>
                 </div>
-                <button onClick={() => { setAudioFile(null); setResult(null); setOutput('') }}
+                <button onClick={() => { setAudioFile(null); setResult(null) }}
                         className="w-7 h-7 rounded flex items-center justify-center hover:bg-red-500/10 text-red-500 shrink-0">
                   <IconX size={14} />
                 </button>
@@ -275,15 +293,10 @@ export default function ScriptTimestampPage() {
                 <label className="form-label">AI Model</label>
                 <select value={modelKey} onChange={e => setModelKey(e.target.value)}
                         className="form-select" disabled={status === 'transcribing'}>
-                  {(Object.keys(MODELS) as string[]).map(k => (
-                    <option key={k} value={k}>{MODELS[k].label}</option>
-                  ))}
-                  <option value="demo">Demo Mode (no download)</option>
+                  {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
                 <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                  {modelKey === 'demo'
-                    ? 'Uses sample data — no model download required.'
-                    : (MODELS[modelKey]?.description ?? '')}
+                  Models run locally in the backend. First use may download the model files.
                 </p>
               </div>
 
@@ -295,14 +308,34 @@ export default function ScriptTimestampPage() {
                 </select>
               </div>
 
+              <div className="space-y-1">
+                <label className="form-label">Output Style</label>
+                <select value={outputStyle} onChange={e => setOutputStyle(e.target.value)}
+                        className="form-select" disabled={status === 'transcribing'}>
+                  {STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  {STYLES.find(s => s.value === outputStyle)?.desc}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="form-label">Segmentation Intensity</label>
+                <select value={segmentationIntensity} onChange={e => setSegmentationIntensity(e.target.value)}
+                        className="form-select" disabled={status === 'transcribing'}>
+                  {INTENSITIES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                </select>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  {INTENSITIES.find(i => i.value === segmentationIntensity)?.desc}
+                </p>
+              </div>
+
               <div className="space-y-1 sm:col-span-2">
                 <label className="form-label">Output Format</label>
                 <select value={outputMode}
-                        onChange={e => handleOutputModeChange(e.target.value as OutputMode)}
+                        onChange={e => setOutputMode(e.target.value)}
                         className="form-select" disabled={status === 'transcribing'}>
-                  {OUTPUT_MODES.map(m => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
+                  {OUTPUT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
                 <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {OUTPUT_MODES.find(m => m.value === outputMode)?.desc}
@@ -340,17 +373,15 @@ export default function ScriptTimestampPage() {
                        style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #6366f1, #8b5cf6)' }} />
                 </div>
                 <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>{statusMsg}</p>
-                {progress < 70 && (
-                  <p className="text-[10px] text-center" style={{ color: 'var(--text-muted)' }}>
-                    First run may take a few minutes while the local model downloads (~38 MB).
-                  </p>
-                )}
+                <p className="text-[10px] text-center" style={{ color: 'var(--text-muted)' }}>
+                  For long audio, keep the backend running and avoid closing this window during transcription.
+                </p>
               </div>
             )}
 
             {!canGenerate && status === 'idle' && (
               <p className="text-[11px] mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
-                Upload an audio file or choose Demo Mode to generate timestamps.
+                Upload an audio file to generate timestamps.
               </p>
             )}
           </div>
@@ -368,10 +399,10 @@ export default function ScriptTimestampPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: 'Duration', value: formatDuration(result.durationSeconds) },
+                  { label: 'Duration', value: formatDuration(result.duration) },
                   { label: 'Language', value: ['auto','detected'].includes(result.language) ? 'Auto Detected' : result.language.toUpperCase() },
-                  { label: 'Segments', value: String(result.segments.length) },
-                  { label: 'Format', value: OUTPUT_MODES.find(m => m.value === outputMode)?.label ?? outputMode },
+                  { label: 'Segments', value: String(result.segments_count) },
+                  { label: 'Format', value: OUTPUT_MODES.find(m => m.value === result.format)?.label ?? result.format },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-lg p-2.5 text-center"
                        style={{ background: 'var(--bg-elevated)' }}>
@@ -382,16 +413,9 @@ export default function ScriptTimestampPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="form-label">Output</label>
-                  <select value={outputMode}
-                          onChange={e => handleOutputModeChange(e.target.value as OutputMode)}
-                          className="form-select text-xs" style={{ width: 'auto', paddingTop: '0.25rem', paddingBottom: '0.25rem' }}>
-                    {OUTPUT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                  </select>
-                </div>
+                <label className="form-label mb-2">Output</label>
                 <textarea
-                  readOnly value={output}
+                  readOnly value={result.text}
                   className="w-full text-xs font-mono rounded-xl p-3 resize-y"
                   style={{ minHeight: 180, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
                            color: 'var(--text-primary)', lineHeight: 1.7 }}
@@ -406,32 +430,23 @@ export default function ScriptTimestampPage() {
                   {copied ? 'Copied!' : 'Copy Output'}
                 </button>
 
-                <button onClick={() => downloadAs(output, `${baseName}.txt`)}
+                <button onClick={() => downloadAs(result.text, `${baseName}.txt`)}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                         style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
                   <IconDownload size={13} /> Download TXT
                 </button>
 
-                {outputMode === 'srt' && (
-                  <button onClick={() => downloadAs(output, `${baseName}.srt`)}
+                {result.format === 'srt' && (
+                  <button onClick={() => downloadAs(result.text, `${baseName}.srt`)}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download SRT
                   </button>
                 )}
 
-                {outputMode === 'csv' && (
-                  <button onClick={() => downloadAs(output, `${baseName}.csv`, 'text/csv')}
+                {result.format === 'csv' && (
+                  <button onClick={() => downloadAs(result.text, `${baseName}.csv`, 'text/csv')}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download CSV
-                  </button>
-                )}
-
-                {outputMode !== 'csv' && result.segments.length > 0 && (
-                  <button
-                    onClick={() => downloadAs(formatCsv(result.segments), `${baseName}_timeline.csv`, 'text/csv')}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                    style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-                    <IconDownload size={13} /> Download Timeline CSV
                   </button>
                 )}
               </div>
@@ -464,7 +479,7 @@ export default function ScriptTimestampPage() {
                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
               <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>🔒 100% Local</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                Whisper AI runs in your browser. Audio never leaves your machine. No API keys required.
+                Whisper runs locally in the SyncFrame backend. Your audio stays on this machine.
               </p>
             </div>
           </div>
@@ -489,15 +504,10 @@ export default function ScriptTimestampPage() {
           </div>
 
           <div className="card p-5 space-y-2">
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>AI Model Info</h2>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Backend Local Processing</h2>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              First run downloads ~38 MB model to browser cache. Subsequent runs are instant.
+              Transcription runs directly on your machine through the Python backend. First run may download model files.
             </p>
-            <div className="space-y-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-              <p>• <strong>Whisper Tiny Multilingual</strong> — 16 languages, ~38 MB</p>
-              <p>• <strong>Whisper Tiny English</strong> — English only, faster</p>
-              <p>• <strong>Demo Mode</strong> — No download, sample output</p>
-            </div>
           </div>
         </div>
       </div>

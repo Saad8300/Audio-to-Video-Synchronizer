@@ -7,3 +7,4 @@ pandas
 numpy
 imageio
 imageio-ffmpeg
+faster-whisper

@@ -222,7 +222,7 @@ taskkill /PID <PID> /F
 ### ❌ Chocolatey install fails
 **Cause:** Sometimes corporate firewalls or Windows policies block it.
 **Fix:** Install tools manually:
-- Python 3.12: https://www.python.org/downloads/release/python-3120/
+- Python 3.11 or 3.12 (Highly recommended for local AI transcription): https://www.python.org/downloads/
 - Node.js LTS: https://nodejs.org/
 - FFmpeg: https://www.gyan.dev/ffmpeg/builds/ (download the full build, add `bin\` to PATH)
 - Git: https://git-scm.com/download/win
