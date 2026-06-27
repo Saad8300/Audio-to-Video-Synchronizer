@@ -877,7 +877,7 @@ export default function VideoTimelinePage() {
           <div className="xl:w-[320px] shrink-0 space-y-6">
 
             {/* Action / Generate Card */}
-            <div className="card p-5 space-y-4 sticky top-20">
+            <div className="card p-5 space-y-4">
               <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Action</h2>
 
               {durationWarning && !isLoading && (

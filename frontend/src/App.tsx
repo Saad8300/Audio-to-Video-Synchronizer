@@ -216,6 +216,12 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<ViewMode>('home')
 
+  // Reset scroll position when navigating between tools or returning to home
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [activeView])
+
+
   const handleModeChange = (mode: ViewMode) => {
     setActiveView(mode)
     if (mode !== 'home') {
@@ -863,7 +869,7 @@ export default function App() {
           <div className="xl:w-[320px] shrink-0 space-y-6">
 
             {/* Generate Button */}
-            <div className="card p-5 space-y-4 sticky top-20">
+            <div className="card p-5 space-y-4">
               <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Action</h2>
               <button
                 onClick={handleGenerate}
