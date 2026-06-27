@@ -19,10 +19,10 @@ interface Props {
 
 export default function StudioHomePage({ onSelectTool }: Props) {
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-12 pb-24 space-y-12 animate-fade-in">
+    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 pb-24 space-y-8 animate-fade-in">
       
       {/* ── Hero Section ── */}
-      <div className="text-center space-y-4 max-w-2xl mx-auto pt-8">
+      <div className="text-center space-y-4 max-w-2xl mx-auto pt-2">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-2" 
              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
           <IconSparkles size={14} style={{ color: 'var(--accent-primary)' }} />
@@ -69,7 +69,7 @@ export default function StudioHomePage({ onSelectTool }: Props) {
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconLayers size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1 flex flex-col items-center">
+            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Image Timeline</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Create videos from images, audio, and timestamp CSV files.
@@ -93,7 +93,7 @@ export default function StudioHomePage({ onSelectTool }: Props) {
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconFilm size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1 flex flex-col items-center">
+            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Video Timeline</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Build videos from reusable video clips, main audio, and timeline CSV files.
@@ -117,7 +117,7 @@ export default function StudioHomePage({ onSelectTool }: Props) {
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconGrid size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1 flex flex-col items-center">
+            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Media Timeline</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Mix images, videos, and text rows using one timeline CSV.
@@ -140,7 +140,7 @@ export default function StudioHomePage({ onSelectTool }: Props) {
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconMusic size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1 flex flex-col items-center">
+            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Audio Merger</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Combine multiple audio parts into one clean narration track.

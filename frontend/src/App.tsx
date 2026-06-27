@@ -402,27 +402,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Centre: workflow bar & back button */}
-          {activeView !== 'home' && (
-            <>
-              <div className="flex shrink-0">
-                <button
-                  onClick={() => handleModeChange('home')}
-                  className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
-                  style={{ color: 'var(--text-secondary)' }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-                >
-                  <span aria-hidden="true">&larr;</span>
-                  <span className="hidden sm:inline">Back to Studio Home</span>
-                  <span className="sm:hidden">Home</span>
-                </button>
-              </div>
-              <div className="hidden lg:block flex-1 max-w-md">
-                <WorkflowBar step={workflowStep} />
-              </div>
-            </>
-          )}
+          {/* Centre space */}
+          <div className="flex-1" />
 
           {/* Right: status + theme */}
           <div className="flex items-center gap-2.5 shrink-0">
