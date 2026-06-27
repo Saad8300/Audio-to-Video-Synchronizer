@@ -1,6 +1,7 @@
 // components/VideoTimelinePage.tsx — Video Timeline workflow (Batch 10B + 10C)
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import ToolPageHeader from './ToolPageHeader'
 import {
   IconMusic,
   IconVideo,
@@ -537,7 +538,12 @@ export default function VideoTimelinePage() {
       )}
 
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 animate-fade-in">
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
+        <ToolPageHeader
+          icon={<IconVideo size={24} />}
+          title="Video Timeline"
+          description="Build videos from reusable video clips, main audio, and timeline CSV files."
+        />
+        <div className="flex flex-col xl:flex-row gap-6 items-start mt-6">
 
           {/* ── LEFT COLUMN ── */}
           <div className="flex-1 min-w-0 space-y-6">
@@ -925,42 +931,47 @@ export default function VideoTimelinePage() {
             {/* CSV Guide */}
             <div className="card p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>CSV Guide</h2>
+                <div>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>CSV Format Guide</h2>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Timestamp file reference</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  { col: 'start', desc: 'Clip start time (sec)', req: true },
+                  { col: 'end',   desc: 'Clip end time (sec)', req: true },
+                  { col: 'video', desc: 'Filename inside ZIP', req: true },
+                ].map(({ col, desc, req }) => (
+                  <div key={col} className="flex items-center gap-2">
+                    <code className="text-[11px] px-2 py-0.5 rounded font-mono font-semibold" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--accent-primary)' }}>{col}</code>
+                    <span className="text-[11px]" style={{ color: 'var(--text-primary)' }}>{desc}</span>
+                    {req ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded ml-auto" style={{ background: 'var(--color-error-bg)', color: 'var(--color-error)' }}>REQ</span>
+                    ) : (
+                      <span className="text-[9px] font-medium italic ml-auto" style={{ color: 'var(--text-muted)' }}>optional</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-2">
+                <pre className="text-[10px] leading-relaxed font-mono rounded-lg p-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+{`start,end,video
+0,5,1.mp4
+5,10,2.mp4`}
+                </pre>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
                 <button
                   id="vt-download-template-btn"
                   onClick={downloadTemplate}
-                  className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
-                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)', color: 'var(--accent-primary)', cursor: 'pointer' }}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                 >
-                  <IconDownload size={11} /> Template
+                  <IconDownload size={14} /> Template
                 </button>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Required columns</p>
-                <div className="space-y-1">
-                  {[
-                    { col: 'start', desc: 'Clip start time (sec)' },
-                    { col: 'end',   desc: 'Clip end time (sec)' },
-                    { col: 'video', desc: 'Filename inside ZIP' },
-                  ].map(({ col, desc }) => (
-                    <div key={col} className="flex items-center gap-2">
-                      <code className="text-[10px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--accent-primary)' }}>{col}</code>
-                      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Example</p>
-                <pre className="text-[10px] leading-relaxed font-mono rounded-lg p-2.5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
-{`start,end,video
-0,5,1.mp4
-5,10,2.mp4
-10,15,1.mp4
-15,20,3.mp4`}
-                </pre>
               </div>
 
               <div className="p-3 rounded-xl space-y-2 mt-2" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)' }}>

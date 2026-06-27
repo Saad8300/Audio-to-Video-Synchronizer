@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import FileDropZone from './components/FileDropZone'
 import CsvGuide from './components/CsvGuide'
+import ToolPageHeader from './components/ToolPageHeader'
 import ResultsPanel from './components/ResultsPanel'
 import ProgressOverlay from './components/ProgressOverlay'
 import { type AppMode } from './components/AppModeSwitcher'
@@ -512,7 +513,12 @@ export default function App() {
         <VideoTimelinePage />
       ) : (
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
+        <ToolPageHeader
+          icon={<IconImage size={24} />}
+          title="Image Timeline"
+          description="Create videos from images, audio, and timestamp CSV files."
+        />
+        <div className="flex flex-col xl:flex-row gap-6 items-start mt-6">
 
           {/* ── LEFT COLUMN ── */}
           <div className="flex-1 min-w-0 space-y-6">

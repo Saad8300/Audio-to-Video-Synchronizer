@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import ToolPageHeader from './ToolPageHeader'
 import {
   IconGrid,
   IconMusic,
@@ -396,7 +397,12 @@ export default function MediaTimelinePage() {
 
   return (
     <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 animate-fade-in">
-      <div className="flex flex-col xl:flex-row gap-6 items-start">
+      <ToolPageHeader
+        icon={<IconGrid size={24} />}
+        title="Media Timeline"
+        description="Mix images, videos, and text rows using one timeline CSV."
+      />
+      <div className="flex flex-col xl:flex-row gap-6 items-start mt-6">
 
         {/* ── LEFT COLUMN ── */}
         <div className="flex-1 min-w-0 space-y-6">
@@ -855,50 +861,67 @@ export default function MediaTimelinePage() {
 
           {/* CSV Guide */}
           <div className="card p-5 space-y-4">
-            <h2 className="text-sm font-bold flex items-center justify-between" style={{ color: 'var(--text-primary)' }}>
-              CSV Format Guide
-            </h2>
-            
-            <div className="p-3 rounded-lg font-mono text-[10px] overflow-x-auto whitespace-pre" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
-              start,end,asset,text<br/>
-              0,5,1.png,"Opening image"<br/>
-              5,10,1.mp4,"First video clip"<br/>
-              10,15,2.jpg,"Second image"<br/>
-              15,20,2.mp4,"Second video clip"<br/>
-              20,25,,"Text-only screen"
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>CSV Format Guide</h2>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Timestamp file reference</p>
+              </div>
             </div>
 
-            <button
-              onClick={handleDownloadCsvTemplate}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded text-xs font-semibold transition-colors"
-              style={{ background: 'var(--bg-input)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
-            >
-              <IconDownload size={14} /> Download CSV Template
-            </button>
+            <div className="space-y-2">
+              {[
+                { col: 'start', desc: 'Row start time (sec)', req: true },
+                { col: 'end',   desc: 'Row end time (sec)', req: true },
+                { col: 'asset', desc: 'Filename inside ZIP', req: false },
+                { col: 'text',  desc: 'Overlay or text-only screen', req: false },
+              ].map(({ col, desc, req }) => (
+                <div key={col} className="flex items-center gap-2">
+                  <code className="text-[11px] px-2 py-0.5 rounded font-mono font-semibold" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--accent-primary)' }}>{col}</code>
+                  <span className="text-[11px]" style={{ color: 'var(--text-primary)' }}>{desc}</span>
+                  {req ? (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded ml-auto" style={{ background: 'var(--color-error-bg)', color: 'var(--color-error)' }}>REQ</span>
+                  ) : (
+                    <span className="text-[9px] font-medium italic ml-auto" style={{ color: 'var(--text-muted)' }}>optional</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="pt-2">
+              <pre className="text-[10px] leading-relaxed font-mono rounded-lg p-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+{`start,end,asset,text
+0,5,1.png,"Opening image"
+5,10,1.mp4,"First video clip"
+10,15,,"Text-only screen"`}
+              </pre>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleDownloadCsvTemplate}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+              >
+                <IconDownload size={14} /> Template
+              </button>
+            </div>
 
             <div className="space-y-2 pt-2">
-              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Columns:</p>
+              <p className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Advanced Options:</p>
               <ul className="text-[10px] space-y-1.5" style={{ color: 'var(--text-muted)' }}>
-                <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">start</code> = row start time in seconds</li>
-                <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">end</code> = row end time in seconds</li>
                 <li className="space-y-1">
-                  <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">asset</code> = exact filename inside Media ZIP.<br/>
-                  <div className="mt-1 p-2 rounded bg-[var(--bg-card)] border border-[var(--border-subtle)]">
-                    <span className="font-semibold block mb-1" style={{ color: 'var(--text-primary)' }}>Note: The asset value must exactly match the filename inside your Media ZIP.</span>
+                  <div className="p-2 rounded bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                    <span className="font-semibold block mb-1" style={{ color: 'var(--text-primary)' }}>Note on Assets:</span>
                     <ul className="list-disc pl-4 space-y-0.5 text-[9px]">
-                      <li>Images and videos can both use simple numbered filenames (e.g., <code>1.png</code>, <code>2.jpg</code>, <code>1.mp4</code>, <code>2.mp4</code>).</li>
-                      <li>The app decides media type from the file extension.</li>
-                      <li><code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>, <code>.webp</code> are treated as images.</li>
-                      <li><code>.mp4</code>, <code>.mov</code>, <code>.webm</code> are treated as videos.</li>
-                      <li>Old names like <code>clip_1.mp4</code> still work if that exact filename exists in the ZIP.</li>
+                      <li>Images/videos use standard names (<code>1.png</code>, <code>1.mp4</code>)</li>
+                      <li>Media type determined by extension.</li>
                     </ul>
                   </div>
                 </li>
-                <li><code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px] text-accent">text</code> = optional text overlay or text-only screen</li>
               </ul>
               
               <div className="mt-2 p-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)]">
-                <p className="text-[10px] font-semibold" style={{ color: 'var(--text-primary)' }}>Advanced Optional Columns</p>
+                <p className="text-[10px] font-semibold" style={{ color: 'var(--text-primary)' }}>Global Style Overrides</p>
                 <p className="text-[9px] mt-1" style={{ color: 'var(--text-muted)' }}>
                   Override global text styles per-row with these optional columns: <br/>
                   <code className="text-accent">text_position</code>, <code className="text-accent">text_size</code>, <code className="text-accent">text_color</code>, <code className="text-accent">text_background</code>, <code className="text-accent">text_alignment</code>
