@@ -11,7 +11,18 @@ import {
   IconMonitor
 } from './icons'
 
-export type ViewMode = 'home' | 'image' | 'video' | 'media'
+function IconMicSmall({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" x2="12" y1="19" y2="22"/>
+    </svg>
+  )
+}
+
+export type ViewMode = 'home' | 'image' | 'video' | 'media' | 'audio_merger' | 'script_timestamp'
 
 interface Props {
   onSelectTool: (tool: ViewMode) => void
@@ -154,8 +165,33 @@ export default function StudioHomePage({ onSelectTool }: Props) {
             </div>
           </button>
 
+          {/* Script Timestamp */}
+          <button
+            onClick={() => onSelectTool('script_timestamp')}
+            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
+            style={{ cursor: 'pointer', outline: 'none' }}
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
+              <IconMicSmall size={24} style={{ color: 'var(--accent-primary)' }} />
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-2 w-full">
+              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Script Timestamp</h3>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Transcribe voice audio and generate timestamped scripts, captions, and timeline-ready text.
+              </p>
+            </div>
+            <div className="w-full mt-auto">
+              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
+                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
+                Open Script Timestamp &rarr;
+              </div>
+            </div>
+          </button>
+
                   </div>
       </div>
+
 
       {/* ── Coming Soon Tools ── */}
       <div className="space-y-4 pt-8">

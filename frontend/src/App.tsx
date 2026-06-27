@@ -10,6 +10,7 @@ import VideoTimelinePage from './components/VideoTimelinePage'
 import MediaTimelinePage from './components/MediaTimelinePage'
 import StudioHomePage from './components/StudioHomePage'
 import AudioMergerPage from './components/AudioMergerPage'
+import ScriptTimestampPage from './components/ScriptTimestampPage'
 import {
   IconMusic,
   IconImage,
@@ -200,7 +201,7 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export type ViewMode = 'home' | 'audio_merger' | AppMode
+export type ViewMode = 'home' | 'audio_merger' | 'script_timestamp' | AppMode
 
 
 export default function App() {
@@ -503,6 +504,8 @@ export default function App() {
 
       {activeView === 'audio_merger' ? (
         <AudioMergerPage />
+      ) : activeView === 'script_timestamp' ? (
+        <ScriptTimestampPage />
       ) : activeView === 'media' ? (
         <MediaTimelinePage />
       ) : activeView === 'video' ? (
