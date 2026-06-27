@@ -59,41 +59,17 @@ export default function StudioHomePage({ onSelectTool }: Props) {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Audio Merger */}
-          <button
-            onClick={() => onSelectTool('audio_merger' as any)}
-            className="group card text-left p-6 flex flex-col items-start gap-4 transition-all duration-300 hover:-translate-y-1"
-            style={{ cursor: 'pointer', outline: 'none' }}
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-              <IconMusic size={24} style={{ color: 'var(--accent-primary)' }} />
-            </div>
-            <div className="space-y-1.5 flex-1">
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Audio Merger</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Combine multiple audio parts into one clean narration track.
-              </p>
-            </div>
-            <div className="w-full pt-4 mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
-                   style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
-                Open Audio Merger &rarr;
-              </div>
-            </div>
-          </button>
-
           {/* Image Timeline */}
           <button
             onClick={() => onSelectTool('image')}
-            className="group card text-left p-6 flex flex-col items-start gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconLayers size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1">
+            <div className="space-y-1.5 flex-1 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Image Timeline</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Create videos from images, audio, and timestamp CSV files.
@@ -110,14 +86,14 @@ export default function StudioHomePage({ onSelectTool }: Props) {
           {/* Video Timeline */}
           <button
             onClick={() => onSelectTool('video')}
-            className="group card text-left p-6 flex flex-col items-start gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconFilm size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1">
+            <div className="space-y-1.5 flex-1 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Video Timeline</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Build videos from reusable video clips, main audio, and timeline CSV files.
@@ -134,14 +110,14 @@ export default function StudioHomePage({ onSelectTool }: Props) {
           {/* Media Timeline */}
           <button
             onClick={() => onSelectTool('media')}
-            className="group card text-left p-6 flex flex-col items-start gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconGrid size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-1.5 flex-1">
+            <div className="space-y-1.5 flex-1 flex flex-col items-center">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Media Timeline</h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Mix images, videos, and text rows using one timeline CSV.
@@ -154,7 +130,31 @@ export default function StudioHomePage({ onSelectTool }: Props) {
               </div>
             </div>
           </button>
-        </div>
+{/* Audio Merger */}
+          <button
+            onClick={() => onSelectTool('audio_merger' as any)}
+            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
+            style={{ cursor: 'pointer', outline: 'none' }}
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
+                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
+              <IconMusic size={24} style={{ color: 'var(--accent-primary)' }} />
+            </div>
+            <div className="space-y-1.5 flex-1 flex flex-col items-center">
+              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Audio Merger</h3>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Combine multiple audio parts into one clean narration track.
+              </p>
+            </div>
+            <div className="w-full pt-4 mt-auto">
+              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
+                   style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+                Open Audio Merger &rarr;
+              </div>
+            </div>
+          </button>
+
+                  </div>
       </div>
 
       {/* ── Coming Soon Tools ── */}
@@ -166,8 +166,8 @@ export default function StudioHomePage({ onSelectTool }: Props) {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           
-          <div className="card p-5 flex flex-col items-start gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex items-center justify-between w-full">
+          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
+            <div className="flex flex-col items-center gap-2 w-full">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center"
                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
                 <IconType size={20} style={{ color: 'var(--text-muted)' }} />
@@ -187,8 +187,8 @@ export default function StudioHomePage({ onSelectTool }: Props) {
 
 
 
-          <div className="card p-5 flex flex-col items-start gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex items-center justify-between w-full">
+          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
+            <div className="flex flex-col items-center gap-2 w-full">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center"
                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
                 <IconMusic size={20} style={{ color: 'var(--text-muted)' }} />
@@ -206,8 +206,8 @@ export default function StudioHomePage({ onSelectTool }: Props) {
             </div>
           </div>
 
-          <div className="card p-5 flex flex-col items-start gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex items-center justify-between w-full">
+          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
+            <div className="flex flex-col items-center gap-2 w-full">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center"
                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
                 <IconFileText size={20} style={{ color: 'var(--text-muted)' }} />
@@ -225,8 +225,8 @@ export default function StudioHomePage({ onSelectTool }: Props) {
             </div>
           </div>
 
-          <div className="card p-5 flex flex-col items-start gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex items-center justify-between w-full">
+          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
+            <div className="flex flex-col items-center gap-2 w-full">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center"
                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
                 <IconVideo size={20} style={{ color: 'var(--text-muted)' }} />
