@@ -604,13 +604,29 @@ async def jobs_start_script_timestamp(
                     {
                         "type": "script_timestamp_result",
                         "text": final_text,
-                        "format": output_format,
-                        "duration": res["duration"],
-                        "language": res["language"],
-                        
-                        "segments_count": res["segments_count"]
+                        "model": res.get("model_name", model_name),
+                        "model_name": res.get("model_name", model_name),
+                        "model_label": res.get("model_name", model_name),
+                        "language": res.get("language", language),
+                        "output_style": output_style,
+                        "segmentation_intensity": segmentation_intensity,
+                        "output_format": output_format,
+                        "original_script_used": res.get("original_script_used", False),
+                        "duration_seconds": res.get("duration", 0),
+                        "processing_seconds": round(time.time() - state["started_at"], 2),
+                        "segments_count": res.get("segments_count", 0),
+                        "average_segment_seconds": res.get("avg_segment_length", 0)
                     }
                 ]
+                logger.info(f"Script Timestamp result keys: {list(res.keys())}")
+                logger.info(f"Script Timestamp metadata keys: {list(state['timeline_report'][0].keys())}")
+                
+                logger.info(
+                    f"Job {job_id} Script Timestamp Complete. "
+                    f"model_name={model_name}, "
+                    f"segments_count={res.get('segments_count', 0)}, "
+                    f"processing_time={round(time.time() - state['started_at'], 2)}s"
+                )
 
         except GenerationCancelled as e:
             logger.info(f"Job {job_id} cancelled.")
