@@ -476,6 +476,31 @@ export default function App() {
       ) : (
         <>
 
+      {/* ── Back Navigation ── */}
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5 pb-1">
+        <button
+          onClick={() => handleModeChange('home')}
+          className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer rounded-lg px-2.5 py-1.5"
+          style={{
+            color: 'var(--text-secondary)',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-subtle)'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = 'var(--accent-primary)'
+            e.currentTarget.style.borderColor = 'var(--accent-border)'
+            e.currentTarget.style.background = 'var(--accent-subtle)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = 'var(--text-secondary)'
+            e.currentTarget.style.borderColor = 'var(--border-subtle)'
+            e.currentTarget.style.background = 'var(--bg-elevated)'
+          }}
+        >
+          <span aria-hidden="true">&larr;</span> Back
+        </button>
+      </div>
+
       {activeView === 'audio_merger' ? (
         <AudioMergerPage />
       ) : activeView === 'media' ? (

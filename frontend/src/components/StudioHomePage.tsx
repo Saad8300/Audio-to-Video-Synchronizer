@@ -62,22 +62,22 @@ export default function StudioHomePage({ onSelectTool }: Props) {
           {/* Image Timeline */}
           <button
             onClick={() => onSelectTool('image')}
-            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconLayers size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
+            <div className="flex-1 flex flex-col items-center gap-2 w-full">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Image Timeline</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
                 Create videos from images, audio, and timestamp CSV files.
               </p>
             </div>
-            <div className="w-full pt-4 mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
-                   style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+            <div className="w-full mt-auto">
+              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
+                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
                 Open Image Timeline &rarr;
               </div>
             </div>
@@ -86,22 +86,22 @@ export default function StudioHomePage({ onSelectTool }: Props) {
           {/* Video Timeline */}
           <button
             onClick={() => onSelectTool('video')}
-            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconFilm size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
+            <div className="flex-1 flex flex-col items-center gap-2 w-full">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Video Timeline</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
                 Build videos from reusable video clips, main audio, and timeline CSV files.
               </p>
             </div>
-            <div className="w-full pt-4 mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
-                   style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+            <div className="w-full mt-auto">
+              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
+                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
                 Open Video Timeline &rarr;
               </div>
             </div>
@@ -110,45 +110,45 @@ export default function StudioHomePage({ onSelectTool }: Props) {
           {/* Media Timeline */}
           <button
             onClick={() => onSelectTool('media')}
-            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconGrid size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
+            <div className="flex-1 flex flex-col items-center gap-2 w-full">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Media Timeline</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
                 Mix images, videos, and text rows using one timeline CSV.
               </p>
             </div>
-            <div className="w-full pt-4 mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
-                   style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+            <div className="w-full mt-auto">
+              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
+                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
                 Open Media Timeline &rarr;
               </div>
             </div>
           </button>
-{/* Audio Merger */}
+          {/* Audio Merger */}
           <button
             onClick={() => onSelectTool('audio_merger' as any)}
-            className="group card text-center p-6 flex flex-col items-center gap-4 transition-all duration-300 hover:-translate-y-1"
+            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
             style={{ cursor: 'pointer', outline: 'none' }}
           >
             <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
                  style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
               <IconMusic size={24} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="space-y-2 flex-1 mt-2 mb-2 flex flex-col items-center">
+            <div className="flex-1 flex flex-col items-center gap-2 w-full">
               <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Audio Merger</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
                 Combine multiple audio parts into one clean narration track.
               </p>
             </div>
-            <div className="w-full pt-4 mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-colors"
-                   style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}>
+            <div className="w-full mt-auto">
+              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
+                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
                 Open Audio Merger &rarr;
               </div>
             </div>
