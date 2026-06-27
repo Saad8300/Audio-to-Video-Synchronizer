@@ -20,6 +20,7 @@ interface MergeResponse {
   filename: string
   duration: number
   parts_merged: number
+  output_format: string
 }
 
 export default function AudioMergerPage() {
@@ -35,17 +36,31 @@ export default function AudioMergerPage() {
 
   const handleAddFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
-    const file = e.target.files[0]
+    const newFiles = Array.from(e.target.files)
     
-    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
-    if (!['.mp3', '.wav', '.m4a', '.aac'].includes(ext)) {
-      setErrorMsg(`Audio file "${file.name}" is not supported. Use mp3, wav, m4a, or aac.`)
-      return
+    const validParts: AudioPart[] = []
+    let hasError = false
+    
+    newFiles.forEach(file => {
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
+      if (!['.mp3', '.wav', '.m4a', '.aac'].includes(ext)) {
+        hasError = true
+      } else {
+        validParts.push({ id: crypto.randomUUID(), file })
+      }
+    })
+    
+    if (validParts.length > 0) {
+      setParts(prev => [...prev, ...validParts])
     }
     
-    setParts(prev => [...prev, { id: crypto.randomUUID(), file }])
+    if (hasError) {
+      setErrorMsg(`Some files were ignored because they are not supported. Use mp3, wav, m4a, or aac.`)
+    } else {
+      setErrorMsg('')
+    }
+    
     if (fileInputRef.current) fileInputRef.current.value = ''
-    setErrorMsg('')
   }
 
   const moveUp = (index: number) => {
@@ -107,7 +122,11 @@ export default function AudioMergerPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || 'Audio merge failed. Please check your audio files and try again.')
+        const msg = err.detail || 'Audio merge failed. Please check your audio files and try again.'
+        if (outputFormat === 'mp3' && msg.toLowerCase().includes('libmp3lame')) {
+            throw new Error('MP3 export failed. Please check FFmpeg and try WAV output.')
+        }
+        throw new Error(msg)
       }
 
       const data = await res.json()
@@ -115,13 +134,33 @@ export default function AudioMergerPage() {
         url: `http://localhost:8000${data.url}`,
         filename: data.filename,
         duration: data.duration,
-        parts_merged: data.parts_merged
+        parts_merged: data.parts_merged,
+        output_format: data.output_format || outputFormat.toUpperCase()
       })
       setStatus('success')
     } catch (err: any) {
       console.error(err)
       setErrorMsg(err.message || 'An unexpected error occurred.')
       setStatus('error')
+    }
+  }
+
+  const handleDownload = async () => {
+    if (!result) return
+    try {
+      const response = await fetch(result.url)
+      const blob = await response.blob()
+      const objectUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = result.filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      console.error("Download failed", err)
+      alert("Failed to download the file directly. Please try saving it via the audio player.")
     }
   }
 
@@ -176,6 +215,7 @@ export default function AudioMergerPage() {
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept=".mp3,.wav,.m4a,.aac"
                 className="hidden"
                 onChange={handleAddFile}
@@ -308,28 +348,35 @@ export default function AudioMergerPage() {
               
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span style={{ color: 'var(--text-muted)' }}>Filename:</span>
-                  <span className="font-mono font-medium truncate ml-2" title={result.filename}>{result.filename}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Output Format:</span>
+                  <span className="font-medium">{result.output_format}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--text-muted)' }}>Parts Merged:</span>
+                  <span className="font-medium">{result.parts_merged}</span>
                 </div>
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--text-muted)' }}>Duration:</span>
                   <span className="font-medium">{formatDuration(result.duration)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span style={{ color: 'var(--text-muted)' }}>Parts Merged:</span>
-                  <span className="font-medium">{result.parts_merged}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Merge Order:</span>
+                  <span className="font-medium">{result.parts_merged} files</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--text-muted)' }}>Filename:</span>
+                  <span className="font-mono font-medium truncate ml-2" title={result.filename}>{result.filename}</span>
                 </div>
               </div>
               
               <audio src={result.url} controls className="w-full h-10 mt-2" />
               
-              <a
-                href={result.url}
-                download={result.filename}
+              <button
+                onClick={handleDownload}
                 className="btn-primary w-full py-2.5 mt-2 flex justify-center items-center gap-2 text-sm"
               >
                 <IconDownload size={16} /> Download Merged Audio
-              </a>
+              </button>
             </div>
           )}
         </div>

@@ -1216,7 +1216,8 @@ async def audio_merge(
             "url": f"/outputs/audio/{final_filename}",
             "filename": final_filename,
             "duration": duration,
-            "parts_merged": meta["parts_merged"]
+            "parts_merged": meta["parts_merged"],
+            "output_format": fmt.upper()
         })
         
     except Exception as e:
