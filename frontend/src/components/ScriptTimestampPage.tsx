@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   IconMusic,
   IconUpload,
@@ -7,8 +7,9 @@ import {
   IconCheck,
   IconAlertTriangle,
   IconDownload,
+  IconChevronDown,
+  IconChevronRight
 } from './icons'
-import type { JobStatus } from '../types'
 
 function IconMic({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
   return (
@@ -91,11 +92,23 @@ export default function ScriptTimestampPage() {
   const [audioFile, setAudioFile]   = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // Settings - new defaults for Short-form video workflow
   const [modelKey, setModelKey]     = useState('base')
   const [language, setLanguage]     = useState('auto')
-  const [outputStyle, setOutputStyle] = useState('standard')
+  const [outputStyle, setOutputStyle] = useState('visual_beat')
   const [segmentationIntensity, setSegmentationIntensity] = useState('detailed')
-  const [outputMode, setOutputMode] = useState('simple')
+  const [outputMode, setOutputMode] = useState('csv')
+  
+  // Original Script
+  const [originalScript, setOriginalScript] = useState('')
+  const [showOriginalScript, setShowOriginalScript] = useState(false)
+
+  // Advanced Segmentation
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [targetSegmentLength, setTargetSegmentLength] = useState('1-3')
+  const [maxWordsPerLine, setMaxWordsPerLine] = useState('4-8')
+  const [splitOnPunctuation, setSplitOnPunctuation] = useState(true)
+  const [avoidVeryShortLines, setAvoidVeryShortLines] = useState(true)
   
   const [status, setStatus]         = useState<AppStatus>('idle')
   const [progress, setProgress]     = useState(0)
@@ -139,6 +152,17 @@ export default function ScriptTimestampPage() {
     formData.append('output_style', outputStyle)
     formData.append('segmentation_intensity', segmentationIntensity)
     formData.append('output_format', outputMode)
+    
+    if (originalScript.trim()) {
+      formData.append('original_script', originalScript)
+    }
+
+    if (showAdvanced) {
+      formData.append('target_segment_length', targetSegmentLength)
+      formData.append('max_words_per_line', maxWordsPerLine)
+      formData.append('split_on_punctuation', splitOnPunctuation ? 'true' : 'false')
+      formData.append('avoid_very_short_lines', avoidVeryShortLines ? 'true' : 'false')
+    }
 
     try {
       const res = await fetch('http://127.0.0.1:8000/api/jobs/start-script-timestamp', {
@@ -284,6 +308,36 @@ export default function ScriptTimestampPage() {
                    onChange={handleFileChange} />
           </div>
 
+          {/* Original Script (Optional) */}
+          <div className="card p-5">
+            <button 
+              onClick={() => setShowOriginalScript(!showOriginalScript)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <div>
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Paste Original Script <span className="font-normal opacity-70">(Optional)</span></h2>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Helps the tool create cleaner timestamped lines that follow your original wording.</p>
+              </div>
+              <div className="shrink-0 ml-4 p-1 rounded hover:bg-white/5 transition-colors">
+                {showOriginalScript ? <IconChevronDown size={18} /> : <IconChevronRight size={18} />}
+              </div>
+            </button>
+
+            {showOriginalScript && (
+              <div className="mt-4 animate-fade-in space-y-2">
+                <textarea
+                  value={originalScript}
+                  onChange={e => setOriginalScript(e.target.value)}
+                  disabled={status === 'transcribing'}
+                  placeholder="Paste your original script here if you want timestamps aligned with your written script..."
+                  className="w-full text-sm rounded-xl p-3 resize-y"
+                  style={{ minHeight: 120, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
+                           color: 'var(--text-primary)' }}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Settings */}
           <div className="card p-5 space-y-4">
             <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h2>
@@ -296,7 +350,7 @@ export default function ScriptTimestampPage() {
                   {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
                 <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                  Models run locally in the backend. First use may download the model files.
+                  Models run locally in the backend.
                 </p>
               </div>
 
@@ -344,6 +398,55 @@ export default function ScriptTimestampPage() {
             </div>
           </div>
 
+          {/* Advanced Segmentation (Optional) */}
+          <div className="card p-5">
+            <button 
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <div>
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Advanced Segmentation Controls</h2>
+              </div>
+              <div className="shrink-0 ml-4 p-1 rounded hover:bg-white/5 transition-colors">
+                {showAdvanced ? <IconChevronDown size={18} /> : <IconChevronRight size={18} />}
+              </div>
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-4 animate-fade-in grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4" style={{ borderColor: 'var(--border-subtle)' }}>
+                <div className="space-y-1">
+                  <label className="form-label">Target segment length</label>
+                  <select value={targetSegmentLength} onChange={e => setTargetSegmentLength(e.target.value)} className="form-select" disabled={status === 'transcribing'}>
+                    <option value="1-2">1–2 sec</option>
+                    <option value="1-3">1–3 sec (Visual Beat Default)</option>
+                    <option value="3-5">3–5 sec</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="form-label">Max words per line</label>
+                  <select value={maxWordsPerLine} onChange={e => setMaxWordsPerLine(e.target.value)} className="form-select" disabled={status === 'transcribing'}>
+                    <option value="4-6">4–6 words</option>
+                    <option value="4-8">4–8 words (Visual Beat Default)</option>
+                    <option value="9-12">9–12 words</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2 mt-2 sm:col-span-2">
+                  <label className="flex items-center gap-2 cursor-pointer group w-max">
+                    <input type="checkbox" className="form-checkbox" checked={splitOnPunctuation} onChange={e => setSplitOnPunctuation(e.target.checked)} disabled={status === 'transcribing'} />
+                    <span className="text-sm group-hover:text-white transition-colors" style={{ color: 'var(--text-primary)' }}>Split on punctuation</span>
+                  </label>
+                  
+                  <label className="flex items-center gap-2 cursor-pointer group w-max">
+                    <input type="checkbox" className="form-checkbox" checked={avoidVeryShortLines} onChange={e => setAvoidVeryShortLines(e.target.checked)} disabled={status === 'transcribing'} />
+                    <span className="text-sm group-hover:text-white transition-colors" style={{ color: 'var(--text-primary)' }}>Avoid very short lines</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Generate */}
           <div className="card p-5">
             <button
@@ -374,40 +477,49 @@ export default function ScriptTimestampPage() {
                 </div>
                 <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>{statusMsg}</p>
                 <p className="text-[10px] text-center" style={{ color: 'var(--text-muted)' }}>
-                  For long audio, keep the backend running and avoid closing this window during transcription.
+                  For long audio, keep the backend running and avoid closing this window.
                 </p>
               </div>
-            )}
-
-            {!canGenerate && status === 'idle' && (
-              <p className="text-[11px] mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
-                Upload an audio file to generate timestamps.
-              </p>
             )}
           </div>
 
           {/* Results */}
           {status === 'done' && result && (
             <div className="card p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center"
-                     style={{ background: 'rgba(34,197,94,0.15)' }}>
-                  <IconCheck size={12} style={{ color: '#22c55e' }} />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center"
+                       style={{ background: 'rgba(34,197,94,0.15)' }}>
+                    <IconCheck size={12} style={{ color: '#22c55e' }} />
+                  </div>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Transcription Complete</h2>
                 </div>
-                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Transcription Complete</h2>
+                <div className="text-[10px] uppercase font-bold tracking-wider opacity-60">Result Stats</div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {result.original_script_used && (
+                <div className="rounded-lg p-3 text-xs mb-2"
+                     style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                  <p className="font-semibold" style={{ color: 'var(--accent-primary)' }}>✨ Original Script Applied</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>
+                    Original script was used as guidance. Timing is based on transcription and may be approximate.
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {[
-                  { label: 'Duration', value: formatDuration(result.duration) },
-                  { label: 'Language', value: ['auto','detected'].includes(result.language) ? 'Auto Detected' : result.language.toUpperCase() },
-                  { label: 'Segments', value: String(result.segments_count) },
                   { label: 'Format', value: OUTPUT_MODES.find(m => m.value === result.format)?.label ?? result.format },
+                  { label: 'Style', value: result.format === 'csv' ? 'Visual Beat' : STYLES.find(s => s.value === outputStyle)?.label.replace(' Mode','') ?? outputStyle },
+                  { label: 'Lang', value: ['auto','detected'].includes(result.language) ? 'Auto' : result.language.toUpperCase() },
+                  { label: 'Duration', value: formatDuration(result.duration) },
+                  { label: 'Lines', value: String(result.segments_count) },
+                  { label: 'Avg Sec/Line', value: result.avg_segment_length ? `${result.avg_segment_length}s` : 'N/A' },
                 ].map(({ label, value }) => (
-                  <div key={label} className="rounded-lg p-2.5 text-center"
-                       style={{ background: 'var(--bg-elevated)' }}>
-                    <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
-                    <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{value}</p>
+                  <div key={label} className="rounded-lg p-2 text-center flex flex-col justify-center"
+                       style={{ background: 'var(--bg-elevated)', minHeight: 56 }}>
+                    <p className="text-[9px] uppercase tracking-wider mb-0.5 opacity-70" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                    <p className="text-[11px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{value}</p>
                   </div>
                 ))}
               </div>
@@ -461,12 +573,13 @@ export default function ScriptTimestampPage() {
             <div className="space-y-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
               {[
                 ['1', 'Upload your voiceover audio file'],
-                ['2', 'Choose language — Auto Detect works for most files'],
-                ['3', 'Select output format for your workflow'],
-                ['4', 'Click Generate Timestamps'],
-                ['5', 'Copy or download your output'],
+                ['2', <span key="2"><strong>Optional Script:</strong> Paste your original script to help create cleaner timestamped lines.</span>],
+                ['3', 'Choose language — Auto Detect works for most files'],
+                ['4', 'Select Output Style (Visual Beat is great for Shorts)'],
+                ['5', 'Select output format for your workflow'],
+                ['6', 'Click Generate Timestamps'],
               ].map(([step, desc]) => (
-                <div key={step} className="flex gap-2.5">
+                <div key={step as string} className="flex gap-2.5">
                   <span className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold"
                         style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)' }}>
                     {step}
@@ -475,39 +588,27 @@ export default function ScriptTimestampPage() {
                 </div>
               ))}
             </div>
-            <div className="rounded-lg p-3 text-xs space-y-1"
+            <div className="rounded-lg p-3 text-xs space-y-1 mt-4"
                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
-              <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>🔒 100% Local</p>
+              <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>🔒 Backend Local Whisper</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                Whisper runs locally in the SyncFrame backend. Your audio stays on this machine.
+                Audio is processed locally by the SyncFrame backend. For long audio, keep the app running until transcription finishes.
               </p>
             </div>
           </div>
 
           <div className="card p-5 space-y-3">
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Output Formats</h2>
-            <div className="space-y-3">
-              {OUTPUT_MODES.map(m => (
-                <div key={m.value} className="space-y-0.5">
-                  <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{m.label}</p>
-                  <p className="text-[10px] font-mono" style={{ color: 'var(--accent-primary)' }}>{m.desc}</p>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Visual Beat Mode</h2>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              Visual Beat Mode creates short 1–3 second lines for image/video switches, perfect for TikTok and Shorts. 
+            </p>
             <div className="rounded-lg p-3 text-xs"
                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
               <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>💡 Timeline CSV Tip</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                Use Timeline CSV output with SyncFrame's Image Timeline or Media Timeline tools.
+                Use Visual Beat + Timeline CSV output for the fastest workflow with SyncFrame's Image or Media Timeline tools.
               </p>
             </div>
-          </div>
-
-          <div className="card p-5 space-y-2">
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Backend Local Processing</h2>
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Transcription runs directly on your machine through the Python backend. First run may download model files.
-            </p>
           </div>
         </div>
       </div>

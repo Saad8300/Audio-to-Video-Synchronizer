@@ -235,3 +235,11 @@ export const IconGrid = icon(
     <rect width="7" height="7" x="3" y="14" rx="1" />
   </>,
 )
+
+export const IconChevronDown = icon(
+  <polyline points="6 9 12 15 18 9" />
+)
+
+export const IconChevronRight = icon(
+  <polyline points="9 18 15 12 9 6" />
+)

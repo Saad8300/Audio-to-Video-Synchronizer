@@ -524,7 +524,12 @@ async def jobs_start_script_timestamp(
     language: str = Form("auto"),
     output_style: str = Form("standard"),
     segmentation_intensity: str = Form("detailed"),
-    output_format: str = Form("simple")
+    output_format: str = Form("simple"),
+    original_script: Optional[str] = Form(None),
+    target_segment_length: Optional[str] = Form(None),
+    max_words_per_line: Optional[str] = Form(None),
+    split_on_punctuation: Optional[bool] = Form(True),
+    avoid_very_short_lines: Optional[bool] = Form(True)
 ):
     job_id = f"st_{uuid.uuid4().hex[:8]}"
     state = _new_job(job_id)
@@ -555,12 +560,21 @@ async def jobs_start_script_timestamp(
                     state["current_step"] = step
                     state["progress"] = pct
 
+            advanced = {
+                "target_segment_length": target_segment_length,
+                "max_words_per_line": max_words_per_line,
+                "split_on_punctuation": split_on_punctuation,
+                "avoid_very_short_lines": avoid_very_short_lines
+            }
+
             res = transcribe_audio_backend(
                 audio_path=audio_path,
                 model_name=model_name,
                 language=language if language != "auto" else None,
                 output_style=output_style,
                 segmentation_intensity=segmentation_intensity,
+                original_script=original_script,
+                advanced_settings=advanced,
                 progress_callback=_progress_cb
             )
 
