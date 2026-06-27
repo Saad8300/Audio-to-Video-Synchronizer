@@ -175,7 +175,11 @@ export default function ScriptTimestampPage() {
       const data = await res.json()
       setJobId(data.job_id)
     } catch (err: any) {
-      setErrorMsg(err.message || 'Backend is offline. Start the app backend and try again.')
+      if (err.message && err.message.includes('Backend transcription failed')) {
+        setErrorMsg('Backend transcription failed. Please check your audio file and try again.')
+      } else {
+        setErrorMsg('Backend is offline. Start the backend and try again.')
+      }
       setStatus('error')
     }
   }
@@ -201,7 +205,14 @@ export default function ScriptTimestampPage() {
             }
           } else if (data.status === 'error') {
             clearInterval(interval)
-            setErrorMsg(data.errors?.[0] || 'Transcription failed.')
+            const rawErr = String(data.errors?.[0] || '')
+            if (rawErr.includes('model') || rawErr.includes('WhisperModel') || rawErr.includes('compute_type') || rawErr.includes('memory') || rawErr.includes('load')) {
+              setErrorMsg('Whisper model failed to load. Try a smaller model.')
+            } else if (rawErr) {
+              setErrorMsg('Unexpected Script Timestamp error. Check backend logs for details.')
+            } else {
+              setErrorMsg('Backend transcription failed. Please check your audio file and try again.')
+            }
             setStatus('error')
           } else if (data.status === 'cancelled') {
             clearInterval(interval)
@@ -569,6 +580,28 @@ export default function ScriptTimestampPage() {
         {/* Right sidebar */}
         <div className="lg:col-span-4 space-y-6">
           <div className="card p-5 space-y-3">
+            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Usage Details</h2>
+            <ul className="text-xs space-y-1.5" style={{ color: 'var(--text-secondary)' }}>
+              <li><strong>Mode:</strong> Backend Local Whisper</li>
+              <li><strong>Model:</strong> {MODELS.find(m => m.value === modelKey)?.label || modelKey}</li>
+              <li><strong>Language:</strong> {LANGUAGES.find(l => l.code === language)?.label || language}</li>
+              <li><strong>Output Style:</strong> {STYLES.find(s => s.value === outputStyle)?.label || outputStyle}</li>
+              <li><strong>Segmentation:</strong> {INTENSITIES.find(i => i.value === segmentationIntensity)?.label || segmentationIntensity}</li>
+              <li><strong>Output Format:</strong> {OUTPUT_MODES.find(m => m.value === outputMode)?.label || outputMode}</li>
+              {audioFile && <li><strong>File Size:</strong> {formatBytes(audioFile.size)}</li>}
+              {result && (
+                <>
+                  <li className="pt-2 mt-2 border-t" style={{ borderColor: 'var(--border-subtle)' }}><strong>Duration:</strong> {formatDuration(result.duration_seconds || result.duration || 0)}</li>
+                  <li><strong>Segments:</strong> {result.segments_count}</li>
+                  <li><strong>Avg Segment:</strong> {result.average_segment_seconds || result.avg_segment_length || 0} sec</li>
+                  <li><strong>Original Script:</strong> {result.original_script_used ? 'Yes' : 'No'}</li>
+                  <li><strong>Processing Time:</strong> {result.processing_seconds ? `${result.processing_seconds}s` : 'N/A'}</li>
+                </>
+              )}
+            </ul>
+          </div>
+
+          <div className="card p-5 space-y-3">
             <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Quick Guide</h2>
             <div className="space-y-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
               {[
@@ -592,7 +625,7 @@ export default function ScriptTimestampPage() {
                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
               <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>🔒 Backend Local Whisper</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                Audio is processed locally by the SyncFrame backend. For long audio, keep the app running until transcription finishes.
+                Audio is processed locally by the SyncFrame backend on this machine. No cloud API is used. For long audio, keep the backend running until transcription finishes.
               </p>
             </div>
           </div>

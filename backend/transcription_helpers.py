@@ -404,5 +404,6 @@ def transcribe_audio_backend(
         "duration": duration,
         "language": info.language,
         "avg_segment_length": round(avg_len, 2),
-        "original_script_used": original_script_used
+        "original_script_used": original_script_used,
+        "model_name": model_name
     }

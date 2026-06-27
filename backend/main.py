@@ -547,6 +547,16 @@ async def jobs_start_script_timestamp(
 
     def _worker():
         try:
+            logger.info(
+                f"Job {job_id} Script Timestamp Started. "
+                f"file={audio_file.filename}, "
+                f"model_name={model_name}, "
+                f"language={language}, "
+                f"output_style={output_style}, "
+                f"segmentation_intensity={segmentation_intensity}, "
+                f"output_format={output_format}, "
+                f"original_script_used={bool(original_script and original_script.strip())}"
+            )
             with _jobs_lock:
                 state["status"] = "running"
                 state["started_at"] = time.time()
@@ -597,7 +607,7 @@ async def jobs_start_script_timestamp(
                         "format": output_format,
                         "duration": res["duration"],
                         "language": res["language"],
-                        "model": res["model"],
+                        
                         "segments_count": res["segments_count"]
                     }
                 ]
