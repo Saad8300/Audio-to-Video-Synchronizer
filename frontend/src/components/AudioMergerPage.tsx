@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import ToolPageHeader from './ToolPageHeader'
 import {
   IconMusic,
   IconUpload,
@@ -174,18 +175,11 @@ export default function AudioMergerPage() {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 space-y-6 animate-fade-in">
       
       {/* ── Page Header ── */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-             style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-          <IconMusic size={24} style={{ color: 'var(--accent-primary)' }} />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gradient">Audio Merger</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-            Add audio parts in the order you want, then merge them into one clean file.
-          </p>
-        </div>
-      </div>
+      <ToolPageHeader
+        icon={<IconMusic size={24} />}
+        title="Audio Merger"
+        description="Add audio parts in the order you want, then merge them into one clean file."
+      />
 
       {/* ── Alerts ── */}
       {errorMsg && (

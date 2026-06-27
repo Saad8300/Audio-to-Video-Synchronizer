@@ -10,6 +10,7 @@ import {
   IconChevronDown,
   IconChevronRight
 } from './icons'
+import ToolPageHeader from './ToolPageHeader'
 
 function IconMic({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
   return (
@@ -253,18 +254,11 @@ export default function ScriptTimestampPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-             style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-          <IconMic size={24} style={{ color: 'var(--accent-primary)' }} />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gradient">Script Timestamp</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-            Upload voice audio and generate timestamped text for videos, captions, and timeline workflows.
-          </p>
-        </div>
-      </div>
+      <ToolPageHeader
+        icon={<IconMic size={24} />}
+        title="Script Timestamp"
+        description="Upload voice audio and generate timestamped text for videos, captions, and timeline workflows."
+      />
 
       {errorMsg && (
         <div className="alert-error">
@@ -520,14 +514,13 @@ export default function ScriptTimestampPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {[
-                  { label: 'Format', value: OUTPUT_MODES.find(m => m.value === result.format)?.label ?? result.format },
-                  { label: 'Style', value: result.format === 'csv' ? 'Visual Beat' : STYLES.find(s => s.value === outputStyle)?.label.replace(' Mode','') ?? outputStyle },
+                  { label: 'Style', value: STYLES.find(s => s.value === (result.output_style || outputStyle))?.label.replace(' Mode','') ?? (result.output_style || outputStyle) },
                   { label: 'Lang', value: ['auto','detected'].includes(result.language) ? 'Auto' : result.language.toUpperCase() },
-                  { label: 'Duration', value: formatDuration(result.duration) },
-                  { label: 'Lines', value: String(result.segments_count) },
-                  { label: 'Avg Sec/Line', value: result.avg_segment_length ? `${result.avg_segment_length}s` : 'N/A' },
+                  { label: 'Duration', value: formatDuration(result.duration_seconds || result.duration || 0) },
+                  { label: 'Lines', value: String(result.segments_count || 0) },
+                  { label: 'Avg Sec/Line', value: (result.average_segment_seconds || result.avg_segment_length) ? `${result.average_segment_seconds || result.avg_segment_length}s` : '—' },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-lg p-2 text-center flex flex-col justify-center"
                        style={{ background: 'var(--bg-elevated)', minHeight: 56 }}>
@@ -561,15 +554,23 @@ export default function ScriptTimestampPage() {
                   <IconDownload size={13} /> Download TXT
                 </button>
 
-                {result.format === 'srt' && (
+                {(result.output_format === 'srt' || result.format === 'srt') && (
                   <button onClick={() => downloadAs(result.text, `${baseName}.srt`)}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download SRT
                   </button>
                 )}
 
-                {result.format === 'csv' && (
-                  <button onClick={() => downloadAs(result.text, `${baseName}.csv`, 'text/csv')}
+                {(result.output_format === 'csv' || result.format === 'csv') && (
+                  <button onClick={() => {
+                    const now = new Date()
+                    const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
+                    let csvContent = result.text
+                    if (!csvContent.includes('start,end,text')) {
+                      csvContent = 'start,end,text\n' + csvContent
+                    }
+                    downloadAs(csvContent, `script_timestamp_${timestamp}.csv`, 'text/csv')
+                  }}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download CSV
                   </button>
