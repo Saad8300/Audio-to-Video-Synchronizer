@@ -256,3 +256,58 @@ async def prepare_multiple_audio(
         "audio_parts_count": len(order),
         "audio_parts_order": order,
     }
+
+def merge_audio_parts_in_order(
+    audio_paths: list[str],
+    output_path: str,
+    output_format: str = "wav",
+) -> tuple[float, dict]:
+    """
+    Load a list of audio files sequentially, concatenate them in the exact order,
+    and export as WAV (pcm_s16le) or MP3 (libmp3lame).
+    
+    Returns (duration, metadata).
+    Raises ValueError with user-friendly message on any problem.
+    """
+    from moviepy.editor import AudioFileClip, concatenate_audioclips
+    
+    clips = []
+    try:
+        # Load clips
+        for path in audio_paths:
+            clips.append(AudioFileClip(path))
+            
+        if not clips:
+            raise ValueError("No audio clips to merge.")
+            
+        # Merge
+        merged_clip = concatenate_audioclips(clips)
+        
+        # Export
+        codec = "pcm_s16le" if output_format == "wav" else "libmp3lame"
+        logger.info(f"Exporting merged audio to {output_path} with codec {codec}")
+        
+        merged_clip.write_audiofile(
+            output_path,
+            fps=44100,
+            codec=codec,
+            logger=None
+        )
+        
+        duration = float(merged_clip.duration)
+        
+        return duration, {
+            "parts_merged": len(audio_paths),
+            "output_format": output_format,
+            "duration": duration,
+        }
+        
+    except Exception as e:
+        logger.error(f"Error merging audio parts: {e}")
+        raise ValueError(f"Failed to merge audio parts: {str(e)}")
+    finally:
+        for c in clips:
+            try:
+                c.close()
+            except:
+                pass

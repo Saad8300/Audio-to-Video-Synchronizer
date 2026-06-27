@@ -9,6 +9,7 @@ import { type AppMode } from './components/AppModeSwitcher'
 import VideoTimelinePage from './components/VideoTimelinePage'
 import MediaTimelinePage from './components/MediaTimelinePage'
 import StudioHomePage from './components/StudioHomePage'
+import AudioMergerPage from './components/AudioMergerPage'
 import {
   IconMusic,
   IconImage,
@@ -199,7 +200,7 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export type ViewMode = 'home' | AppMode
+export type ViewMode = 'home' | 'audio_merger' | AppMode
 
 
 export default function App() {
@@ -494,7 +495,9 @@ export default function App() {
       ) : (
         <>
 
-      {activeView === 'media' ? (
+      {activeView === 'audio_merger' ? (
+        <AudioMergerPage />
+      ) : activeView === 'media' ? (
         <MediaTimelinePage />
       ) : activeView === 'video' ? (
         <VideoTimelinePage />

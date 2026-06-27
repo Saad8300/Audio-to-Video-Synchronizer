@@ -42,7 +42,7 @@ from video_generator import generate_video, GenerationCancelled
 from video_timeline_generator import generate_video_timeline, VideoTimelineCancelled
 from media_timeline_generator import generate_media_timeline, MediaTimelineCancelled
 from utils import seconds_to_mmss, FORMAT_DIMENSIONS
-from audio_helpers import prepare_single_audio, prepare_zip_audio
+from audio_helpers import prepare_single_audio, prepare_zip_audio, merge_audio_parts_in_order
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -1167,9 +1167,76 @@ async def generate(
             pass
 
 
-@app.get("/outputs/{filename}")
-async def serve_output(filename: str):
-    file_path = OUTPUTS_DIR / filename
+
+# ---------------------------------------------------------------------------
+# Audio Merger Route
+# ---------------------------------------------------------------------------
+
+@app.post("/api/tools/audio-merge")
+async def audio_merge(
+    audio_parts: List[UploadFile] = File(...),
+    output_format: str = Form("wav"),
+    output_filename: str = Form("merged_audio")
+):
+    import time
+    job_id = f"audio_merge_{uuid.uuid4().hex[:8]}"
+    job_temp = TEMP_DIR / job_id
+    job_temp.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        # Save parts in exact array order
+        audio_paths = []
+        for i, part in enumerate(audio_parts):
+            content = await part.read()
+            ext = Path(part.filename).suffix.lower() if part.filename else ".mp3"
+            if ext not in {".mp3", ".wav", ".m4a", ".aac"}:
+                ext = ".mp3"
+            
+            # Save safely
+            part_path = str(job_temp / f"part_{i:03d}{ext}")
+            with open(part_path, "wb") as f:
+                f.write(content)
+            audio_paths.append(part_path)
+            
+        safe_name = output_filename.strip() if output_filename and output_filename.strip() else "merged_audio"
+        safe_name = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
+        safe_name = safe_name.strip().replace(" ", "_") or "merged_audio"
+        
+        fmt = "wav" if output_format.lower() == "wav" else "mp3"
+        timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+        final_filename = f"{safe_name}_{timestamp_str}.{fmt}"
+        
+        output_dir = OUTPUTS_DIR / "audio"
+        output_dir.mkdir(exist_ok=True)
+        final_path = str(output_dir / final_filename)
+        
+        duration, meta = merge_audio_parts_in_order(audio_paths, final_path, fmt)
+        
+        return JSONResponse({
+            "url": f"/outputs/audio/{final_filename}",
+            "filename": final_filename,
+            "duration": duration,
+            "parts_merged": meta["parts_merged"]
+        })
+        
+    except Exception as e:
+        logger.exception(f"Audio merge failed for {job_id}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+    finally:
+        try:
+            shutil.rmtree(str(job_temp), ignore_errors=True)
+        except:
+            pass
+
+@app.get("/outputs/{path:path}")
+async def serve_output(path: str):
+    import mimetypes
+    file_path = OUTPUTS_DIR / path
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(str(file_path), media_type="video/mp4")
+        
+    mime_type, _ = mimetypes.guess_type(str(file_path))
+    if not mime_type:
+        mime_type = "video/mp4" if path.endswith(".mp4") else "audio/wav"
+        
+    return FileResponse(str(file_path), media_type=mime_type)
