@@ -71,13 +71,13 @@ export default function StudioDashboardPage() {
 
       {/* Empty State */}
       {!hasActivity && (
-        <div className="card p-10 flex flex-col items-center justify-center text-center mt-8 border-dashed" style={{ borderColor: 'var(--border-default)' }}>
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-black/5 dark:bg-white/5">
+        <div className="card p-12 flex flex-col items-center justify-center text-center mt-8 border-dashed animate-fade-in-up" style={{ borderColor: 'var(--border-default)', animationDelay: '100ms' }}>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5 bg-[var(--bg-input)]">
             <IconHistory size={28} style={{ color: 'var(--text-muted)' }} />
           </div>
-          <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No activity yet</h2>
-          <p className="text-sm max-w-md" style={{ color: 'var(--text-secondary)' }}>
-            Generate your first video, audio file, or timestamp export to start building stats. All activity is stored locally on your machine.
+          <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No activity yet</h2>
+          <p className="text-sm font-medium max-w-md" style={{ color: 'var(--text-secondary)' }}>
+            Generate your first video, audio file, or timestamp export to start building stats.
           </p>
         </div>
       )}

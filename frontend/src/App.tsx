@@ -440,10 +440,11 @@ export default function App() {
       )}
 
       {/* ── View Router ── */}
-      {activeView === 'tools' && <StudioToolsPage onSelectTool={v => setActiveView(`tool:${v}` as ViewMode)} />}
-      {activeView === 'dashboard' && <StudioDashboardPage />}
-      {activeView === 'history' && <StudioHistoryPage />}
-      {activeView === 'settings' && <StudioSettingsPage />}
+      <div key={activeView} className="animate-fade-in flex-1 flex flex-col min-w-0">
+        {activeView === 'tools' && <StudioToolsPage onSelectTool={v => setActiveView(`tool:${v}` as ViewMode)} />}
+        {activeView === 'dashboard' && <StudioDashboardPage />}
+        {activeView === 'history' && <StudioHistoryPage />}
+        {activeView === 'settings' && <StudioSettingsPage />}
 
       {/* ── Back Navigation for Tools ── */}
       {isTool && (
@@ -831,9 +832,10 @@ export default function App() {
         
                   </div>
         
-                </div>
-                </main>
+        </div>
+        </main>
       )}
+      </div>
     </StudioLayout>
   )
 }

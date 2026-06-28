@@ -340,15 +340,16 @@ export default function ScriptTimestampPage() {
             ) : (
               <button onClick={() => fileInputRef.current?.click()}
                       disabled={status === 'transcribing'}
-                      className="w-full border-2 border-dashed rounded-xl py-10 flex flex-col items-center gap-3 transition-colors group"
+                      className="w-full border-2 border-dashed rounded-xl py-14 flex flex-col items-center gap-3 transition-colors group animate-fade-in-up"
                       style={{ borderColor: 'var(--border-default)', background: 'var(--bg-elevated)' }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                     style={{ background: 'var(--accent-subtle)' }}>
-                  <IconUpload size={22} style={{ color: 'var(--accent-primary)' }} />
+                <div className="w-14 h-14 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 mb-2"
+                     style={{ background: 'var(--bg-input)' }}>
+                  <IconUpload size={24} style={{ color: 'var(--text-muted)' }} />
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Click to upload audio</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>mp3, wav, m4a, aac, webm, mp4</p>
+                <div className="text-center px-4">
+                  <p className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Click to upload audio</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Upload audio and generate timestamped text for your timeline workflow.</p>
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>mp3, wav, m4a, aac, webm, mp4</p>
                 </div>
               </button>
             )}

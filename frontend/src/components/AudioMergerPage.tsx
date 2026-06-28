@@ -218,11 +218,19 @@ export default function AudioMergerPage() {
             </div>
             
             {parts.length === 0 ? (
-              <div className="text-center py-12 rounded-xl border border-dashed"
+              <div className="text-center py-16 rounded-xl border border-dashed animate-fade-in-up"
                    style={{ borderColor: 'var(--border-default)', background: 'var(--bg-elevated)' }}>
-                <IconMusic size={32} className="mx-auto mb-3 opacity-20" />
-                <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>No audio parts added yet.</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Click 'Add Audio Part' to start building your mix.</p>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 bg-[var(--bg-input)]">
+                  <IconMusic size={24} style={{ color: 'var(--text-muted)' }} />
+                </div>
+                <p className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)' }}>No audio parts added yet</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Add at least 2 audio parts to start merging.</p>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-6 px-4 py-2 rounded-lg font-bold text-sm bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                >
+                  Browse Files
+                </button>
               </div>
             ) : (
               <div className="space-y-2">

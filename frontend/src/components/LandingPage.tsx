@@ -15,40 +15,44 @@ interface LandingPageProps {
 
 export default function LandingPage({ onEnterStudio, onViewTools }: LandingPageProps) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-default)', color: 'var(--text-primary)' }}>
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: 'var(--bg-default)', color: 'var(--text-primary)' }}>
+      {/* Background ambient gradient pattern */}
+      <div className="absolute top-0 left-0 right-0 h-[500px] opacity-20 pointer-events-none"
+           style={{
+             background: 'radial-gradient(circle at 50% 0%, var(--accent-primary) 0%, transparent 70%)',
+             filter: 'blur(60px)'
+           }}
+      />
+      
       {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20">
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 relative z-10">
         
         {/* Chips */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-8 max-w-2xl">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-8 max-w-2xl animate-fade-in-up">
           {['Local Processing', 'Timeline Tools', 'Audio Tools', 'Script Timestamp', 'No Cloud Upload'].map(chip => (
-            <span key={chip} className="px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase"
-                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-muted)' }}>
+            <span key={chip} className="px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
               {chip}
             </span>
           ))}
         </div>
 
-        <h1 className="text-5xl md:text-6xl font-black tracking-tight mb-6">
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <span className="text-gradient">SyncFrame Studio</span>
         </h1>
         
-        <p className="text-lg md:text-xl font-medium mb-4 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-lg md:text-xl font-medium mb-12 max-w-2xl animate-fade-in-up" style={{ color: 'var(--text-secondary)', animationDelay: '200ms' }}>
           Create videos, timestamps, audio tools, and media timelines locally.
         </p>
-        
-        <p className="text-sm md:text-base mb-10 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
-          A local-first studio for image timelines, video timelines, media timelines, audio merging, and script timestamps.
-        </p>
 
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mx-auto justify-center">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mx-auto justify-center animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <button
             onClick={onEnterStudio}
-            className="w-full sm:w-auto px-8 py-3 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             style={{
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               color: '#fff',
-              boxShadow: '0 4px 16px rgba(99,102,241,0.35)'
+              boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
             }}
           >
             Enter Studio <IconZap size={18} />
@@ -56,7 +60,7 @@ export default function LandingPage({ onEnterStudio, onViewTools }: LandingPageP
           
           <button
             onClick={onViewTools}
-            className="w-full sm:w-auto px-8 py-3 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold transition-all hover:bg-[var(--bg-input)] hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             style={{
               background: 'var(--bg-elevated)',
               color: 'var(--text-primary)',
@@ -68,16 +72,16 @@ export default function LandingPage({ onEnterStudio, onViewTools }: LandingPageP
         </div>
 
         {/* Feature Cards Showcase */}
-        <div className="mt-20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full max-w-6xl mx-auto">
+        <div className="mt-24 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full max-w-6xl mx-auto animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           {[
-            { title: 'Image Timeline', icon: <IconImage size={24} color="#0ea5e9" /> },
-            { title: 'Video Timeline', icon: <IconVideo size={24} color="#8b5cf6" /> },
-            { title: 'Media Timeline', icon: <IconSparkles size={24} color="#3b82f6" /> },
-            { title: 'Audio Merger', icon: <IconMusic size={24} color="#10b981" /> },
-            { title: 'Script Timestamp', icon: <IconFileText size={24} color="#f59e0b" /> },
+            { title: 'Image Timeline', icon: <IconImage size={24} className="text-sky-500" /> },
+            { title: 'Video Timeline', icon: <IconVideo size={24} className="text-purple-500" /> },
+            { title: 'Media Timeline', icon: <IconSparkles size={24} className="text-blue-500" /> },
+            { title: 'Audio Merger', icon: <IconMusic size={24} className="text-emerald-500" /> },
+            { title: 'Script Timestamp', icon: <IconFileText size={24} className="text-amber-500" /> },
           ].map(feat => (
-            <div key={feat.title} className="card p-5 flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300">
-              <div className="mb-3 p-3 rounded-xl" style={{ background: 'var(--bg-input)' }}>
+            <div key={feat.title} className="card p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-all duration-300" style={{ boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}>
+              <div className="mb-4 p-4 rounded-2xl" style={{ background: 'var(--bg-input)' }}>
                 {feat.icon}
               </div>
               <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{feat.title}</span>

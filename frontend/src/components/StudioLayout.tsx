@@ -7,10 +7,11 @@ import {
   IconHistory,
   IconDashboard,
   IconMenu,
-  IconX
+  IconX,
+  IconHelpCircle
 } from './icons'
 
-export type StudioTab = 'tools' | 'dashboard' | 'history' | 'settings'
+export type StudioTab = 'tools' | 'dashboard' | 'history' | 'settings' | 'help'
 
 interface StudioLayoutProps {
   children: ReactNode
@@ -29,6 +30,7 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
     { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard size={18} /> },
     { id: 'history', label: 'History', icon: <IconHistory size={18} /> },
     { id: 'settings', label: 'Settings', icon: <IconSettings size={18} /> },
+    { id: 'help', label: 'Help / Guide', icon: <IconHelpCircle size={18} /> },
   ]
 
   const handleNav = (tab: StudioTab) => {
@@ -50,7 +52,7 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
       </div>
 
       {/* Sidebar (Desktop) / Mobile Menu */}
-      <div className={`md:flex flex-col w-full md:w-64 shrink-0 border-r md:h-screen sticky top-0 ${mobileMenuOpen ? 'block' : 'hidden'}`}
+      <div className={`md:flex flex-col w-full md:w-64 shrink-0 border-r md:h-screen ${mobileMenuOpen ? 'block fixed inset-y-0 left-0 z-50 shadow-2xl' : 'hidden'} md:sticky md:top-0`}
            style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-elevated)' }}>
         
         {/* Desktop Header */}
@@ -82,6 +84,14 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
             )
           })}
         </nav>
+
+        {/* Mobile menu backdrop click area */}
+        {mobileMenuOpen && (
+          <div 
+            className="md:hidden fixed inset-0 z-[-1] bg-black/20 backdrop-blur-sm" 
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
 
         {/* Footer actions */}
         <div className="p-4 border-t space-y-4" style={{ borderColor: 'var(--border-subtle)' }}>

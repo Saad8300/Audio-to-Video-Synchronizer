@@ -138,13 +138,13 @@ export default function StudioHistoryPage() {
                 </tr>
               ) : history.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-black/5 dark:bg-white/5">
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center animate-fade-in-up">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5 bg-[var(--bg-input)]">
                         <IconHistory size={28} style={{ color: 'var(--text-muted)' }} />
                       </div>
-                      <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No history yet</h2>
-                      <p className="text-sm max-w-md" style={{ color: 'var(--text-secondary)' }}>
+                      <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No history yet</h2>
+                      <p className="text-sm font-medium max-w-md" style={{ color: 'var(--text-secondary)' }}>
                         Your generated videos, audio files, and timestamp exports will appear here.
                       </p>
                     </div>

@@ -6,7 +6,7 @@
 
 ## 🧩 What does this app do?
 
-This app provides three professional workflows for automated video creation:
+SyncFrame Studio is a local desktop-class application featuring a full **Studio Dashboard** for analytics, **History tracking**, local **Settings**, and five core professional workflows for automated video/audio creation:
 
 ### 1. Image Timeline (Photos to Video)
 You give it:
