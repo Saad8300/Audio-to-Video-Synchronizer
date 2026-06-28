@@ -36,7 +36,7 @@ import type {
   JobStatus,
   GenerateResponse,
 } from '../types'
-import { startVideoTimelineJob } from '../utils/api'
+import { startVideoTimelineJob, createVideoTimelineBatchJob } from '../utils/api'
 import { loadSettings } from '../utils/appSettings'
 import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
@@ -474,6 +474,8 @@ export default function VideoTimelinePage() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null)
   const [result,       setResult]       = useState<GenerateResponse | null>(null)
   const [cancelledMsg, setCancelledMsg] = useState<string | null>(null)
+  const [isAddingToQueue, setIsAddingToQueue] = useState(false)
+  const [successQueueMsg, setSuccessQueueMsg] = useState<string | null>(null)
 
   const canGenerate = (audioInputMode === 'single' ? !!audioFile : !!audioZip) && !!videosZip && !!csvFile
     && status !== 'uploading' && status !== 'generating' && status !== 'cancelling'
@@ -501,6 +503,26 @@ export default function VideoTimelinePage() {
     } catch (err) {
       setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
       setStatus('error')
+    }
+  }
+
+  const handleAddJob = async () => {
+    if ((audioInputMode === 'single' ? !audioFile : !audioZip) || !videosZip || !csvFile) return
+
+    setIsAddingToQueue(true)
+    setSuccessQueueMsg(null)
+
+    try {
+      await createVideoTimelineBatchJob(
+        audioInputMode, audioFile, audioZip, videosZip, csvFile, settings,
+        introFile, outroFile,
+      )
+      setSuccessQueueMsg("Added to Batch Queue")
+      setTimeout(() => setSuccessQueueMsg(null), 4000)
+    } catch (err) {
+      alert("Failed to add to queue: " + err)
+    } finally {
+      setIsAddingToQueue(false)
     }
   }
 
@@ -873,25 +895,49 @@ export default function VideoTimelinePage() {
               <button
                 id="vt-generate-btn"
                 onClick={handleGenerate}
-                disabled={!canGenerate}
+                disabled={!canGenerate || isAddingToQueue}
                 aria-label="Generate video timeline"
                 className={`w-full relative overflow-hidden transition-all duration-300 flex items-center justify-center gap-2 rounded-xl text-sm font-bold active:scale-[0.98] ${
-                  canGenerate
+                  canGenerate && !isAddingToQueue
                     ? 'active:brightness-95'
                     : 'opacity-50 cursor-not-allowed'
                 }`}
                 style={{
                   height: 52,
-                  background: canGenerate ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'var(--bg-elevated)',
-                  boxShadow: canGenerate ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
-                  color: canGenerate ? '#fff' : 'var(--text-muted)',
-                  border: canGenerate ? 'none' : '1px solid var(--border-default)'
+                  background: canGenerate && !isAddingToQueue ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'var(--bg-elevated)',
+                  boxShadow: canGenerate && !isAddingToQueue ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
+                  color: canGenerate && !isAddingToQueue ? '#fff' : 'var(--text-muted)',
+                  border: canGenerate && !isAddingToQueue ? 'none' : '1px solid var(--border-default)'
                 }}
-                onMouseEnter={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(99,102,241,0.55)' }}
-                onMouseLeave={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
+                onMouseEnter={e => { if (canGenerate && !isAddingToQueue) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(99,102,241,0.55)' }}
+                onMouseLeave={e => { if (canGenerate && !isAddingToQueue) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
               >
                 {isLoading ? <><IconLoader size={18} className="animate-spin" />Generating…</> : canGenerate ? <><IconZap size={18} />Generate Video</> : <>Select Required Files</>}
               </button>
+
+              <button
+                onClick={handleAddJob}
+                disabled={!canGenerate || isLoading || isAddingToQueue}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold h-12 transition-colors border ${
+                  canGenerate && !isLoading && !isAddingToQueue
+                    ? 'hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-[var(--border-default)]'
+                    : 'opacity-50 cursor-not-allowed border-transparent bg-[var(--bg-elevated)]'
+                }`}
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {isAddingToQueue ? <><IconLoader size={16} className="animate-spin" /> Adding...</> : <><IconFilm size={16} /> Add to Batch Queue</>}
+              </button>
+
+              {successQueueMsg && (
+                <div className="flex flex-col items-center gap-2 mt-2 p-3 rounded-lg border bg-green-500/10 border-green-500/20 animate-fade-in">
+                  <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
+                    <IconCheck size={16} /> {successQueueMsg}
+                  </div>
+                  <a href="/batch" className="text-xs font-semibold hover:underline" style={{ color: 'var(--text-primary)' }}>
+                    Open Batch Queue →
+                  </a>
+                </div>
+              )}
 
 
 

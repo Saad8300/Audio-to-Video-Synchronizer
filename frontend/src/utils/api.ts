@@ -215,6 +215,206 @@ export async function createImageTimelineBatchJob(
   return res.json() as Promise<{ job: BatchJob }>
 }
 
+/**
+ * Save a Video Timeline configuration to the Batch Queue instead of running immediately.
+ */
+export async function createVideoTimelineBatchJob(
+  audioInputMode: 'single' | 'zip',
+  audioFile:   File | null,
+  audioZip:    File | null,
+  videosZip:   File,
+  timelineCsv: File,
+  settings:    VideoTimelineSettings,
+  introFile?:  File | null,
+  outroFile?:  File | null,
+): Promise<{ job: BatchJob }> {
+  const form = new FormData()
+
+  // Required uploads
+  form.append('audio_input_mode', audioInputMode)
+  if (audioInputMode === 'single' && audioFile) {
+    form.append('audio_file', audioFile)
+  } else if (audioInputMode === 'zip' && audioZip) {
+    form.append('audio_zip', audioZip)
+  }
+
+  form.append('videos_zip',   videosZip)
+  form.append('timeline_csv', timelineCsv)
+
+  // Optional uploads
+  if (introFile) form.append('intro_file', introFile)
+  if (outroFile) form.append('outro_file', outroFile)
+
+  // Core settings
+  form.append('aspect_ratio',      settings.aspectRatio)
+  form.append('export_resolution', settings.exportResolution)
+  form.append('fit_mode',          settings.fitMode)
+  form.append('fill_mode',         settings.fillMode)
+  form.append('render_profile',    settings.renderProfile)
+  form.append('output_name',       settings.outputName || 'video_timeline')
+
+  // Styling
+  form.append('transition',          settings.transition)
+  form.append('transition_duration', settings.transitionDuration)
+  form.append('visual_effect',       settings.visualEffect)
+  form.append('effect_strength',     settings.effectStrength)
+
+  // Motion
+  form.append('motion_style',         settings.motionStyle)
+  form.append('motion_intensity',     settings.motionIntensity)
+
+  // Background Music
+  if (settings.backgroundMusicFile) {
+    form.append('background_music_file', settings.backgroundMusicFile)
+  }
+  form.append('background_music_volume', String(settings.backgroundMusicVolume))
+  form.append('background_music_loop',   String(settings.backgroundMusicLoop))
+  form.append('background_music_fade',   String(settings.backgroundMusicFade))
+
+  // Watermark
+  const wmActive = settings.watermarkText.trim().length > 0
+  if (wmActive) {
+    form.append('watermark_text',          settings.watermarkText)
+    form.append('watermark_position_mode', settings.watermarkPositionMode)
+    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
+    form.append('watermark_position',      settings.watermarkPosition)
+    form.append('watermark_x',             String(settings.watermarkX))
+    form.append('watermark_y',             String(settings.watermarkY))
+    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
+    form.append('watermark_size',          String(settings.watermarkSize))
+    form.append('watermark_margin',        String(settings.watermarkMargin))
+  }
+
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/video-timeline`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(parseErrorResponse(res.status, text))
+  }
+
+  return res.json() as Promise<{ job: BatchJob }>
+}
+
+/**
+ * Save a Media Timeline configuration to the Batch Queue instead of running immediately.
+ */
+export async function createMediaTimelineBatchJob(
+  audioInputMode: 'single' | 'zip',
+  audioFile:   File | null,
+  audioZip:    File | null,
+  mediaZip:    File,
+  timelineCsv: File,
+  settings:    {
+    aspectRatio:      string
+    exportResolution: string
+    fitMode:          string
+    fillMode:         string
+    renderProfile:    string
+    outputName:       string
+    textPosition:     string
+    textSize:         string
+    textColor:        string
+    textBackground:   string
+    textWidth:        string
+    textAlignment:    string
+    transition:       string
+    transitionDuration: string
+    visualEffect:     string
+    effectStrength:   string
+    enableWatermark:       boolean
+    watermarkText:         string
+    watermarkPositionMode: string
+    watermarkCoordinateMode: string
+    watermarkPosition:     string
+    watermarkX:            number
+    watermarkY:            number
+    watermarkOpacity:      number
+    watermarkSize:         number
+    watermarkMargin:       number
+    enableIntro:           boolean
+    enableOutro:           boolean
+    motionStyle:           string
+    motionIntensity:       string
+    backgroundMusicFile:   File | null
+    backgroundMusicVolume: number
+    backgroundMusicLoop:   boolean
+    backgroundMusicFade:   boolean
+  },
+  introFile?:  File | null,
+  outroFile?:  File | null,
+): Promise<{ job: BatchJob }> {
+  const form = new FormData()
+
+  form.append('audio_input_mode', audioInputMode)
+  if (audioInputMode === 'single' && audioFile) {
+    form.append('audio_file', audioFile)
+  } else if (audioInputMode === 'zip' && audioZip) {
+    form.append('audio_zip', audioZip)
+  }
+  
+  form.append('media_zip',    mediaZip)
+  form.append('timeline_csv', timelineCsv)
+
+  form.append('aspect_ratio',      settings.aspectRatio)
+  form.append('export_resolution', settings.exportResolution)
+  form.append('fit_mode',          settings.fitMode)
+  form.append('fill_mode',         settings.fillMode)
+  form.append('render_profile',    settings.renderProfile)
+  form.append('output_name',       settings.outputName || 'media_timeline')
+
+  form.append('text_position',   settings.textPosition)
+  form.append('text_size',       settings.textSize)
+  form.append('text_color',      settings.textColor)
+  form.append('text_background', settings.textBackground)
+  form.append('text_width',      settings.textWidth)
+  form.append('text_alignment',  settings.textAlignment)
+
+  form.append('transition',          settings.transition)
+  form.append('transition_duration', settings.transitionDuration)
+  form.append('visual_effect',       settings.visualEffect)
+  form.append('effect_strength',     settings.effectStrength)
+
+  form.append('motion_style',         settings.motionStyle)
+  form.append('motion_intensity',     settings.motionIntensity)
+
+  if (settings.backgroundMusicFile) {
+    form.append('background_music_file', settings.backgroundMusicFile)
+  }
+  form.append('background_music_volume', String(settings.backgroundMusicVolume))
+  form.append('background_music_loop',   String(settings.backgroundMusicLoop))
+  form.append('background_music_fade',   String(settings.backgroundMusicFade))
+
+  if (settings.watermarkText.trim().length > 0) {
+    form.append('watermark_text',          settings.watermarkText)
+    form.append('watermark_position_mode', settings.watermarkPositionMode)
+    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
+    form.append('watermark_position',      settings.watermarkPosition)
+    form.append('watermark_x',             String(settings.watermarkX))
+    form.append('watermark_y',             String(settings.watermarkY))
+    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
+    form.append('watermark_size',          String(settings.watermarkSize))
+    form.append('watermark_margin',        String(settings.watermarkMargin))
+  }
+
+  if (introFile) form.append('intro_file', introFile)
+  if (outroFile) form.append('outro_file', outroFile)
+
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/media-timeline`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(parseErrorResponse(res.status, text))
+  }
+
+  return res.json() as Promise<{ job: BatchJob }>
+}
+
 /** Poll a job's current status. */
 export async function getJobStatus(jobId: string): Promise<JobStatus> {
   const res = await fetch(`${BASE_URL}/api/jobs/${jobId}/status`, {

@@ -21,7 +21,7 @@ import type {
   JobStatus,
   GenerateResponse,
 } from '../types'
-import { startMediaTimelineJob } from '../utils/api'
+import { startMediaTimelineJob, createMediaTimelineBatchJob } from '../utils/api'
 import { loadSettings } from '../utils/appSettings'
 import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
@@ -318,6 +318,8 @@ export default function MediaTimelinePage() {
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null)
   const [result, setResult] = useState<GenerateResponse | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [isAddingToQueue, setIsAddingToQueue] = useState(false)
+  const [successQueueMsg, setSuccessQueueMsg] = useState<string | null>(null)
 
   const set = useCallback(<K extends keyof MediaTimelineSettings>(k: K, v: MediaTimelineSettings[K]) => {
     setSettings(prev => ({ ...prev, [k]: v }))
@@ -404,6 +406,32 @@ export default function MediaTimelinePage() {
       console.error(err)
       setErrorMsg(err.message || 'Failed to start generation.')
       setStatus('error')
+    }
+  }
+
+  const handleAddJob = async () => {
+    if (!isReady) return
+
+    setIsAddingToQueue(true)
+    setSuccessQueueMsg(null)
+
+    try {
+      await createMediaTimelineBatchJob(
+        audioInputMode,
+        audioFile,
+        audioZip,
+        mediaZip,
+        timelineCsv,
+        settings,
+        introFile,
+        outroFile
+      )
+      setSuccessQueueMsg("Added to Batch Queue")
+      setTimeout(() => setSuccessQueueMsg(null), 4000)
+    } catch (err: any) {
+      alert("Failed to add to queue: " + (err.message || err))
+    } finally {
+      setIsAddingToQueue(false)
     }
   }
 
@@ -809,32 +837,56 @@ export default function MediaTimelinePage() {
 
             <button
               onClick={handleGenerate}
-              disabled={!isReady}
+              disabled={!isReady || isAddingToQueue}
               className={`w-full relative overflow-hidden transition-all duration-300 flex items-center justify-center gap-2 rounded-xl text-sm font-bold active:scale-[0.98] ${
-                isReady
+                isReady && !isAddingToQueue
                   ? 'active:brightness-95'
                   : 'opacity-50 cursor-not-allowed'
               }`}
               style={{
                 height: 52,
-                background: isReady ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'var(--bg-elevated)',
-                boxShadow: isReady ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
-                color: isReady ? '#fff' : 'var(--text-muted)',
-                border: isReady ? 'none' : '1px solid var(--border-default)'
+                background: isReady && !isAddingToQueue ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'var(--bg-elevated)',
+                boxShadow: isReady && !isAddingToQueue ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
+                color: isReady && !isAddingToQueue ? '#fff' : 'var(--text-muted)',
+                border: isReady && !isAddingToQueue ? 'none' : '1px solid var(--border-default)'
               }}
-              onMouseEnter={e => { if (isReady) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(99,102,241,0.55)' }}
-              onMouseLeave={e => { if (isReady) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
+              onMouseEnter={e => { if (isReady && !isAddingToQueue) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(99,102,241,0.55)' }}
+              onMouseLeave={e => { if (isReady && !isAddingToQueue) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
             >
               {status === 'uploading' ? (
-                <><IconLoader size={16} /> Uploading...</>
+                <><IconLoader size={16} className="animate-spin" /> Uploading...</>
               ) : status === 'generating' ? (
-                <><IconLoader size={16} /> Generating...</>
+                <><IconLoader size={16} className="animate-spin" /> Generating...</>
               ) : isReady ? (
                 <><IconSparkles size={16} /> Generate Video</>
               ) : (
                 <>Select Required Files</>
               )}
             </button>
+
+            <button
+              onClick={handleAddJob}
+              disabled={!isReady || ['uploading', 'generating'].includes(status) || isAddingToQueue}
+              className={`w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold h-12 transition-colors border ${
+                isReady && !['uploading', 'generating'].includes(status) && !isAddingToQueue
+                  ? 'hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-[var(--border-default)]'
+                  : 'opacity-50 cursor-not-allowed border-transparent bg-[var(--bg-elevated)]'
+              }`}
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {isAddingToQueue ? <><IconLoader size={16} className="animate-spin" /> Adding...</> : <><IconFilm size={16} /> Add to Batch Queue</>}
+            </button>
+
+            {successQueueMsg && (
+              <div className="flex flex-col items-center gap-2 mt-2 p-3 rounded-lg border bg-green-500/10 border-green-500/20 animate-fade-in">
+                <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
+                  <IconCheck size={16} /> {successQueueMsg}
+                </div>
+                <a href="/batch" className="text-xs font-semibold hover:underline" style={{ color: 'var(--text-primary)' }}>
+                  Open Batch Queue →
+                </a>
+              </div>
+            )}
           </div>
 
           {/* CSV Guide */}

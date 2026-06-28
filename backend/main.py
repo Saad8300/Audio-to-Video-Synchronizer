@@ -1643,6 +1643,264 @@ async def api_batch_job_image_timeline(
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
 
+@app.post("/api/batch/jobs/video-timeline")
+async def api_batch_job_video_timeline(
+    audio_input_mode: str = Form("single"),
+    audio_file:       Optional[UploadFile] = File(None),
+    audio_zip:        Optional[UploadFile] = File(None),
+    videos_zip:      UploadFile = File(...),
+    timeline_csv:    UploadFile = File(...),
+    aspect_ratio:      str   = Form("9:16"),
+    export_resolution: str   = Form("1080p"),
+    fit_mode:          str   = Form("cover"),
+    fill_mode:         str   = Form("loop"),
+    render_profile:    str   = Form("balanced"),
+    output_name:       Optional[str] = Form(None),
+    transition:          str   = Form("none"),
+    transition_duration: float = Form(0.5),
+    visual_effect:       str   = Form("none"),
+    effect_strength:     str   = Form("medium"),
+    motion_style:        str   = Form("none"),
+    motion_intensity:    str   = Form("medium"),
+    background_music_file:   Optional[UploadFile] = File(None),
+    background_music_volume: float = Form(15.0),
+    background_music_loop:   bool  = Form(True),
+    background_music_fade:   bool  = Form(True),
+    watermark_text:          Optional[str] = Form(None),
+    watermark_position_mode: Optional[str] = Form(None),
+    watermark_coordinate_mode: Optional[str] = Form(None),
+    watermark_position:      Optional[str] = Form(None),
+    watermark_x:             Optional[int] = Form(None),
+    watermark_y:             Optional[int] = Form(None),
+    watermark_opacity:       Optional[float] = Form(None),
+    watermark_size:          Optional[int] = Form(None),
+    watermark_margin:        Optional[int] = Form(None),
+    intro_file:    Optional[UploadFile] = File(None),
+    outro_file:    Optional[UploadFile] = File(None),
+):
+    import uuid
+    import json
+    job_id = f"batch_{uuid.uuid4().hex[:12]}"
+    job_dir = batch_queue_store.DATA_DIR / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    
+    saved_assets = {}
+    
+    async def save_upload(file_obj: Optional[UploadFile], key_name: str):
+        if file_obj and file_obj.filename:
+            safe_name = "".join(c for c in file_obj.filename if c.isalnum() or c in ".-_")
+            path = job_dir / safe_name
+            content = await file_obj.read()
+            with open(path, "wb") as f:
+                f.write(content)
+            saved_assets[key_name] = safe_name
+
+    try:
+        await save_upload(audio_file, "audio_file")
+        await save_upload(audio_zip, "audio_zip")
+        await save_upload(videos_zip, "videos_zip")
+        await save_upload(timeline_csv, "timeline_csv")
+        await save_upload(intro_file, "intro_file")
+        await save_upload(outro_file, "outro_file")
+        await save_upload(background_music_file, "background_music_file")
+        
+        config = {
+            "audio_input_mode": audio_input_mode,
+            "aspect_ratio": aspect_ratio,
+            "export_resolution": export_resolution,
+            "fit_mode": fit_mode,
+            "fill_mode": fill_mode,
+            "render_profile": render_profile,
+            "output_name": output_name,
+            "transition": transition,
+            "transition_duration": float(transition_duration),
+            "visual_effect": visual_effect,
+            "effect_strength": effect_strength,
+            "motion_style": motion_style,
+            "motion_intensity": motion_intensity,
+            "background_music_volume": background_music_volume,
+            "background_music_loop": background_music_loop,
+            "background_music_fade": background_music_fade,
+        }
+        
+        if watermark_text:
+            config.update({
+                "watermark_text": watermark_text,
+                "watermark_position_mode": watermark_position_mode,
+                "watermark_coordinate_mode": watermark_coordinate_mode,
+                "watermark_position": watermark_position,
+                "watermark_x": watermark_x,
+                "watermark_y": watermark_y,
+                "watermark_opacity": watermark_opacity,
+                "watermark_size": watermark_size,
+                "watermark_margin": watermark_margin,
+            })
+        
+        with open(job_dir / "config.json", "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+            
+        clean_out_name = make_clean_filename(output_name, "batch_video_timeline", ".mp4")
+        
+        job = batch_queue_store.add_job(
+            source_tool="video_timeline",
+            source_tool_label="Video Timeline",
+            title=f"Video Timeline: {clean_out_name}",
+            output_name=clean_out_name,
+            output_type="video",
+            export_preset=visual_effect,
+            aspect_ratio=aspect_ratio,
+            resolution=export_resolution,
+            render_profile=render_profile,
+            config=config,
+            assets=saved_assets
+        )
+        
+        job = batch_queue_store.update_job(job["id"], {"id": job_id})
+        
+        return JSONResponse(content={"job": job})
+        
+    except Exception as e:
+        logger.error(f"Error saving batch job: {e}")
+        import shutil
+        shutil.rmtree(job_dir, ignore_errors=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+@app.post("/api/batch/jobs/media-timeline")
+async def api_batch_job_media_timeline(
+    audio_input_mode: str = Form("single"),
+    audio_file:       Optional[UploadFile] = File(None),
+    audio_zip:        Optional[UploadFile] = File(None),
+    media_zip:      UploadFile = File(...),
+    timeline_csv:    UploadFile = File(...),
+    aspect_ratio:      str   = Form("9:16"),
+    export_resolution: str   = Form("1080p"),
+    fit_mode:          str   = Form("cover"),
+    fill_mode:         str   = Form("loop"),
+    render_profile:    str   = Form("balanced"),
+    output_name:       Optional[str] = Form(None),
+    text_position:     str = Form("bottom_center"),
+    text_size:         str = Form("medium"),
+    text_color:        str = Form("white"),
+    text_background:   str = Form("soft_shadow"),
+    text_width:        str = Form("wide"),
+    text_alignment:    str = Form("center"),
+    transition:          str   = Form("none"),
+    transition_duration: float = Form(0.5),
+    visual_effect:       str   = Form("none"),
+    effect_strength:     str   = Form("medium"),
+    motion_style:        str   = Form("none"),
+    motion_intensity:    str   = Form("medium"),
+    background_music_file:   Optional[UploadFile] = File(None),
+    background_music_volume: float = Form(15.0),
+    background_music_loop:   bool  = Form(True),
+    background_music_fade:   bool  = Form(True),
+    watermark_text:          Optional[str] = Form(None),
+    watermark_position_mode: Optional[str] = Form(None),
+    watermark_coordinate_mode: Optional[str] = Form(None),
+    watermark_position:      Optional[str] = Form(None),
+    watermark_x:             Optional[int] = Form(None),
+    watermark_y:             Optional[int] = Form(None),
+    watermark_opacity:       Optional[float] = Form(None),
+    watermark_size:          Optional[int] = Form(None),
+    watermark_margin:        Optional[int] = Form(None),
+    intro_file:    Optional[UploadFile] = File(None),
+    outro_file:    Optional[UploadFile] = File(None),
+):
+    import uuid
+    import json
+    job_id = f"batch_{uuid.uuid4().hex[:12]}"
+    job_dir = batch_queue_store.DATA_DIR / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    
+    saved_assets = {}
+    
+    async def save_upload(file_obj: Optional[UploadFile], key_name: str):
+        if file_obj and file_obj.filename:
+            safe_name = "".join(c for c in file_obj.filename if c.isalnum() or c in ".-_")
+            path = job_dir / safe_name
+            content = await file_obj.read()
+            with open(path, "wb") as f:
+                f.write(content)
+            saved_assets[key_name] = safe_name
+
+    try:
+        await save_upload(audio_file, "audio_file")
+        await save_upload(audio_zip, "audio_zip")
+        await save_upload(media_zip, "media_zip")
+        await save_upload(timeline_csv, "timeline_csv")
+        await save_upload(intro_file, "intro_file")
+        await save_upload(outro_file, "outro_file")
+        await save_upload(background_music_file, "background_music_file")
+        
+        config = {
+            "audio_input_mode": audio_input_mode,
+            "aspect_ratio": aspect_ratio,
+            "export_resolution": export_resolution,
+            "fit_mode": fit_mode,
+            "fill_mode": fill_mode,
+            "render_profile": render_profile,
+            "output_name": output_name,
+            "text_position": text_position,
+            "text_size": text_size,
+            "text_color": text_color,
+            "text_background": text_background,
+            "text_width": text_width,
+            "text_alignment": text_alignment,
+            "transition": transition,
+            "transition_duration": float(transition_duration),
+            "visual_effect": visual_effect,
+            "effect_strength": effect_strength,
+            "motion_style": motion_style,
+            "motion_intensity": motion_intensity,
+            "background_music_volume": background_music_volume,
+            "background_music_loop": background_music_loop,
+            "background_music_fade": background_music_fade,
+        }
+        
+        if watermark_text:
+            config.update({
+                "watermark_text": watermark_text,
+                "watermark_position_mode": watermark_position_mode,
+                "watermark_coordinate_mode": watermark_coordinate_mode,
+                "watermark_position": watermark_position,
+                "watermark_x": watermark_x,
+                "watermark_y": watermark_y,
+                "watermark_opacity": watermark_opacity,
+                "watermark_size": watermark_size,
+                "watermark_margin": watermark_margin,
+            })
+        
+        with open(job_dir / "config.json", "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+            
+        clean_out_name = make_clean_filename(output_name, "batch_media_timeline", ".mp4")
+        
+        job = batch_queue_store.add_job(
+            source_tool="media_timeline",
+            source_tool_label="Media Timeline",
+            title=f"Media Timeline: {clean_out_name}",
+            output_name=clean_out_name,
+            output_type="video",
+            export_preset=visual_effect,
+            aspect_ratio=aspect_ratio,
+            resolution=export_resolution,
+            render_profile=render_profile,
+            config=config,
+            assets=saved_assets
+        )
+        
+        job = batch_queue_store.update_job(job["id"], {"id": job_id})
+        
+        return JSONResponse(content={"job": job})
+        
+    except Exception as e:
+        logger.error(f"Error saving batch job: {e}")
+        import shutil
+        shutil.rmtree(job_dir, ignore_errors=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
 @app.get("/api/batch/jobs")
 def api_get_batch_jobs():
     try:

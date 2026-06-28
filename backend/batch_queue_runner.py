@@ -16,6 +16,8 @@ import batch_queue_store
 import history_store
 from utils import make_clean_filename
 from video_generator import generate_video, GenerationCancelled
+from video_timeline_generator import generate_video_timeline, VideoTimelineCancelled
+from media_timeline_generator import generate_media_timeline, MediaTimelineCancelled
 from audio_helpers import prepare_single_audio, prepare_zip_audio
 
 logger = logging.getLogger(__name__)
@@ -102,7 +104,7 @@ def _process_job(job: Dict[str, Any]):
     logger.info(f"Processing batch job {job_id} via {source_tool}")
     batch_queue_store.update_job(job_id, {"status": "running", "progress": 0, "message": "Starting rendering"})
     
-    if source_tool != "image_timeline":
+    if source_tool not in ("image_timeline", "video_timeline", "media_timeline"):
         batch_queue_store.update_job(job_id, {"status": "failed", "message": f"Batch rendering for '{source_tool}' is not supported yet."})
         return
         
@@ -118,13 +120,15 @@ def _process_job(job: Dict[str, Any]):
     audio_file_name = assets.get("audio_file")
     audio_zip_name = assets.get("audio_zip")
     images_zip_name = assets.get("images_zip")
+    videos_zip_name = assets.get("videos_zip")
+    media_zip_name = assets.get("media_zip")
     timestamp_csv_name = assets.get("timestamp_csv")
     intro_file_name = assets.get("intro_file")
     outro_file_name = assets.get("outro_file")
     bg_music_file_name = assets.get("bg_music_file")
     
-    if not images_zip_name or not timestamp_csv_name:
-        batch_queue_store.update_job(job_id, {"status": "failed", "message": "Missing required images ZIP or timestamp CSV in job."})
+    if not timestamp_csv_name:
+        batch_queue_store.update_job(job_id, {"status": "failed", "message": "Missing required timestamp CSV in job."})
         return
         
     # Set up temp dir for this run
@@ -155,7 +159,13 @@ def _process_job(job: Dict[str, Any]):
             batch_queue_store.update_job(job_id, {"status": "failed", "message": f"Audio processing failed: {str(e)}"})
             return
             
-        zip_path = str(job_dir / images_zip_name)
+        if source_tool == "image_timeline":
+            zip_path = str(job_dir / images_zip_name) if images_zip_name else None
+        elif source_tool == "video_timeline":
+            zip_path = str(job_dir / videos_zip_name) if videos_zip_name else None
+        else:
+            zip_path = str(job_dir / media_zip_name) if media_zip_name else None
+            
         csv_path = str(job_dir / timestamp_csv_name)
         
         intro_path = str(job_dir / intro_file_name) if intro_file_name else None
@@ -170,43 +180,121 @@ def _process_job(job: Dict[str, Any]):
         
         start_time = time.time()
         
-        # Run generation
-        res = generate_video(
-            audio_path=audio_path,
-            zip_path=zip_path,
-            csv_path=csv_path,
-            output_path=output_path,
-            temp_dir=str(run_temp),
-            aspect_ratio=config.get("aspect_ratio", "9:16"),
-            export_resolution=config.get("export_resolution", "1080p"),
-            fit_mode=config.get("fit_mode", "cover"),
-            transition=config.get("transition", "fade"),
-            transition_duration=float(config.get("transition_duration", 0.5)),
-            zoom_effect=config.get("zoom_effect", "none"),
-            render_profile=config.get("render_profile", "balanced"),
-            motion_effect=config.get("motion_effect", "slow_zoom_in"),
-            motion_intensity=config.get("motion_intensity", "medium"),
-            visual_effect=config.get("visual_effect", "none"),
-            effect_strength=config.get("effect_strength", "medium"),
-            enable_watermark=config.get("enable_watermark", False),
-            watermark_text=config.get("watermark_text", ""),
-            watermark_position_mode=config.get("watermark_position_mode", "preset"),
-            watermark_coordinate_mode=config.get("watermark_coordinate_mode", "design_canvas"),
-            watermark_position=config.get("watermark_position", "bottom_right"),
-            watermark_x=int(config.get("watermark_x", 50)),
-            watermark_y=int(config.get("watermark_y", 50)),
-            watermark_opacity=float(config.get("watermark_opacity", 0.65)),
-            watermark_size=int(config.get("watermark_size", 20)),
-            watermark_margin=int(config.get("watermark_margin", 36)),
-            intro_path=intro_path,
-            outro_path=outro_path,
-            bg_music_path=bg_music_path,
-            enable_bg_music=config.get("enable_bg_music", False),
-            music_volume=float(config.get("music_volume", 0.12)),
-            music_fade=config.get("music_fade", True),
-            cancel_event=runner_state.current_cancel_event,
-            progress_callback=update_progress
-        )
+        if source_tool == "image_timeline":
+            res = generate_video(
+                audio_path=audio_path,
+                zip_path=zip_path,
+                csv_path=csv_path,
+                output_path=output_path,
+                temp_dir=str(run_temp),
+                aspect_ratio=config.get("aspect_ratio", "9:16"),
+                export_resolution=config.get("export_resolution", "1080p"),
+                fit_mode=config.get("fit_mode", "cover"),
+                transition=config.get("transition", "fade"),
+                transition_duration=float(config.get("transition_duration", 0.5)),
+                zoom_effect=config.get("zoom_effect", "none"),
+                render_profile=config.get("render_profile", "balanced"),
+                motion_effect=config.get("motion_effect", "slow_zoom_in"),
+                motion_intensity=config.get("motion_intensity", "medium"),
+                visual_effect=config.get("visual_effect", "none"),
+                effect_strength=config.get("effect_strength", "medium"),
+                enable_watermark=config.get("enable_watermark", False),
+                watermark_text=config.get("watermark_text", ""),
+                watermark_position_mode=config.get("watermark_position_mode", "preset"),
+                watermark_coordinate_mode=config.get("watermark_coordinate_mode", "design_canvas"),
+                watermark_position=config.get("watermark_position", "bottom_right"),
+                watermark_x=int(config.get("watermark_x", 50)),
+                watermark_y=int(config.get("watermark_y", 50)),
+                watermark_opacity=float(config.get("watermark_opacity", 0.65)),
+                watermark_size=int(config.get("watermark_size", 20)),
+                watermark_margin=int(config.get("watermark_margin", 36)),
+                intro_path=intro_path,
+                outro_path=outro_path,
+                bg_music_path=bg_music_path,
+                enable_bg_music=config.get("enable_bg_music", False),
+                music_volume=float(config.get("music_volume", 0.12)),
+                music_fade=config.get("music_fade", True),
+                cancel_event=runner_state.current_cancel_event,
+                progress_callback=update_progress
+            )
+        elif source_tool == "video_timeline":
+            res = generate_video_timeline(
+                audio_path=audio_path,
+                zip_path=zip_path,
+                csv_path=csv_path,
+                output_path=output_path,
+                temp_dir=str(run_temp),
+                aspect_ratio=config.get("aspect_ratio", "9:16"),
+                export_resolution=config.get("export_resolution", "1080p"),
+                fit_mode=config.get("fit_mode", "cover"),
+                fill_mode=config.get("fill_mode", "loop"),
+                render_profile=config.get("render_profile", "balanced"),
+                transition=config.get("transition", "none"),
+                transition_duration=float(config.get("transition_duration", 0.5)),
+                visual_effect=config.get("visual_effect", "none"),
+                effect_strength=config.get("effect_strength", "medium"),
+                watermark_text=config.get("watermark_text", ""),
+                watermark_position_mode=config.get("watermark_position_mode", "preset"),
+                watermark_coordinate_mode=config.get("watermark_coordinate_mode", "design_canvas"),
+                watermark_position=config.get("watermark_position", "bottom_right"),
+                watermark_x=int(config.get("watermark_x", 50)),
+                watermark_y=int(config.get("watermark_y", 50)),
+                watermark_opacity=float(config.get("watermark_opacity", 0.65)),
+                watermark_size=int(config.get("watermark_size", 20)),
+                watermark_margin=int(config.get("watermark_margin", 36)),
+                motion_style=config.get("motion_style", "none"),
+                motion_intensity=config.get("motion_intensity", "medium"),
+                background_music_path=bg_music_path,
+                background_music_volume=float(config.get("background_music_volume", 15.0)),
+                background_music_loop=config.get("background_music_loop", True),
+                background_music_fade=config.get("background_music_fade", True),
+                intro_path=intro_path,
+                outro_path=outro_path,
+                cancel_event=runner_state.current_cancel_event,
+                progress_callback=update_progress
+            )
+        else: # media_timeline
+            res = generate_media_timeline(
+                audio_path=audio_path,
+                zip_path=zip_path,
+                csv_path=csv_path,
+                output_path=output_path,
+                temp_dir=str(run_temp),
+                aspect_ratio=config.get("aspect_ratio", "9:16"),
+                export_resolution=config.get("export_resolution", "1080p"),
+                fit_mode=config.get("fit_mode", "cover"),
+                fill_mode=config.get("fill_mode", "loop"),
+                render_profile=config.get("render_profile", "balanced"),
+                transition=config.get("transition", "none"),
+                transition_duration=float(config.get("transition_duration", 0.5)),
+                visual_effect=config.get("visual_effect", "none"),
+                effect_strength=config.get("effect_strength", "medium"),
+                watermark_text=config.get("watermark_text", ""),
+                watermark_position_mode=config.get("watermark_position_mode", "preset"),
+                watermark_coordinate_mode=config.get("watermark_coordinate_mode", "design_canvas"),
+                watermark_position=config.get("watermark_position", "bottom_right"),
+                watermark_x=int(config.get("watermark_x", 50)),
+                watermark_y=int(config.get("watermark_y", 50)),
+                watermark_opacity=float(config.get("watermark_opacity", 0.65)),
+                watermark_size=int(config.get("watermark_size", 20)),
+                watermark_margin=int(config.get("watermark_margin", 36)),
+                motion_style=config.get("motion_style", "none"),
+                motion_intensity=config.get("motion_intensity", "medium"),
+                text_position=config.get("text_position", "bottom_center"),
+                text_size=config.get("text_size", "medium"),
+                text_color=config.get("text_color", "white"),
+                text_background=config.get("text_background", "soft_shadow"),
+                text_width=config.get("text_width", "wide"),
+                text_alignment=config.get("text_alignment", "center"),
+                background_music_path=bg_music_path,
+                background_music_volume=float(config.get("background_music_volume", 15.0)),
+                background_music_loop=config.get("background_music_loop", True),
+                background_music_fade=config.get("background_music_fade", True),
+                intro_path=intro_path,
+                outro_path=outro_path,
+                cancel_event=runner_state.current_cancel_event,
+                progress_callback=update_progress
+            )
         
         elapsed = time.time() - start_time
         
@@ -237,7 +325,7 @@ def _process_job(job: Dict[str, Any]):
                 render_profile=config.get("render_profile", "balanced"),
                 metadata={
                     "batch_job_id": job_id,
-                    "source_tool": "image_timeline",
+                    "source_tool": source_tool,
                     "generated_via": "batch_queue"
                 }
             )
