@@ -9,8 +9,8 @@ import ProgressOverlay from './components/ProgressOverlay'
 import { type AppMode } from './components/AppModeSwitcher'
 import VideoTimelinePage from './components/VideoTimelinePage'
 import MediaTimelinePage from './components/MediaTimelinePage'
-import LandingPage from './components/LandingPage'
 import StudioLayout from './components/StudioLayout'
+import StudioHome from './components/StudioHome'
 import StudioToolsPage from './components/StudioToolsPage'
 import StudioDashboardPage from './components/StudioDashboardPage'
 import StudioHistoryPage from './components/StudioHistoryPage'
@@ -389,7 +389,7 @@ export default function App() {
   // Derived
 
   if (activeView === 'landing') {
-    return <LandingPage onEnterStudio={() => setActiveView('tools')} onViewTools={() => setActiveView('tools')} />
+    return <StudioHome onSelectTool={(t) => setActiveView(`tool:${t}` as ViewMode)} backendStatusOk={healthOk} />
   }
 
   return (
@@ -481,7 +481,7 @@ export default function App() {
       {isTool && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5 pb-1">
           <button
-            onClick={() => setActiveView('tools')}
+            onClick={() => setActiveView('landing')}
             className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer rounded-lg px-2.5 py-1.5"
             style={{
               color: 'var(--text-secondary)',
@@ -499,7 +499,7 @@ export default function App() {
               e.currentTarget.style.background = 'var(--bg-elevated)'
             }}
           >
-            <span aria-hidden="true">&larr;</span> Back
+            <span aria-hidden="true">&larr;</span> Back to Studio Home
           </button>
         </div>
       )}
