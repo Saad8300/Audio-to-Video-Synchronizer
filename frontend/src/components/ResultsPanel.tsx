@@ -21,28 +21,78 @@ function StatusBadge({ status }: { status: TimelineRow['status'] }) {
   return <span className="badge-error">✗ Error</span>
 }
 
+function cleanErrorMessage(msg: string): string {
+  // Clean up raw FastAPI / backend JSON errors into human-readable messages
+  if (msg.includes('Field required') && msg.includes('audio_files')) {
+    return 'Please upload a main audio file or Audio Parts ZIP.'
+  }
+  if (msg.includes('Field required') && (msg.includes('images_zip') || msg.includes('media_zip') || msg.includes('videos_zip'))) {
+    return 'Please upload the required ZIP file.'
+  }
+  if (msg.includes('Field required') && msg.includes('timeline_csv')) {
+    return 'Please upload the timeline CSV.'
+  }
+  if (msg.toLowerCase().includes('csv') && msg.toLowerCase().includes('format')) {
+    return 'CSV format issue. Please check the row shown in the error.'
+  }
+  if (msg.toLowerCase().includes('audio merge') || msg.toLowerCase().includes('merging audio')) {
+    return 'Audio merge failed. Please check your audio files and try again.'
+  }
+  // Strip raw JSON-like messages
+  if (msg.startsWith('{') || msg.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(msg)
+      if (parsed.detail) return String(parsed.detail)
+    } catch {}
+    return 'An error occurred. Please check your files and try again.'
+  }
+  return msg
+}
+
+function cleanWarningMessage(msg: string): string {
+  // Make "unused files" warnings less scary
+  if (
+    msg.toLowerCase().includes('not used') ||
+    msg.toLowerCase().includes('unused') ||
+    msg.toLowerCase().includes('not referenced')
+  ) {
+    return 'Some files in the ZIP were not used by the CSV. This is okay if you intentionally included extra files.'
+  }
+  return msg
+}
+
 function MessageList({ items, type }: { items: string[]; type: 'warning' | 'error' }) {
   if (!items.length) return null
   const isWarn = type === 'warning'
+  const cleanedItems = items.map(m => isWarn ? cleanWarningMessage(m) : cleanErrorMessage(m))
+  // Deduplicate cleaned messages
+  const uniqueItems = cleanedItems.filter((m, i) => cleanedItems.indexOf(m) === i)
+  // For warnings: show max 5 + collapsible
+  const SHOW_MAX = 5
+  const visibleItems = isWarn ? uniqueItems.slice(0, SHOW_MAX) : uniqueItems
+  const hiddenCount = isWarn ? Math.max(0, uniqueItems.length - SHOW_MAX) : 0
   return (
     <div
       className="rounded-xl p-4 space-y-2"
       style={{
-        background: isWarn ? 'var(--color-warning-bg)' : 'var(--color-error-bg)',
-        border: `1px solid ${isWarn ? 'var(--color-warning-border)' : 'var(--color-error-border)'}`,
+        background: isWarn ? 'var(--bg-elevated)' : 'var(--color-error-bg)',
+        border: `1px solid ${isWarn ? 'var(--border-subtle)' : 'var(--color-error-border)'}`,
       }}
     >
       <div className="flex items-center gap-2 text-xs font-bold" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)' }}>
         {isWarn ? <IconAlertTriangle size={13} /> : <IconX size={13} />}
-        {items.length} {isWarn ? 'Warning' : 'Error'}{items.length > 1 ? 's' : ''}
+        {isWarn ? `${uniqueItems.length} Note${uniqueItems.length > 1 ? 's' : ''}` : `${uniqueItems.length} Error${uniqueItems.length > 1 ? 's' : ''}`}
       </div>
       <ul className="space-y-1.5">
-        {items.map((msg, i) => (
-          <li key={i} className="text-xs flex items-start gap-2" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)', opacity: 0.9 }}>
-            <span className="shrink-0 mt-0.5 text-[10px]">·</span>
+        {visibleItems.map((msg, i) => (
+          <li key={i} className="text-xs flex items-start gap-2" style={{ color: isWarn ? 'var(--text-secondary)' : 'var(--color-error)', opacity: 0.9 }}>
+            <span className="shrink-0 mt-0.5 text-[10px]" style={{ color: isWarn ? 'var(--color-warning)' : 'var(--color-error)' }}>·</span>
             <span>{msg}</span>
           </li>
         ))}
+        {hiddenCount > 0 && (
+          <li className="text-[10px] italic" style={{ color: 'var(--text-muted)' }}>+ {hiddenCount} more</li>
+        )}
       </ul>
     </div>
   )

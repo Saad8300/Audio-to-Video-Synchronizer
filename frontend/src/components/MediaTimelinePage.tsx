@@ -13,6 +13,7 @@ import {
   IconFilm,
 } from './icons'
 import ProgressOverlay from './ProgressOverlay'
+import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
 import type {
   MediaTimelineSettings,
   GenerateStatus,
@@ -821,6 +822,17 @@ export default function MediaTimelinePage() {
           {/* Generate Button */}
           <div className="card p-5 space-y-4">
             <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Action</h2>
+
+            <PreflightCheck
+              checks={buildPreflightChecks({
+                audioLabel: audioInputMode === 'single' ? 'Main Audio' : 'Audio Parts ZIP',
+                audioReady: audioInputMode === 'single' ? !!audioFile : !!audioZip,
+                zipLabel: 'Media ZIP',
+                zipReady: !!mediaZip,
+                csvReady: !!timelineCsv,
+              })}
+            />
+
             <button
               onClick={handleGenerate}
               disabled={!isReady}
@@ -843,20 +855,12 @@ export default function MediaTimelinePage() {
                 <><IconLoader size={16} /> Uploading...</>
               ) : status === 'generating' ? (
                 <><IconLoader size={16} /> Generating...</>
+              ) : isReady ? (
+                <><IconSparkles size={16} /> Generate Video</>
               ) : (
-                <><IconSparkles size={16} /> {isReady ? 'Generate Media Timeline' : 'Waiting for files...'}</>
+                <>Select Required Files</>
               )}
             </button>
-            {isReady && status === 'idle' && (
-              <div className="space-y-1 mt-2">
-                <p className="text-[10px] text-center" style={{ color: 'var(--color-success)' }}>
-                  Ready to generate media timeline.
-                </p>
-                <p className="text-[10px] text-center px-2" style={{ color: 'var(--text-muted)' }}>
-                  Large Media Timeline projects may take longer to render depending on video clips, text overlays, and transitions.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* CSV Guide */}

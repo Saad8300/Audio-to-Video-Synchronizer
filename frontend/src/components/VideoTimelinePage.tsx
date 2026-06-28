@@ -15,6 +15,7 @@ import {
   IconX,
 } from './icons'
 import ProgressOverlay from './ProgressOverlay'
+import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
 import type {
   VideoTimelineSettings,
   AspectRatio,
@@ -880,6 +881,16 @@ export default function VideoTimelinePage() {
             <div className="card p-5 space-y-4">
               <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Action</h2>
 
+              <PreflightCheck
+                checks={buildPreflightChecks({
+                  audioLabel: audioInputMode === 'single' ? 'Main Audio' : 'Audio Parts ZIP',
+                  audioReady: audioInputMode === 'single' ? !!audioFile : !!audioZip,
+                  zipLabel: 'Videos ZIP',
+                  zipReady: !!videosZip,
+                  csvReady: !!csvFile,
+                })}
+              />
+
               {durationWarning && !isLoading && (
                 <div className="rounded-xl p-3.5 space-y-1" style={{ background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)' }}>
                   <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-warning)' }}>
@@ -911,21 +922,11 @@ export default function VideoTimelinePage() {
                 onMouseEnter={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(99,102,241,0.55)' }}
                 onMouseLeave={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
               >
-                {isLoading ? <><IconLoader size={18} className="animate-spin" />Generating…</> : <><IconZap size={18} />Generate Video Timeline</>}
+                {isLoading ? <><IconLoader size={18} className="animate-spin" />Generating…</> : canGenerate ? <><IconZap size={18} />Generate Video</> : <>Select Required Files</>}
               </button>
 
-              {/* Missing files note */}
-              {!canGenerate && !isLoading && (
-                <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
-                  {[{ label: 'Audio', hasFile: audioInputMode === 'single' ? !!audioFile : !!audioZip }, { label: 'Videos ZIP', hasFile: !!videosZip }, { label: 'CSV', hasFile: !!csvFile }]
-                    .filter(f => !f.hasFile)
-                    .map(f => (
-                      <span key={f.label} className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-error)' }}>
-                        <IconX size={10} /> {f.label} missing
-                      </span>
-                    ))}
-                </div>
-              )}
+
+
             </div>
 
             {/* CSV Guide */}

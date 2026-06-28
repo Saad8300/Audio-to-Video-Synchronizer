@@ -12,6 +12,7 @@ import MediaTimelinePage from './components/MediaTimelinePage'
 import StudioHomePage from './components/StudioHomePage'
 import AudioMergerPage from './components/AudioMergerPage'
 import ScriptTimestampPage from './components/ScriptTimestampPage'
+import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
 import {
   IconMusic,
   IconImage,
@@ -870,7 +871,20 @@ export default function App() {
 
             {/* Generate Button */}
             <div className="card p-5 space-y-4">
+              {/* Action card title */}
               <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Action</h2>
+              
+              {/* Preflight Check */}
+              <PreflightCheck
+                checks={buildPreflightChecks({
+                  audioLabel: audioInputMode === 'single' ? 'Main Audio' : 'Audio Parts ZIP',
+                  audioReady: audioInputMode === 'single' ? !!audioFile : !!audioZip,
+                  zipLabel: 'Images ZIP',
+                  zipReady: !!imagesZip,
+                  csvReady: !!csvFile,
+                })}
+              />
+
               <button
                 onClick={handleGenerate}
                 disabled={!canGenerate}
@@ -890,37 +904,15 @@ export default function App() {
                 onMouseLeave={e => { if (canGenerate) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(99,102,241,0.35)' }}
               >
                 {isLoading ? (
-                  <>
-                    <IconLoader size={18} className="animate-spin" />
-                    Generating…
-                  </>
+                  <><IconLoader size={18} className="animate-spin" />Generating…</>
+                ) : canGenerate ? (
+                  <><IconZap size={18} />Generate Video</>
                 ) : (
-                  <>
-                    <IconZap size={18} />
-                    Generate Video
-                  </>
+                  <>Select Required Files</>
                 )}
               </button>
 
-              {/* Missing files indicator */}
-              {!canGenerate && !isLoading && (
-                <div className="flex items-center gap-3 flex-wrap mt-3">
-                  {[
-                    { label: 'Audio',     hasFile: (audioInputMode === 'single' ? !!audioFile : !!audioZip) },
-                    { label: 'Images',    hasFile: !!imagesZip },
-                    { label: 'CSV',       hasFile: !!csvFile   },
-                  ].filter(f => !f.hasFile).map(f => (
-                    <span
-                      key={f.label}
-                      className="flex items-center gap-1 text-[10px]"
-                      style={{ color: 'var(--color-error)' }}
-                    >
-                      <span style={{ color: 'var(--color-error-border)' }}>✗</span>
-                      {f.label} missing
-                    </span>
-                  ))}
-                </div>
-              )}
+
             </div>
 
             {/* CSV Format Guide */}
