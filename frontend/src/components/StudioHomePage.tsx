@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   IconLayers,
   IconFilm,
@@ -7,11 +7,16 @@ import {
   IconMusic,
   IconFileText,
   IconVideo,
+  IconSettings,
   IconSparkles,
-  IconMonitor
+  IconMonitor,
+  IconZap,
+  IconCheck,
 } from './icons'
 
-function IconMicSmall({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
+// ── Inline SVG icons not in library ────────────────────────────────────────
+
+function IconMic({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
          stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>
@@ -22,267 +27,537 @@ function IconMicSmall({ size = 24, style }: { size?: number; style?: React.CSSPr
   )
 }
 
+function IconHistory({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M12 7v5l4 2"/>
+    </svg>
+  )
+}
+
+function IconSliders({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <line x1="4" x2="4" y1="21" y2="14"/>
+      <line x1="4" x2="4" y1="10" y2="3"/>
+      <line x1="12" x2="12" y1="21" y2="12"/>
+      <line x1="12" x2="12" y1="8" y2="3"/>
+      <line x1="20" x2="20" y1="21" y2="16"/>
+      <line x1="20" x2="20" y1="12" y2="3"/>
+      <line x1="1" x2="7" y1="14" y2="14"/>
+      <line x1="9" x2="15" y1="8" y2="8"/>
+      <line x1="17" x2="23" y1="16" y2="16"/>
+    </svg>
+  )
+}
+
+function IconArrowRight({ size = 16, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+    </svg>
+  )
+}
+
+function IconShield({ size = 16, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  )
+}
+
+function IconWifi({ size = 14, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+      <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+      <line x1="12" x2="12.01" y1="20" y2="20"/>
+    </svg>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export type ViewMode = 'home' | 'image' | 'video' | 'media' | 'audio_merger' | 'script_timestamp'
 
 interface Props {
   onSelectTool: (tool: ViewMode) => void
+  healthOk?: boolean | null
 }
 
-export default function StudioHomePage({ onSelectTool }: Props) {
+// Active tool definitions
+const ACTIVE_TOOLS: {
+  id: ViewMode
+  icon: React.ReactNode
+  title: string
+  desc: string
+  color: string
+  accentColor: string
+}[] = [
+  {
+    id: 'image',
+    icon: <IconLayers size={26} />,
+    title: 'Image Timeline',
+    desc: 'Create videos from images, main audio, and timestamp CSV files.',
+    color: 'rgba(99,102,241,0.12)',
+    accentColor: '#6366f1',
+  },
+  {
+    id: 'video',
+    icon: <IconFilm size={26} />,
+    title: 'Video Timeline',
+    desc: 'Create videos from reusable video clips and timeline CSV files.',
+    color: 'rgba(139,92,246,0.12)',
+    accentColor: '#8b5cf6',
+  },
+  {
+    id: 'media',
+    icon: <IconGrid size={26} />,
+    title: 'Media Timeline',
+    desc: 'Mix images, videos, and text-only rows in one flexible media timeline.',
+    color: 'rgba(59,130,246,0.12)',
+    accentColor: '#3b82f6',
+  },
+  {
+    id: 'audio_merger',
+    icon: <IconMusic size={26} />,
+    title: 'Audio Merger',
+    desc: 'Combine multiple audio files or audio parts ZIP into one clean track.',
+    color: 'rgba(16,185,129,0.12)',
+    accentColor: '#10b981',
+  },
+  {
+    id: 'script_timestamp',
+    icon: <IconMic size={26} />,
+    title: 'Script Timestamp',
+    desc: 'Transcribe voice audio and generate timestamped scripts and CSV files.',
+    color: 'rgba(245,158,11,0.12)',
+    accentColor: '#f59e0b',
+  },
+]
+
+// Coming soon tool definitions
+const COMING_SOON_TOOLS: {
+  icon: React.ReactNode
+  title: string
+  desc: string
+}[] = [
+  { icon: <IconType size={20} />,     title: 'Text to Speech',   desc: 'Generate narration audio from text scripts.' },
+  { icon: <IconSliders size={20} />,  title: 'Audio Mixer',      desc: 'Mix voice audio with background music and export.' },
+  { icon: <IconFileText size={20} />, title: 'CSV Helper',       desc: 'Validate, preview, and fix timeline CSV files.' },
+  { icon: <IconVideo size={20} />,    title: 'Media Converter',  desc: 'Prepare images, videos, and audio for timeline generation.' },
+  { icon: <IconHistory size={20} />,  title: 'Output History',   desc: 'View recent generated videos and open output files quickly.' },
+  { icon: <IconSettings size={20} />, title: 'Settings',         desc: 'Manage app preferences, export defaults, and saved presets.' },
+]
+
+// Workflow steps
+const WORKFLOW_STEPS = [
+  { n: '1', label: 'Prepare Audio',   sub: 'Record or export your voiceover as MP3 or WAV' },
+  { n: '2', label: 'Prepare ZIP',     sub: 'Collect your images or video clips in a ZIP' },
+  { n: '3', label: 'Build CSV',       sub: 'Use Script Timestamp or hand-craft timing CSV' },
+  { n: '4', label: 'Generate Video',  sub: 'Pick a timeline tool and hit generate' },
+  { n: '5', label: 'Review Output',   sub: 'Preview the rendered MP4 in the results panel' },
+]
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function StudioHomePage({ onSelectTool, healthOk }: Props) {
+  const [toast, setToast] = useState<string | null>(null)
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2200)
+  }
+
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 pb-24 space-y-8 animate-fade-in">
-      
-      {/* ── Hero Section ── */}
-      <div className="text-center space-y-4 max-w-2xl mx-auto pt-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-2" 
-             style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-          <IconSparkles size={14} style={{ color: 'var(--accent-primary)' }} />
-          <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: 'var(--accent-primary)' }}>
-            SyncFrame Studio
-          </span>
+    <div className="flex-1 w-full animate-fade-in" style={{ position: 'relative' }}>
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed', top: 72, left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+            borderRadius: 12, padding: '10px 20px', zIndex: 999,
+            color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          🚧 {toast}
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gradient">
-          Studio Home
-        </h1>
-        <p className="text-sm sm:text-base leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-          Choose a tool to create videos, manage audio, and build timeline-based content locally.
-          SyncFrame Studio helps you create videos from images, video clips, text, and audio timelines — all running securely on your machine.
-        </p>
-        
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <span className="text-[11px] font-medium px-2.5 py-1 rounded-md" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
-            Local Processing
-          </span>
-          <span className="text-[11px] font-medium px-2.5 py-1 rounded-md" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
-            Timeline Tools
-          </span>
-          <span className="text-[11px] font-medium px-2.5 py-1 rounded-md" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
-            Audio & Video
-          </span>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════
+          HERO SECTION
+      ═══════════════════════════════════════════════════════ */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.05) 50%, transparent 100%)',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        {/* Background glow orbs */}
+        <div style={{
+          position: 'absolute', top: -80, left: -80, width: 320, height: 320,
+          borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.12), transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', top: -40, right: -60, width: 240, height: 240,
+          borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20 relative">
+          {/* Brand pill */}
+          <div className="flex justify-center mb-6">
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+            >
+              <IconSparkles size={13} style={{ color: 'var(--accent-primary)' }} />
+              <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: 'var(--accent-primary)' }}>
+                SyncFrame Studio
+              </span>
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="text-center space-y-4 max-w-3xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-gradient leading-tight">
+              Create synchronized<br />videos faster
+            </h1>
+            <p className="text-base sm:text-lg leading-relaxed mx-auto max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+              A local video automation studio for building videos from audio, images, video clips, media timelines, and CSV timing files.
+            </p>
+
+            {/* CTA buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+              <button
+                onClick={() => onSelectTool('image')}
+                className="inline-flex items-center gap-2 rounded-xl font-bold text-sm px-5 py-3 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  color: '#fff',
+                  boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
+                  border: 'none',
+                }}
+              >
+                <IconLayers size={16} /> Start Image Timeline
+              </button>
+              <button
+                onClick={() => onSelectTool('media')}
+                className="inline-flex items-center gap-2 rounded-xl font-semibold text-sm px-5 py-3 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-default)',
+                }}
+              >
+                <IconGrid size={16} /> Open Media Timeline
+              </button>
+            </div>
+
+            {/* Status badges */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              {[
+                { icon: <IconShield size={12} />, label: 'Runs locally' },
+                { icon: <IconShield size={12} />, label: 'No cloud upload' },
+                { icon: <IconZap size={12} />, label: '4K export ready' },
+              ].map(b => (
+                <span
+                  key={b.label}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full"
+                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}
+                >
+                  {b.icon} {b.label}
+                </span>
+              ))}
+              <span
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                style={{
+                  background: healthOk ? 'rgba(34,197,94,0.12)' : healthOk === false ? 'rgba(239,68,68,0.10)' : 'var(--bg-elevated)',
+                  color: healthOk ? '#22c55e' : healthOk === false ? '#ef4444' : 'var(--text-muted)',
+                  border: `1px solid ${healthOk ? 'rgba(34,197,94,0.30)' : healthOk === false ? 'rgba(239,68,68,0.25)' : 'var(--border-subtle)'}`,
+                }}
+              >
+                <span
+                  style={{
+                    width: 7, height: 7, borderRadius: '50%',
+                    background: healthOk ? '#22c55e' : healthOk === false ? '#ef4444' : 'var(--text-muted)',
+                    display: 'inline-block',
+                    animation: healthOk ? 'ping 1.5s cubic-bezier(0,0,0.2,1) infinite' : undefined,
+                  }}
+                />
+                {healthOk === null || healthOk === undefined ? 'Connecting…' : healthOk ? 'Backend live' : 'Backend offline'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Active Tools ── */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <IconMonitor size={18} style={{ color: 'var(--text-primary)' }} />
-          <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Active Tools</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {/* Image Timeline */}
-          <button
-            onClick={() => onSelectTool('image')}
-            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
-            style={{ cursor: 'pointer', outline: 'none' }}
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-              <IconLayers size={24} style={{ color: 'var(--accent-primary)' }} />
-            </div>
-            <div className="flex-1 flex flex-col items-center gap-2 w-full">
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Image Timeline</h3>
-              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Create videos from images, audio, and timestamp CSV files.
-              </p>
-            </div>
-            <div className="w-full mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
-                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-                Open Image Timeline &rarr;
-              </div>
-            </div>
-          </button>
+      {/* ═══════════════════════════════════════════════════════
+          ACTIVE TOOLS GRID
+      ═══════════════════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
-          {/* Video Timeline */}
-          <button
-            onClick={() => onSelectTool('video')}
-            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
-            style={{ cursor: 'pointer', outline: 'none' }}
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-              <IconFilm size={24} style={{ color: 'var(--accent-primary)' }} />
+        <section>
+          <div className="flex items-center gap-2.5 mb-6">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+            >
+              <IconMonitor size={15} style={{ color: 'var(--accent-primary)' }} />
             </div>
-            <div className="flex-1 flex flex-col items-center gap-2 w-full">
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Video Timeline</h3>
-              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Build videos from reusable video clips, main audio, and timeline CSV files.
-              </p>
-            </div>
-            <div className="w-full mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
-                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-                Open Video Timeline &rarr;
-              </div>
-            </div>
-          </button>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Active Tools</h2>
+            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>
+              {ACTIVE_TOOLS.length} Ready
+            </span>
+          </div>
 
-          {/* Media Timeline */}
-          <button
-            onClick={() => onSelectTool('media')}
-            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
-            style={{ cursor: 'pointer', outline: 'none' }}
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-              <IconGrid size={24} style={{ color: 'var(--accent-primary)' }} />
-            </div>
-            <div className="flex-1 flex flex-col items-center gap-2 w-full">
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Media Timeline</h3>
-              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Mix images, videos, and text rows using one timeline CSV.
-              </p>
-            </div>
-            <div className="w-full mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
-                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-                Open Media Timeline &rarr;
-              </div>
-            </div>
-          </button>
-          {/* Audio Merger */}
-          <button
-            onClick={() => onSelectTool('audio_merger' as any)}
-            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
-            style={{ cursor: 'pointer', outline: 'none' }}
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-              <IconMusic size={24} style={{ color: 'var(--accent-primary)' }} />
-            </div>
-            <div className="flex-1 flex flex-col items-center gap-2 w-full">
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Audio Merger</h3>
-              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Combine multiple audio parts into one clean narration track.
-              </p>
-            </div>
-            <div className="w-full mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
-                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-                Open Audio Merger &rarr;
-              </div>
-            </div>
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {ACTIVE_TOOLS.map(tool => (
+              <ActiveToolCard
+                key={tool.id}
+                tool={tool}
+                onClick={() => onSelectTool(tool.id)}
+              />
+            ))}
+          </div>
+        </section>
 
-          {/* Script Timestamp */}
-          <button
-            onClick={() => onSelectTool('script_timestamp')}
-            className="group card text-center p-6 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-1"
-            style={{ cursor: 'pointer', outline: 'none' }}
-          >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                 style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}>
-              <IconMicSmall size={24} style={{ color: 'var(--accent-primary)' }} />
+        {/* ═══════════════════════════════════════════════════════
+            WORKFLOW SECTION
+        ═══════════════════════════════════════════════════════ */}
+        <section>
+          <div className="flex items-center gap-2.5 mb-6">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+            >
+              <IconZap size={15} style={{ color: 'var(--text-muted)' }} />
             </div>
-            <div className="flex-1 flex flex-col items-center gap-2 w-full">
-              <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Script Timestamp</h3>
-              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Transcribe voice audio and generate timestamped scripts, captions, and timeline-ready text.
-              </p>
-            </div>
-            <div className="w-full mt-auto">
-              <div className="text-xs font-semibold text-center py-2 rounded-lg transition-all"
-                   style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-                Open Script Timestamp &rarr;
-              </div>
-            </div>
-          </button>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Recommended Workflow</h2>
+            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {WORKFLOW_STEPS.map((step, i) => (
+              <div
+                key={step.n}
+                className="card p-4 flex flex-col gap-2.5 relative"
+                style={{ borderLeft: i < WORKFLOW_STEPS.length - 1 ? undefined : undefined }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      color: '#fff',
+                    }}
+                  >
+                    {step.n}
                   </div>
+                  {i < WORKFLOW_STEPS.length - 1 && (
+                    <div className="hidden sm:flex flex-1 items-center justify-end absolute right-[-8px] top-[18px] z-10">
+                      <IconArrowRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{step.label}</p>
+                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: 'var(--text-muted)' }}>{step.sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════
+            COMING SOON TOOLS
+        ═══════════════════════════════════════════════════════ */}
+        <section>
+          <div className="flex items-center gap-2.5 mb-6">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+            >
+              <IconSparkles size={15} style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-secondary)' }}>Coming Soon</h2>
+            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+              In Development
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {COMING_SOON_TOOLS.map(tool => (
+              <button
+                key={tool.title}
+                onClick={() => showToast(`${tool.title} — Coming soon`)}
+                className="card p-4 flex flex-col items-center text-center gap-2.5 transition-all duration-200 hover:scale-[1.02] group"
+                style={{ opacity: 0.65, cursor: 'pointer', outline: 'none' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all group-hover:opacity-100"
+                  style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)' }}
+                >
+                  <div style={{ color: 'var(--text-muted)' }}>{tool.icon}</div>
+                </div>
+                <div>
+                  <p className="text-xs font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>{tool.title}</p>
+                  <p className="text-[10px] mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>{tool.desc}</p>
+                </div>
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+                >
+                  Coming Soon
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════
+            SYSTEM STATUS
+        ═══════════════════════════════════════════════════════ */}
+        <section className="pb-10">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+            >
+              <IconWifi size={14} style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>System Status</h2>
+            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              {
+                label: 'Backend API',
+                value: healthOk === null || healthOk === undefined ? 'Connecting…' : healthOk ? 'Online' : 'Offline',
+                ok: healthOk,
+              },
+              { label: 'Frontend', value: 'Running', ok: true },
+              { label: 'Processing Mode', value: 'Local Only', ok: true },
+              { label: 'FFmpeg', value: 'Required', ok: null },
+            ].map(item => (
+              <div
+                key={item.label}
+                className="card p-4 flex flex-col gap-1.5"
+              >
+                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>
+                  {item.label}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    style={{
+                      width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
+                      background: item.ok === true ? '#22c55e' : item.ok === false ? '#ef4444' : 'var(--text-muted)',
+                    }}
+                  />
+                  <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
       </div>
-
-
-      {/* ── Coming Soon Tools ── */}
-      <div className="space-y-4 pt-8">
-        <div className="flex items-center gap-2 mb-4">
-          <IconSparkles size={18} style={{ color: 'var(--text-muted)' }} />
-          <h2 className="text-lg font-bold" style={{ color: 'var(--text-muted)' }}>Coming Soon</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          
-          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                   style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
-                <IconType size={20} style={{ color: 'var(--text-muted)' }} />
-              </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                Coming Soon
-              </span>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Text to Speech</h3>
-              <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
-                Generate voice audio from text for video projects.
-              </p>
-            </div>
-          </div>
-
-
-
-          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                   style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
-                <IconMusic size={20} style={{ color: 'var(--text-muted)' }} />
-              </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                Coming Soon
-              </span>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Audio Mixer</h3>
-              <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
-                Mix voice audio with background music and export.
-              </p>
-            </div>
-          </div>
-
-          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                   style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
-                <IconFileText size={20} style={{ color: 'var(--text-muted)' }} />
-              </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                Coming Soon
-              </span>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>CSV Helper</h3>
-              <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
-                Create, validate, and fix timeline CSV files.
-              </p>
-            </div>
-          </div>
-
-          <div className="card p-5 flex flex-col items-center text-center gap-3 opacity-60 grayscale-[30%]">
-            <div className="flex flex-col items-center gap-2 w-full">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                   style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)' }}>
-                <IconVideo size={20} style={{ color: 'var(--text-muted)' }} />
-              </div>
-              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                Coming Soon
-              </span>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Media Tools</h3>
-              <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--text-muted)' }}>
-                Prepare, convert, compress, and organize media.
-              </p>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
     </div>
+  )
+}
+
+// ── Active Tool Card ──────────────────────────────────────────────────────────
+
+function ActiveToolCard({
+  tool,
+  onClick,
+}: {
+  tool: typeof ACTIVE_TOOLS[number]
+  onClick: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="group flex flex-col gap-4 text-left rounded-2xl p-5 transition-all duration-250"
+      style={{
+        cursor: 'pointer',
+        outline: 'none',
+        background: hovered
+          ? `linear-gradient(145deg, ${tool.color}, rgba(0,0,0,0))`
+          : 'var(--bg-card)',
+        border: hovered
+          ? `1px solid ${tool.accentColor}40`
+          : '1px solid var(--border-subtle)',
+        boxShadow: hovered
+          ? `0 8px 32px ${tool.accentColor}22, 0 2px 8px rgba(0,0,0,0.2)`
+          : '0 1px 3px rgba(0,0,0,0.15)',
+        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+      }}
+    >
+      {/* Icon + status */}
+      <div className="flex items-start justify-between w-full">
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform duration-200"
+          style={{
+            background: `${tool.accentColor}18`,
+            border: `1px solid ${tool.accentColor}35`,
+            color: tool.accentColor,
+            transform: hovered ? 'scale(1.08)' : 'scale(1)',
+          }}
+        >
+          {tool.icon}
+        </div>
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1"
+          style={{
+            background: 'rgba(34,197,94,0.12)',
+            color: '#22c55e',
+            border: '1px solid rgba(34,197,94,0.25)',
+          }}
+        >
+          <IconCheck size={9} /> Ready
+        </span>
+      </div>
+
+      {/* Text */}
+      <div className="flex-1 space-y-1.5">
+        <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+          {tool.title}
+        </h3>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+          {tool.desc}
+        </p>
+      </div>
+
+      {/* Open CTA */}
+      <div
+        className="flex items-center gap-1.5 text-xs font-semibold transition-all duration-200"
+        style={{ color: hovered ? tool.accentColor : 'var(--text-muted)' }}
+      >
+        Open tool <IconArrowRight size={13} />
+      </div>
+    </button>
   )
 }

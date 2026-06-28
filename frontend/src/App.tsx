@@ -480,7 +480,7 @@ export default function App() {
           PAGE CONTENT — switches between modes
       ════════════════════════════════════════════════════════════ */}
       {activeView === 'home' ? (
-        <StudioHomePage onSelectTool={handleModeChange} />
+        <StudioHomePage onSelectTool={handleModeChange} healthOk={healthOk} />
       ) : (
         <>
 
