@@ -1984,12 +1984,48 @@ def api_clear_completed_batch_jobs():
     cleared = batch_queue_store.clear_completed_jobs()
     return JSONResponse(content={"cleared": cleared})
 
+@app.delete("/api/batch/jobs/failed")
+def api_clear_failed_batch_jobs():
+    cleared = batch_queue_store.clear_failed_jobs()
+    return JSONResponse(content={"cleared": cleared})
+
+@app.delete("/api/batch/jobs/cancelled")
+def api_clear_cancelled_batch_jobs():
+    cleared = batch_queue_store.clear_cancelled_jobs()
+    return JSONResponse(content={"cleared": cleared})
+
+@app.delete("/api/batch/jobs")
+def api_clear_all_batch_jobs():
+    cleared = batch_queue_store.clear_all_jobs()
+    return JSONResponse(content={"cleared": cleared})
+
 @app.delete("/api/batch/jobs/{job_id}")
 def api_delete_batch_job(job_id: str):
     success = batch_queue_store.delete_job(job_id)
     if not success:
         raise HTTPException(status_code=404, detail="Job not found")
     return JSONResponse(content={"success": True})
+
+@app.post("/api/batch/jobs/{job_id}/move-up")
+def api_move_job_up(job_id: str):
+    success = batch_queue_store.move_job_up(job_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot move job up")
+    return JSONResponse(content={"success": True})
+
+@app.post("/api/batch/jobs/{job_id}/move-down")
+def api_move_job_down(job_id: str):
+    success = batch_queue_store.move_job_down(job_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot move job down")
+    return JSONResponse(content={"success": True})
+
+@app.post("/api/batch/jobs/{job_id}/duplicate")
+def api_duplicate_batch_job(job_id: str):
+    new_job = batch_queue_store.duplicate_job(job_id)
+    if not new_job:
+        raise HTTPException(status_code=404, detail="Job not found or could not be duplicated")
+    return JSONResponse(content={"job": new_job})
 
 # ── Batch Queue Control Endpoints ─────────────────────────────────────────────
 
@@ -2015,22 +2051,14 @@ def api_stop_batch_queue():
 
 @app.post("/api/batch/retry-failed")
 def api_retry_failed_batch_jobs():
-    jobs = batch_queue_store.get_all_jobs()
-    failed_jobs = [j for j in jobs if j.get("status") == "failed"]
-    count = 0
-    for j in failed_jobs:
-        batch_queue_store.update_job(j["id"], {"status": "queued", "progress": 0, "message": "Retrying"})
-        count += 1
+    count = batch_queue_store.retry_failed_jobs()
     return JSONResponse(content={"retried_count": count})
 
 @app.post("/api/batch/jobs/{job_id}/retry")
 def api_retry_single_batch_job(job_id: str):
-    job = batch_queue_store.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    if job.get("status") not in ["failed", "cancelled", "completed"]:
-        raise HTTPException(status_code=400, detail="Only failed, cancelled, or completed jobs can be retried.")
-    batch_queue_store.update_job(job_id, {"status": "queued", "progress": 0, "message": "Retrying"})
+    success = batch_queue_store.retry_job(job_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Only failed or cancelled jobs can be retried.")
     return JSONResponse(content={"success": True})
 
 @app.get("/outputs/{path:path}")

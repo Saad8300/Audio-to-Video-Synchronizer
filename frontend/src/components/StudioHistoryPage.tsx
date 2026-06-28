@@ -284,13 +284,20 @@ export default function StudioHistoryPage() {
 
                       {/* Tool badge */}
                       <td className="px-5 py-3.5">
-                        <span
-                          className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg"
-                          style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
-                        >
-                          {meta.icon}
-                          {meta.label}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg shrink-0"
+                            style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
+                          >
+                            {meta.icon}
+                            {meta.label}
+                          </span>
+                          {item.from_batch_queue && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }} title="Generated via Batch Queue">
+                              Batch Queue
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Filename */}

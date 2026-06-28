@@ -387,3 +387,20 @@ def get_state():
             "stopping": runner_state.stopping,
             "message": runner_state.message
         }
+
+# Recover stuck jobs on startup
+def _recover_stuck_jobs():
+    try:
+        jobs = batch_queue_store.get_all_jobs()
+        for j in jobs:
+            if j.get("status") == "running":
+                logger.info(f"Recovering stuck job {j.get('id')} to failed status.")
+                batch_queue_store.update_job(j["id"], {
+                    "status": "failed", 
+                    "message": "Interrupted by backend restart",
+                    "progress": 0
+                })
+    except Exception as e:
+        logger.error(f"Failed to recover stuck jobs: {e}")
+
+_recover_stuck_jobs()

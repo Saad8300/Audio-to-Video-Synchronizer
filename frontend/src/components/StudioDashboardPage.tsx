@@ -12,7 +12,7 @@ import {
   IconSparkles,
   IconArrowRight,
 } from './icons'
-import { getHistory } from '../utils/api'
+import { getHistory, getBatchStats } from '../utils/api'
 import StudioPageHeader from './StudioPageHeader'
 
 // ── Tiny inline icons not in icons.tsx ──────────────────────────────────────
@@ -347,13 +347,20 @@ function EmptyDashboard() {
 
 export default function StudioDashboardPage() {
   const [records, setRecords] = useState<HistoryRecord[]>([])
+  const [batchStats, setBatchStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(() => {
     setLoading(true)
-    getHistory()
-      .then(data => { setRecords(data); setLoading(false) })
-      .catch(() => setLoading(false))
+    Promise.all([
+      getHistory().catch(() => []),
+      getBatchStats().catch(() => ({}))
+    ])
+      .then(([historyData, batchData]) => { 
+        setRecords(historyData)
+        setBatchStats(batchData)
+        setLoading(false) 
+      })
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -604,6 +611,29 @@ export default function StudioDashboardPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Batch Queue Stats */}
+              {batchStats && (
+                <div className="card p-5 space-y-3">
+                  <h2 className="text-sm font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Batch Queue Status</h2>
+                  
+                  {[
+                    { label: 'Total Jobs', count: batchStats.total || 0, color: '#94a3b8' },
+                    { label: 'Queued', count: batchStats.queued || 0, color: '#3b82f6' },
+                    { label: 'Running', count: batchStats.running || 0, color: '#a855f7' },
+                    { label: 'Completed', count: batchStats.completed || 0, color: '#10b981' },
+                    { label: 'Failed', count: batchStats.failed || 0, color: '#ef4444' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between py-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
+                      </div>
+                      <span className="text-xs font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

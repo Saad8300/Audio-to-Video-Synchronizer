@@ -768,6 +768,37 @@ export async function clearCompletedBatchJobs(): Promise<void> {
   if (!res.ok) throw new Error("Failed to clear completed jobs")
 }
 
+export async function clearFailedBatchJobs(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/failed`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to clear failed jobs")
+}
+
+export async function clearCancelledBatchJobs(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/cancelled`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to clear cancelled jobs")
+}
+
+export async function clearAllBatchJobs(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to clear all jobs")
+}
+
+export async function moveBatchJobUp(id: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${id}/move-up`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to move job up")
+}
+
+export async function moveBatchJobDown(id: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${id}/move-down`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to move job down")
+}
+
+export async function duplicateBatchJob(id: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${id}/duplicate`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to duplicate job")
+  return res.json()
+}
+
 // ---------------------------------------------------------------------------
 // Batch Queue Runner API (Batch 15C)
 // ---------------------------------------------------------------------------
