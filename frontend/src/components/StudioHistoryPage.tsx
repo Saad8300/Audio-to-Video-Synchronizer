@@ -59,7 +59,7 @@ export default function StudioHistoryPage() {
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8">
+    <div className="w-full px-5 sm:px-8 py-8 space-y-8 animate-fade-in" style={{ maxWidth: 1280 }}>
       
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

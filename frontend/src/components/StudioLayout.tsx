@@ -112,8 +112,10 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        {children}
+      <div className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto min-h-screen">
+        <div className="w-full h-full">
+          {children}
+        </div>
       </div>
       
     </div>

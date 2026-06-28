@@ -11,7 +11,7 @@ import {
 
 export default function StudioHelpPage() {
   return (
-    <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+    <div className="w-full px-5 sm:px-8 py-8 space-y-8 animate-fade-in" style={{ maxWidth: 900 }}>
       <header className="mb-8">
         <h1 className="text-2xl font-black mb-2" style={{ color: 'var(--text-primary)' }}>Help & Guide</h1>
         <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>

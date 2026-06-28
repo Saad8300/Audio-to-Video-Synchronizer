@@ -78,7 +78,7 @@ const ACTIVE_TOOLS: {
 
 export default function StudioToolsPage({ onSelectTool }: Props) {
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div className="w-full px-5 sm:px-8 py-8 space-y-8 animate-fade-in" style={{ maxWidth: 1280 }}>
       
       <header>
         <h1 className="text-2xl font-black mb-2" style={{ color: 'var(--text-primary)' }}>Tools</h1>
