@@ -631,7 +631,7 @@ def generate_video(
     use_intro     = intro_path is not None and os.path.isfile(intro_path)
     use_outro     = outro_path is not None and os.path.isfile(outro_path)
     use_music     = enable_bg_music and bg_music_path is not None and os.path.isfile(bg_music_path)
-    use_watermark = enable_watermark and bool(watermark_text.strip())
+    use_watermark = False
     use_motion    = effective_motion != "none"
 
     # ── Performance warnings ──────────────────────────────────────────────────

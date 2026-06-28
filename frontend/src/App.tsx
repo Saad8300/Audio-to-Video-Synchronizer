@@ -60,17 +60,6 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   enableBgMusic:    false,
   musicVolume:      12,
   musicFade:        true,
-  // Batch 3 — watermark
-  enableWatermark:       false,
-  watermarkText:         '',
-  watermarkPositionMode: 'preset',
-  watermarkCoordinateMode: 'design_canvas',
-  watermarkPosition:     'white_default',
-  watermarkX:            50,
-  watermarkY:            50,
-  watermarkOpacity:      65,
-  watermarkSize:         20,
-  watermarkMargin:       36,
 }
 
 // ── Theme helpers ───────────────────────────────────────────────────────────
@@ -398,7 +387,6 @@ export default function App() {
   }, [])
 
   // Derived
-  const hasEnhancements = introFile || outroFile || bgMusicFile || settings.watermarkText.trim()
 
   if (activeView === 'landing') {
     return <LandingPage onEnterStudio={() => setActiveView('tools')} onViewTools={() => setActiveView('tools')} />

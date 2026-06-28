@@ -375,7 +375,7 @@ export default function StudioHelpPage() {
             {[
               { step: 'Step 1 — Script Timestamp', desc: 'Record your voiceover. Upload it to Script Timestamp. Generate a SyncFrame Timeline CSV with timestamps.', color: '#f59e0b', icon: <IconMic size={13} /> },
               { step: 'Step 2 — Image / Video Timeline', desc: 'Prepare your images or video clips named 1.jpg, 2.jpg (or 1.mp4, 2.mp4). Upload them + your audio + the timestamp CSV into Image Timeline or Video Timeline.', color: '#8b5cf6', icon: <IconFilm size={13} /> },
-              { step: 'Step 3 — Configure Settings', desc: 'Set Aspect Ratio (9:16 for Shorts/TikTok), Resolution (1080p), transitions, watermark, and output filename.', color: '#6366f1', icon: <IconSettings size={13} /> },
+              { step: 'Step 3 — Configure Settings', desc: 'Set Aspect Ratio (9:16 for Shorts/TikTok), Resolution (1080p), transitions, and output filename.', color: '#6366f1', icon: <IconSettings size={13} /> },
               { step: 'Step 4 — Generate', desc: 'Click Generate and wait. The export runs locally. You can monitor progress in the results panel.', color: '#10b981', icon: <IconZap size={13} /> },
               { step: 'Step 5 — Audio Merger (optional)', desc: 'If your voiceover is split into parts, merge them with Audio Merger before uploading to the timeline.', color: '#06b6d4', icon: <IconMusic size={13} /> },
               { step: 'Step 6 — Download + Review History', desc: 'Download your export from the results panel. Check History to track all your exports and re-download if needed.', color: '#94a3b8', icon: <IconHistory size={13} /> },

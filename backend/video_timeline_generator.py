@@ -845,7 +845,7 @@ def generate_video_timeline(
         profile  = PROFILE_SETTINGS.get(render_profile, PROFILE_SETTINGS["balanced"])
         fps      = profile["fps"]
         t_dur    = max(0.1, min(float(transition_duration), 2.0))
-        use_wm   = bool(watermark_text.strip())
+        use_wm = False
         use_intro = intro_path is not None and os.path.isfile(intro_path)
         use_outro = outro_path is not None and os.path.isfile(outro_path)
 

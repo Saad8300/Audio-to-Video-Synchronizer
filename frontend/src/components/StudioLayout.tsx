@@ -37,13 +37,11 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
   }, [collapsed])
 
   const tabs: { id: StudioTab; label: string; icon: ReactNode }[] = [
-    { id: 'tools',     label: 'Tools',       icon: <IconZap size={17} /> },
-    { id: 'batch_video', label: 'Batch',       icon: <IconLayers size={17} /> },
     { id: 'dashboard', label: 'Dashboard',   icon: <IconDashboard size={17} /> },
+    { id: 'tools',     label: 'Tools',       icon: <IconZap size={17} /> },
     { id: 'history',   label: 'History',     icon: <IconHistory size={17} /> },
     { id: 'templates', label: 'Templates',   icon: <IconLayers size={17} /> },
     { id: 'settings',  label: 'Settings',    icon: <IconSettings size={17} /> },
-    { id: 'help',      label: 'Help',        icon: <IconHelpCircle size={17} /> },
   ]
 
   const handleNav = (tab: StudioTab) => {

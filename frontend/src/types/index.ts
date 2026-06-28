@@ -21,9 +21,6 @@ export type Transition       =
   | 'flash'
 export type ZoomEffect       = 'none' | 'slow_zoom_in'
 export type RenderProfile    = 'fast_preview' | 'balanced' | 'high_quality'
-export type WatermarkPosition     = 'white_default' | 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right' | 'center'
-export type WatermarkPositionMode = 'preset' | 'custom'
-export type WatermarkCoordinateMode = 'design_canvas' | 'final_pixels'
 
 // ── Batch 9A — new motion / style types ─────────────────────────────────────
 
@@ -88,17 +85,6 @@ export interface GenerateSettings {
   musicVolume:   number    // 0–100 (integer percentage)
   musicFade:     boolean
 
-  // Batch 3 — watermark
-  enableWatermark:         boolean
-  watermarkText:           string
-  watermarkPositionMode:   WatermarkPositionMode
-  watermarkCoordinateMode: WatermarkCoordinateMode
-  watermarkPosition:       WatermarkPosition
-  watermarkX:            number
-  watermarkY:            number
-  watermarkOpacity:      number   // 10–100 (integer percentage in UI, /100 before sending)
-  watermarkSize:         number   // 1-100 numeric slider
-  watermarkMargin:       number   // 10–100 px
 }
 
 export interface TimelineRow {
@@ -171,17 +157,6 @@ export interface VideoTimelineSettings {
   backgroundMusicLoop:   boolean
   backgroundMusicFade:   boolean
 
-  // Batch 10C — watermark
-  enableWatermark:         boolean
-  watermarkText:           string
-  watermarkPositionMode:   WatermarkPositionMode
-  watermarkCoordinateMode: WatermarkCoordinateMode
-  watermarkPosition:       WatermarkPosition
-  watermarkX:            number
-  watermarkY:            number
-  watermarkOpacity:      number
-  watermarkSize:         number
-  watermarkMargin:       number
 
   // Batch 10C — intro / outro
   enableIntro:  boolean
@@ -229,16 +204,6 @@ export interface MediaTimelineSettings {
   backgroundMusicVolume: number
   backgroundMusicLoop:   boolean
   backgroundMusicFade:   boolean
-  enableWatermark:         boolean
-  watermarkText:           string
-  watermarkPositionMode:   WatermarkPositionMode
-  watermarkCoordinateMode: WatermarkCoordinateMode
-  watermarkPosition:       WatermarkPosition
-  watermarkX:            number
-  watermarkY:            number
-  watermarkOpacity:      number
-  watermarkSize:         number
-  watermarkMargin:       number
   enableIntro:           boolean
   enableOutro:           boolean
 }

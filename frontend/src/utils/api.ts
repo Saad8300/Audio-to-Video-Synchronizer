@@ -98,18 +98,6 @@ export async function startJob(
   form.append('effect_strength',  settings.effectStrength)
   form.append('style_preset',     settings.stylePreset)
 
-  // Watermark (Batch 3)
-  const watermarkActive = settings.watermarkText.trim().length > 0
-  form.append('enable_watermark',        watermarkActive ? 'true' : 'false')
-  form.append('watermark_text',          settings.watermarkText)
-  form.append('watermark_position_mode', settings.watermarkPositionMode)
-  form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
-  form.append('watermark_position',      settings.watermarkPosition)
-  form.append('watermark_x',             String(settings.watermarkX))
-  form.append('watermark_y',             String(settings.watermarkY))
-  form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
-  form.append('watermark_size',          String(settings.watermarkSize))
-  form.append('watermark_margin',        String(settings.watermarkMargin))
 
   // Background music (Batch 2)
   const musicActive = !!bgMusicFile
@@ -178,18 +166,6 @@ export async function createImageTimelineBatchJob(
   form.append('effect_strength',  settings.effectStrength)
   form.append('style_preset',     settings.stylePreset)
 
-  // Watermark
-  const watermarkActive = settings.watermarkText.trim().length > 0
-  form.append('enable_watermark',        watermarkActive ? 'true' : 'false')
-  form.append('watermark_text',          settings.watermarkText)
-  form.append('watermark_position_mode', settings.watermarkPositionMode)
-  form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
-  form.append('watermark_position',      settings.watermarkPosition)
-  form.append('watermark_x',             String(settings.watermarkX))
-  form.append('watermark_y',             String(settings.watermarkY))
-  form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
-  form.append('watermark_size',          String(settings.watermarkSize))
-  form.append('watermark_margin',        String(settings.watermarkMargin))
 
   // Background music
   const musicActive = !!bgMusicFile
@@ -271,20 +247,6 @@ export async function createVideoTimelineBatchJob(
   form.append('background_music_loop',   String(settings.backgroundMusicLoop))
   form.append('background_music_fade',   String(settings.backgroundMusicFade))
 
-  // Watermark
-  const wmActive = settings.watermarkText.trim().length > 0
-  if (wmActive) {
-    form.append('watermark_text',          settings.watermarkText)
-    form.append('watermark_position_mode', settings.watermarkPositionMode)
-    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
-    form.append('watermark_position',      settings.watermarkPosition)
-    form.append('watermark_x',             String(settings.watermarkX))
-    form.append('watermark_y',             String(settings.watermarkY))
-    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
-    form.append('watermark_size',          String(settings.watermarkSize))
-    form.append('watermark_margin',        String(settings.watermarkMargin))
-  }
-
   const res = await fetch(`${BASE_URL}/api/batch/jobs/video-timeline`, {
     method: 'POST',
     body: form,
@@ -324,16 +286,6 @@ export async function createMediaTimelineBatchJob(
     transitionDuration: string
     visualEffect:     string
     effectStrength:   string
-    enableWatermark:       boolean
-    watermarkText:         string
-    watermarkPositionMode: string
-    watermarkCoordinateMode: string
-    watermarkPosition:     string
-    watermarkX:            number
-    watermarkY:            number
-    watermarkOpacity:      number
-    watermarkSize:         number
-    watermarkMargin:       number
     enableIntro:           boolean
     enableOutro:           boolean
     motionStyle:           string
@@ -386,18 +338,6 @@ export async function createMediaTimelineBatchJob(
   form.append('background_music_volume', String(settings.backgroundMusicVolume))
   form.append('background_music_loop',   String(settings.backgroundMusicLoop))
   form.append('background_music_fade',   String(settings.backgroundMusicFade))
-
-  if (settings.watermarkText.trim().length > 0) {
-    form.append('watermark_text',          settings.watermarkText)
-    form.append('watermark_position_mode', settings.watermarkPositionMode)
-    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
-    form.append('watermark_position',      settings.watermarkPosition)
-    form.append('watermark_x',             String(settings.watermarkX))
-    form.append('watermark_y',             String(settings.watermarkY))
-    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
-    form.append('watermark_size',          String(settings.watermarkSize))
-    form.append('watermark_margin',        String(settings.watermarkMargin))
-  }
 
   if (introFile) form.append('intro_file', introFile)
   if (outroFile) form.append('outro_file', outroFile)
@@ -500,20 +440,6 @@ export async function startVideoTimelineJob(
   form.append('background_music_loop',   String(settings.backgroundMusicLoop))
   form.append('background_music_fade',   String(settings.backgroundMusicFade))
 
-  // Batch 10C — watermark (auto-enable when text exists)
-  const wmActive = settings.watermarkText.trim().length > 0
-  if (wmActive) {
-    form.append('watermark_text',          settings.watermarkText)
-    form.append('watermark_position_mode', settings.watermarkPositionMode)
-    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
-    form.append('watermark_position',      settings.watermarkPosition)
-    form.append('watermark_x',             String(settings.watermarkX))
-    form.append('watermark_y',             String(settings.watermarkY))
-    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
-    form.append('watermark_size',          String(settings.watermarkSize))
-    form.append('watermark_margin',        String(settings.watermarkMargin))
-  }
-
   const res = await fetch(`${BASE_URL}/api/jobs/start-video-timeline`, {
     method: 'POST',
     body: form,
@@ -592,16 +518,6 @@ export async function startMediaTimelineJob(
     transitionDuration: string
     visualEffect:     string
     effectStrength:   string
-    enableWatermark:       boolean
-    watermarkText:         string
-    watermarkPositionMode: string
-    watermarkCoordinateMode: string
-    watermarkPosition:     string
-    watermarkX:            number
-    watermarkY:            number
-    watermarkOpacity:      number
-    watermarkSize:         number
-    watermarkMargin:       number
     enableIntro:           boolean
     enableOutro:           boolean
     motionStyle:           string
@@ -660,19 +576,6 @@ export async function startMediaTimelineJob(
 
   if (introFile) form.append('intro_file', introFile)
   if (outroFile) form.append('outro_file', outroFile)
-
-  const wmActive = settings.watermarkText.trim().length > 0
-  if (wmActive) {
-    form.append('watermark_text',          settings.watermarkText)
-    form.append('watermark_position_mode', settings.watermarkPositionMode)
-    form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
-    form.append('watermark_position',      settings.watermarkPosition)
-    form.append('watermark_x',             String(settings.watermarkX))
-    form.append('watermark_y',             String(settings.watermarkY))
-    form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
-    form.append('watermark_size',          String(settings.watermarkSize))
-    form.append('watermark_margin',        String(settings.watermarkMargin))
-  }
 
   const res = await fetch(`${BASE_URL}/api/jobs/start-media-timeline`, {
     method: 'POST',

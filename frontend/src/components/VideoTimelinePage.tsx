@@ -30,8 +30,6 @@ import type {
   EffectStrength,
   MotionEffect,
   MotionIntensity,
-  WatermarkPosition,
-  WatermarkPositionMode,
   GenerateStatus,
   JobStatus,
   GenerateResponse,
@@ -57,17 +55,6 @@ const DEFAULT_SETTINGS: VideoTimelineSettings = {
   transitionDuration:  '0.5',
   visualEffect:        'none',
   effectStrength:      'medium',
-  // Watermark
-  enableWatermark:       false,
-  watermarkText:         '',
-  watermarkPositionMode: 'preset',
-  watermarkCoordinateMode: 'design_canvas',
-  watermarkPosition:     'white_default',
-  watermarkX:            50,
-  watermarkY:            50,
-  watermarkOpacity:      65,
-  watermarkSize:         20,
-  watermarkMargin:       36,
   // Batch 12A — Motion
   motionStyle:         'none',
   motionIntensity:     'medium',
@@ -212,7 +199,6 @@ function VideoTimelineResult({
     `Fill: ${settings.fillMode}`,
     ...(settings.transition !== 'none' ? [`Trans: ${settings.transition.replace('_', ' ')}`] : []),
     ...(settings.visualEffect !== 'none' ? [`Style: ${settings.visualEffect.replace('_', ' ')}`] : []),
-    ...(settings.watermarkText.trim() ? ['Watermark: on'] : []),
     ...(settings.enableIntro ? ['Intro: on'] : []),
     ...(settings.enableOutro ? ['Outro: on'] : []),
     ...(settings.motionStyle !== 'none' ? [`Motion: ${settings.motionStyle.replace(/_/g, ' ')}`] : []),
@@ -231,7 +217,6 @@ function VideoTimelineResult({
       ...(result.visual_duration ? [`Duration: ${result.visual_duration.toFixed(2)}s`] : []),
       ...(settings.transition !== 'none' ? [`Trans: ${settings.transition.replace('_', ' ')}`] : []),
       ...(settings.visualEffect !== 'none' ? [`Style: ${settings.visualEffect.replace('_', ' ')}`] : []),
-      ...(settings.watermarkText.trim() || settings.enableIntro || settings.enableOutro ? ['Extras: on'] : []),
     ]
   }
 
@@ -381,10 +366,7 @@ export default function VideoTimelinePage() {
     setOutroFile(f)
     set('enableOutro', !!f)
   }
-  // Auto-enable watermark when text typed
   const handleWmTextChange = (text: string) => {
-    set('watermarkText', text)
-    set('enableWatermark', text.trim().length > 0)
   }
 
   // Duration warnings

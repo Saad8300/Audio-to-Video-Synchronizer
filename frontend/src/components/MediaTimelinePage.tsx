@@ -47,16 +47,6 @@ const DEFAULT_SETTINGS: MediaTimelineSettings = {
   transitionDuration:  '0.5',
   visualEffect:        'none',
   effectStrength:      'medium',
-  enableWatermark:       false,
-  watermarkText:         '',
-  watermarkPositionMode: 'preset',
-  watermarkCoordinateMode: 'design_canvas',
-  watermarkPosition:     'white_default',
-  watermarkX:            50,
-  watermarkY:            50,
-  watermarkOpacity:      65,
-  watermarkSize:         20,
-  watermarkMargin:       36,
   // Batch 12A
   motionStyle:         'none',
   motionIntensity:     'medium',
@@ -219,7 +209,6 @@ function MediaTimelineResult({
   if (settings.transition !== 'none') chips.push(`Trans: ${settings.transition.replace('_', ' ')}`)
   if (settings.visualEffect !== 'none') chips.push(`Style: ${settings.visualEffect.replace('_', ' ')}`)
   chips.push(
-    ...(settings.watermarkText.trim() ? ['Watermark: on'] : []),
     ...(settings.enableIntro ? ['Intro: on'] : []),
     ...(settings.enableOutro ? ['Outro: on'] : []),
     ...(settings.motionStyle !== 'none' ? [`Motion: ${settings.motionStyle.replace(/_/g, ' ')}`] : []),
@@ -341,8 +330,6 @@ export default function MediaTimelinePage() {
     set('enableOutro', !!f)
   }
   const handleWmTextChange = (text: string) => {
-    set('watermarkText', text)
-    set('enableWatermark', text.trim().length > 0)
   }
 
   const disabled = status === 'uploading' || status === 'generating' || status === 'cancelling'
