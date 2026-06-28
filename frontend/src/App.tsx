@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import FileDropZone from './components/FileDropZone'
 import CsvGuide from './components/CsvGuide'
-import ToolPageHeader from './components/ToolPageHeader'
+import StudioPageHeader from './components/StudioPageHeader'
 import ResultsPanel from './components/ResultsPanel'
 import ProgressOverlay from './components/ProgressOverlay'
 import { type AppMode } from './components/AppModeSwitcher'
@@ -30,6 +30,7 @@ import {
   IconZap,
   IconSparkles,
   IconVideo,
+  IconLayers,
 } from './components/icons'
 import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } from './types'
 import { checkHealth, startJob } from './utils/api'
@@ -502,10 +503,10 @@ export default function App() {
 
       {activeView === 'tool:image' && (
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
-                <ToolPageHeader
-                  icon={<IconImage size={24} />}
+                <StudioPageHeader
+                  icon={<IconLayers size={17} />}
                   title="Image Timeline"
-                  description="Create videos from images, audio, and timestamp CSV files."
+                  subtitle="Create videos from images, audio, and timestamp CSV files."
                 />
                 <div className="flex flex-col xl:flex-row gap-6 items-start mt-6">
         

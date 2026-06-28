@@ -10,7 +10,7 @@ import {
   IconChevronDown,
   IconChevronRight
 } from './icons'
-import ToolPageHeader from './ToolPageHeader'
+import StudioPageHeader from './StudioPageHeader'
 import { loadSettings } from '../utils/appSettings'
 import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
@@ -310,10 +310,10 @@ export default function ScriptTimestampPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 space-y-6 animate-fade-in">
-      <ToolPageHeader
-        icon={<IconMic size={24} />}
+      <StudioPageHeader
+        icon={<IconMic size={17} />}
         title="Script Timestamp"
-        description="Upload voice audio and generate timestamped text for videos, captions, and timeline workflows."
+        subtitle="Generate timestamps, scene plans, and transcripts automatically using local Whisper AI."
       />
 
       {errorMsg && (

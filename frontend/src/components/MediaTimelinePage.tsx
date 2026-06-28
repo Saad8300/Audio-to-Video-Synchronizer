@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
-import ToolPageHeader from './ToolPageHeader'
+import StudioPageHeader from './StudioPageHeader'
 import {
   IconGrid,
   IconMusic,
@@ -419,10 +419,10 @@ export default function MediaTimelinePage() {
 
   return (
     <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 animate-fade-in">
-      <ToolPageHeader
-        icon={<IconGrid size={24} />}
+      <StudioPageHeader
+        icon={<IconGrid size={17} />}
         title="Media Timeline"
-        description="Mix images, videos, and text rows using one timeline CSV."
+        subtitle="Mix images, videos, and text rows using one timeline CSV."
       />
       <div className="flex flex-col xl:flex-row gap-6 items-start mt-6">
 

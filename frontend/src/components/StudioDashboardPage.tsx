@@ -13,6 +13,7 @@ import {
   IconArrowRight,
 } from './icons'
 import { getHistory } from '../utils/api'
+import StudioPageHeader from './StudioPageHeader'
 
 // ── Tiny inline icons not in icons.tsx ──────────────────────────────────────
 
@@ -395,28 +396,19 @@ export default function StudioDashboardPage() {
   return (
     <div className="w-full px-5 sm:px-8 py-8 space-y-8 animate-fade-in" style={{ maxWidth: 1280 }}>
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)' }}>
-              <IconDashboard size={16} />
+      <StudioPageHeader
+        icon={<IconDashboard size={16} />}
+        title="Dashboard"
+        subtitle="Your local SyncFrame Studio analytics and export activity."
+        actions={
+          hasActivity ? (
+            <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)' }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-breathe" />
+              {stats.total_exports} export{stats.total_exports !== 1 ? 's' : ''}
             </div>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              Dashboard
-            </h1>
-          </div>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Your local SyncFrame Studio analytics — all stored in your browser.
-          </p>
-        </div>
-        {hasActivity && (
-          <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)' }}>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-breathe" />
-            {stats.total_exports} total export{stats.total_exports !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       {/* ── Loading State ── */}
       {loading && (

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "hist_537f7c87b881",
+    "created_at": "2026-06-28T15:51:12.802813Z",
+    "tool": "audio_merger",
+    "tool_label": "Audio Merger",
+    "output_name": "merged_audio.wav",
+    "output_type": "audio",
+    "output_url": "/outputs/audio/merged_audio.wav",
+    "file_extension": "wav",
+    "duration_seconds": 196.18,
+    "resolution": null,
+    "aspect_ratio": null,
+    "render_profile": null,
+    "file_size_bytes": 34606230,
+    "status": "completed",
+    "metadata": {
+      "parts_merged": 2
+    }
+  }
+]

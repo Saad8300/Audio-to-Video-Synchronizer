@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import ToolPageHeader from './ToolPageHeader'
+import StudioPageHeader from './StudioPageHeader'
 import {
   IconVideo,
   IconMusic,
   IconFileText,
-  IconArrowRight
+  IconArrowRight,
+  IconLayers
 } from './icons'
 
 function IconPlus({ size = 24, className = '' }: { size?: number, className?: string }) {
@@ -153,9 +154,10 @@ export default function StudioTemplatesPage({ onUseTemplate }: StudioTemplatesPa
 
   return (
     <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-10">
-      <ToolPageHeader
+      <StudioPageHeader
+        icon={<IconLayers size={17} />}
         title="Templates"
-        description="Start faster with local workflow presets for videos, audio, and timestamps."
+        subtitle="Start faster with local workflow presets for videos, audio, and timestamps."
       />
 
       {/* Saved Templates */}

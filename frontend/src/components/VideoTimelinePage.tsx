@@ -1,7 +1,7 @@
 // components/VideoTimelinePage.tsx — Video Timeline workflow (Batch 10B + 10C)
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
-import ToolPageHeader from './ToolPageHeader'
+import StudioPageHeader from './StudioPageHeader'
 import {
   IconMusic,
   IconVideo,
@@ -560,10 +560,10 @@ export default function VideoTimelinePage() {
       )}
 
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 animate-fade-in">
-        <ToolPageHeader
-          icon={<IconVideo size={24} />}
+        <StudioPageHeader
+          icon={<IconFilm size={17} />}
           title="Video Timeline"
-          description="Build videos from reusable video clips, main audio, and timeline CSV files."
+          subtitle="Build videos from reusable video clips, main audio, and timeline CSV files."
         />
         <div className="flex flex-col xl:flex-row gap-6 items-start mt-6">
 

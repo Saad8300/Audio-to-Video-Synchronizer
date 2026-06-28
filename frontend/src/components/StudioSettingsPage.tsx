@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { IconSun, IconMoon, IconSettings, IconMonitor } from './icons'
 import { AppSettings, loadSettings, saveSettings, resetSettings, applyThemeMode, ThemeMode, AccentColor, StartupPage, ExportPreset } from '../utils/appSettings'
+import StudioPageHeader from './StudioPageHeader'
 
 export default function StudioSettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -32,12 +33,11 @@ export default function StudioSettingsPage() {
   return (
     <div className="w-full px-5 sm:px-8 py-8 space-y-8 pb-20 animate-fade-in" style={{ maxWidth: 900 }}>
       
-      <header>
-        <h1 className="text-2xl font-black mb-2" style={{ color: 'var(--text-primary)' }}>Settings</h1>
-        <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-          Customize SyncFrame Studio preferences for your local workflow.
-        </p>
-      </header>
+      <StudioPageHeader
+        icon={<IconSettings size={17} />}
+        title="Settings"
+        subtitle="Customize SyncFrame Studio preferences for your local workflow."
+      />
 
       <div className="space-y-6">
         
