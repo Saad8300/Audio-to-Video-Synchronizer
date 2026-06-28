@@ -39,7 +39,7 @@ const OUTPUT_MODES: { value: string; label: string; desc: string }[] = [
   { value: 'detailed', label: 'Detailed Timestamp Script', desc: '[0:00 - 0:04] Line here' },
   { value: 'scene',    label: 'Scene Plan', desc: 'Scene 1 | 0:00 - 0:04 | Line here' },
   { value: 'srt',      label: 'SRT Captions', desc: 'Standard subtitle format' },
-  { value: 'csv',      label: 'Timeline CSV', desc: 'start,end,text — for SyncFrame timelines' },
+  { value: 'csv',      label: 'Image Timeline CSV', desc: 'TXT preview + Image Timeline CSV using 1.jpg, 2.jpg, 3.jpg…' },
 ]
 
 const MODELS = [
@@ -87,6 +87,43 @@ function formatBytes(bytes: number) {
 function formatDuration(s: number) {
   const m = Math.floor(s / 60), sec = Math.floor(s % 60)
   return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
+/** Format seconds as MM:SS or HH:MM:SS for CSV export */
+function secsToTimecode(totalSec: number): string {
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = Math.floor(totalSec % 60)
+  if (h > 0) {
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+  }
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+}
+
+/** Build the readable bracket-format TXT preview from segments */
+function buildImageTimelinePreview(segments: { start: number; end: number; text: string }[]): string {
+  return segments
+    .filter(s => s.text.trim())
+    .map(s => {
+      const start = formatDuration(s.start)
+      const end = formatDuration(s.end)
+      return `[${start} - ${end}] ${s.text.trim()}`
+    })
+    .join('\n')
+}
+
+/** Build Image Timeline CSV from segments (image,start,end,text) */
+function buildImageTimelineCsv(segments: { start: number; end: number; text: string }[]): string {
+  const filtered = segments.filter(s => s.text.trim())
+  const rows = filtered.map((s, i) => {
+    const image = `${i + 1}.jpg`
+    const start = secsToTimecode(s.start)
+    const end = secsToTimecode(s.end)
+    // Escape text: wrap in double-quotes, escape inner double-quotes by doubling
+    const safeText = `"${s.text.trim().replace(/"/g, '""')}"`
+    return `${image},${start},${end},${safeText}`
+  })
+  return ['image,start,end,text', ...rows].join('\n')
 }
 
 export default function ScriptTimestampPage() {
@@ -234,8 +271,12 @@ export default function ScriptTimestampPage() {
   }, [status, jobId])
 
   const handleCopy = async () => {
-    if (!result?.text) return
-    await navigator.clipboard.writeText(result.text)
+    if (!result) return
+    // For Image Timeline CSV mode, copy the readable TXT preview
+    const textToCopy = (outputMode === 'csv' && result.segments?.length)
+      ? buildImageTimelinePreview(result.segments)
+      : result.text
+    await navigator.clipboard.writeText(textToCopy)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -533,7 +574,13 @@ export default function ScriptTimestampPage() {
               <div>
                 <label className="form-label mb-2">Output</label>
                 <textarea
-                  readOnly value={result.text}
+                  readOnly
+                  value={
+                    // Image Timeline CSV mode: show readable TXT preview, not raw CSV
+                    outputMode === 'csv' && result.segments?.length
+                      ? buildImageTimelinePreview(result.segments)
+                      : result.text
+                  }
                   className="w-full text-xs font-mono rounded-xl p-3 resize-y"
                   style={{ minHeight: 180, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
                            color: 'var(--text-primary)', lineHeight: 1.7 }}
@@ -548,7 +595,15 @@ export default function ScriptTimestampPage() {
                   {copied ? 'Copied!' : 'Copy Output'}
                 </button>
 
-                <button onClick={() => downloadAs(result.text, `${baseName}.txt`)}
+                <button onClick={() => {
+                  const now = new Date()
+                  const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
+                  // For Image Timeline CSV mode: TXT download = readable bracket preview
+                  const txtContent = (outputMode === 'csv' && result.segments?.length)
+                    ? buildImageTimelinePreview(result.segments)
+                    : result.text
+                  downloadAs(txtContent, `script_timestamp_${ts}.txt`)
+                }}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                         style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
                   <IconDownload size={13} /> Download TXT
@@ -564,12 +619,17 @@ export default function ScriptTimestampPage() {
                 {(result.output_format === 'csv' || result.format === 'csv') && (
                   <button onClick={() => {
                     const now = new Date()
-                    const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
-                    let csvContent = result.text
-                    if (!csvContent.includes('start,end,text')) {
-                      csvContent = 'start,end,text\n' + csvContent
-                    }
-                    downloadAs(csvContent, `script_timestamp_${timestamp}.csv`, 'text/csv')
+                    const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
+                    // Build proper Image Timeline CSV from raw segments if available
+                    const csvContent = result.segments?.length
+                      ? buildImageTimelineCsv(result.segments)
+                      : (() => {
+                          // Fallback: if no segments, wrap raw text with header
+                          let c = result.text
+                          if (!c.includes('image,start,end,text')) c = 'image,start,end,text\n' + c
+                          return c
+                        })()
+                    downloadAs(csvContent, `script_timestamp_${ts}.csv`, 'text/csv')
                   }}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download CSV
@@ -640,9 +700,11 @@ export default function ScriptTimestampPage() {
             </p>
             <div className="rounded-lg p-3 text-xs"
                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
-              <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>💡 Timeline CSV Tip</p>
+              <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>💡 Image Timeline CSV Tip</p>
               <p style={{ color: 'var(--text-muted)' }}>
-                Use Visual Beat + Timeline CSV output for the fastest workflow with SyncFrame's Image or Media Timeline tools.
+                Use Visual Beat + Image Timeline CSV output for the fastest image-sync workflow.
+                The CSV downloads with auto-numbered image names: 1.jpg, 2.jpg, 3.jpg…
+                Just name your images the same way inside the Images ZIP.
               </p>
             </div>
           </div>

@@ -593,17 +593,18 @@ async def jobs_start_script_timestamp(
                 state["progress"] = 98
 
             final_text = format_output(res["segments"], output_format)
-            
+
             with _jobs_lock:
                 state["status"] = "completed"
                 state["progress"] = 100
                 state["current_step"] = "Complete"
                 state["finished_at"] = time.time()
-                # Store results in timeline_report for now so frontend can read it via status
+                # Store results in timeline_report so frontend can read it via status
                 state["timeline_report"] = [
                     {
                         "type": "script_timestamp_result",
                         "text": final_text,
+                        "segments": res.get("segments", []),
                         "model": res.get("model_name", model_name),
                         "model_name": res.get("model_name", model_name),
                         "model_label": res.get("model_name", model_name),
