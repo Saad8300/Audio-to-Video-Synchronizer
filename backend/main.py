@@ -44,6 +44,7 @@ from media_timeline_generator import generate_media_timeline, MediaTimelineCance
 from utils import seconds_to_mmss, FORMAT_DIMENSIONS
 from audio_helpers import prepare_single_audio, prepare_zip_audio, merge_audio_parts_in_order
 from transcription_helpers import transcribe_audio_backend, format_output
+import history_store
 
 def make_clean_filename(raw_name: str, default_name: str, extension: str) -> str:
     name = raw_name.strip() if raw_name and raw_name.strip() else default_name
@@ -428,6 +429,22 @@ async def jobs_start(
                         state["progress"]          = 100
                         state["output_video_url"]  = f"/outputs/{output_filename}"
                         logger.info(f"Final MP4 audio stream verified: true")
+                        try:
+                            history_store.add_history(
+                                tool="image_timeline",
+                                tool_label="Image Timeline",
+                                output_name=output_filename,
+                                output_type="video",
+                                output_url=f"/outputs/{output_filename}",
+                                file_extension="mp4",
+                                duration_seconds=result.get("duration", 0),
+                                resolution=export_resolution,
+                                aspect_ratio=aspect_ratio,
+                                render_profile=render_profile,
+                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to add history: {e}")
                 else:
                     state["status"]       = "failed"
                     state["current_step"] = "Failed"
@@ -599,6 +616,35 @@ async def jobs_start_script_timestamp(
                 state["progress"] = 98
 
             final_text = format_output(res["segments"], output_format)
+            
+            # Save file to outputs
+            ext = "csv" if output_format == "csv" else "srt" if output_format == "srt" else "txt"
+            out_name = make_clean_filename("", "transcript", f".{ext}")
+            out_dir = OUTPUTS_DIR / "text"
+            out_dir.mkdir(exist_ok=True)
+            out_path = out_dir / out_name
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(final_text)
+
+            try:
+                history_store.add_history(
+                    tool="script_timestamp",
+                    tool_label="Script Timestamp",
+                    output_name=out_name,
+                    output_type="text",
+                    output_url=f"/outputs/text/{out_name}",
+                    file_extension=ext,
+                    duration_seconds=res.get("duration", 0),
+                    file_size_bytes=os.path.getsize(out_path),
+                    metadata={
+                        "segments_count": len(res.get("segments", [])),
+                        "language": res.get("language", language),
+                        "model_name": res.get("model_name", model_name),
+                        "output_format": output_format
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to add history: {e}")
 
             with _jobs_lock:
                 state["status"] = "completed"
@@ -884,6 +930,22 @@ async def jobs_start_video_timeline(
                         state["progress"]         = 100
                         state["output_video_url"] = f"/outputs/{output_filename}"
                         logger.info(f"Final MP4 audio stream verified: true")
+                        try:
+                            history_store.add_history(
+                                tool="video_timeline",
+                                tool_label="Video Timeline",
+                                output_name=output_filename,
+                                output_type="video",
+                                output_url=f"/outputs/{output_filename}",
+                                file_extension="mp4",
+                                duration_seconds=result.get("duration", 0),
+                                resolution=export_resolution,
+                                aspect_ratio=aspect_ratio,
+                                render_profile=render_profile,
+                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to add history: {e}")
                 else:
                     state["status"]       = "failed"
                     state["current_step"] = "Failed"
@@ -1152,6 +1214,22 @@ async def jobs_start_media_timeline(
                         state["progress"]         = 100
                         state["output_video_url"] = f"/outputs/{output_filename}"
                         logger.info(f"Final MP4 audio stream verified: true")
+                        try:
+                            history_store.add_history(
+                                tool="media_timeline",
+                                tool_label="Media Timeline",
+                                output_name=output_filename,
+                                output_type="video",
+                                output_url=f"/outputs/{output_filename}",
+                                file_extension="mp4",
+                                duration_seconds=result.get("duration", 0),
+                                resolution=export_resolution,
+                                aspect_ratio=aspect_ratio,
+                                render_profile=render_profile,
+                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to add history: {e}")
                 else:
                     state["status"]       = "failed"
                     state["current_step"] = "Failed"
@@ -1342,6 +1420,21 @@ async def audio_merge(
         
         duration, meta = merge_audio_parts_in_order(audio_paths, final_path, fmt)
         
+        try:
+            history_store.add_history(
+                tool="audio_merger",
+                tool_label="Audio Merger",
+                output_name=final_filename,
+                output_type="audio",
+                output_url=f"/outputs/audio/{final_filename}",
+                file_extension=fmt,
+                duration_seconds=duration,
+                file_size_bytes=os.path.getsize(final_path) if os.path.exists(final_path) else None,
+                metadata={"parts_merged": meta["parts_merged"]}
+            )
+        except Exception as e:
+            logger.error(f"Failed to add history: {e}")
+
         return JSONResponse({
             "url": f"/outputs/audio/{final_filename}",
             "filename": final_filename,
@@ -1358,6 +1451,47 @@ async def audio_merge(
             shutil.rmtree(str(job_temp), ignore_errors=True)
         except:
             pass
+# ---------------------------------------------------------------------------
+# HISTORY ROUTES
+# ---------------------------------------------------------------------------
+
+@app.get("/api/history")
+def get_history():
+    try:
+        return JSONResponse(content={"records": history_store.get_all_history()})
+    except Exception as e:
+        logger.error(f"Error getting history: {e}")
+        return JSONResponse(status_code=500, content={"detail": "Failed to load history"})
+
+@app.get("/api/history/stats")
+def get_history_stats():
+    try:
+        return JSONResponse(content=history_store.get_stats())
+    except Exception as e:
+        logger.error(f"Error getting history stats: {e}")
+        return JSONResponse(status_code=500, content={"detail": "Failed to load history stats"})
+
+@app.delete("/api/history/{history_id}")
+def delete_history_item(history_id: str):
+    try:
+        deleted = history_store.delete_history_item(history_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="History item not found")
+        return JSONResponse(content={"success": True})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting history item: {e}")
+        return JSONResponse(status_code=500, content={"detail": "Failed to delete history item"})
+
+@app.delete("/api/history")
+def clear_all_history():
+    try:
+        history_store.clear_history()
+        return JSONResponse(content={"success": True})
+    except Exception as e:
+        logger.error(f"Error clearing history: {e}")
+        return JSONResponse(status_code=500, content={"detail": "Failed to clear history"})
 
 @app.get("/outputs/{path:path}")
 async def serve_output(path: str):
@@ -1368,6 +1502,15 @@ async def serve_output(path: str):
         
     mime_type, _ = mimetypes.guess_type(str(file_path))
     if not mime_type:
-        mime_type = "video/mp4" if path.endswith(".mp4") else "audio/wav"
+        if path.endswith(".mp4"):
+            mime_type = "video/mp4"
+        elif path.endswith(".mp3"):
+            mime_type = "audio/mpeg"
+        elif path.endswith(".csv"):
+            mime_type = "text/csv"
+        elif path.endswith(".txt") or path.endswith(".srt"):
+            mime_type = "text/plain"
+        else:
+            mime_type = "audio/wav"
         
     return FileResponse(str(file_path), media_type=mime_type)

@@ -398,3 +398,30 @@ export async function startMediaTimelineJob(
 
   return res.json() as Promise<{ job_id: string }>
 }
+
+// ---------------------------------------------------------------------------
+// History API (Batch 14B)
+// ---------------------------------------------------------------------------
+
+export async function getHistory(): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/history`)
+  if (!res.ok) throw new Error("Failed to load history")
+  const data = await res.json()
+  return data.records || []
+}
+
+export async function getHistoryStats(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/history/stats`)
+  if (!res.ok) throw new Error("Failed to load history stats")
+  return res.json()
+}
+
+export async function deleteHistoryItem(id: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/history/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to delete history item")
+}
+
+export async function clearHistory(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/history`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to clear history")
+}
