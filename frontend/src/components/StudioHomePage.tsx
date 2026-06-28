@@ -108,15 +108,15 @@ const ACTIVE_TOOLS: {
     icon: <IconLayers size={26} />,
     title: 'Image Timeline',
     desc: 'Create videos from images, main audio, and timestamp CSV files.',
-    color: 'rgba(99,102,241,0.12)',
-    accentColor: '#6366f1',
+    color: 'rgba(6,182,212,0.12)', // Cyan
+    accentColor: '#06b6d4',
   },
   {
     id: 'video',
     icon: <IconFilm size={26} />,
     title: 'Video Timeline',
     desc: 'Create videos from reusable video clips and timeline CSV files.',
-    color: 'rgba(139,92,246,0.12)',
+    color: 'rgba(139,92,246,0.12)', // Violet
     accentColor: '#8b5cf6',
   },
   {
@@ -124,15 +124,15 @@ const ACTIVE_TOOLS: {
     icon: <IconGrid size={26} />,
     title: 'Media Timeline',
     desc: 'Mix images, videos, and text-only rows in one flexible media timeline.',
-    color: 'rgba(59,130,246,0.12)',
-    accentColor: '#3b82f6',
+    color: 'rgba(99,102,241,0.12)', // Indigo
+    accentColor: '#6366f1',
   },
   {
     id: 'audio_merger',
     icon: <IconMusic size={26} />,
     title: 'Audio Merger',
     desc: 'Combine multiple audio files or audio parts ZIP into one clean track.',
-    color: 'rgba(16,185,129,0.12)',
+    color: 'rgba(16,185,129,0.12)', // Emerald
     accentColor: '#10b981',
   },
   {
@@ -140,7 +140,7 @@ const ACTIVE_TOOLS: {
     icon: <IconMic size={26} />,
     title: 'Script Timestamp',
     desc: 'Transcribe voice audio and generate timestamped scripts and CSV files.',
-    color: 'rgba(245,158,11,0.12)',
+    color: 'rgba(245,158,11,0.12)', // Amber
     accentColor: '#f59e0b',
   },
 ]
@@ -159,14 +159,7 @@ const COMING_SOON_TOOLS: {
   { icon: <IconSettings size={20} />, title: 'Settings',         desc: 'Manage app preferences, export defaults, and saved presets.' },
 ]
 
-// Workflow steps
-const WORKFLOW_STEPS = [
-  { n: '1', label: 'Prepare Audio',   sub: 'Record or export your voiceover as MP3 or WAV' },
-  { n: '2', label: 'Prepare ZIP',     sub: 'Collect your images or video clips in a ZIP' },
-  { n: '3', label: 'Build CSV',       sub: 'Use Script Timestamp or hand-craft timing CSV' },
-  { n: '4', label: 'Generate Video',  sub: 'Pick a timeline tool and hit generate' },
-  { n: '5', label: 'Review Output',   sub: 'Preview the rendered MP4 in the results panel' },
-]
+
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -242,32 +235,6 @@ export default function StudioHomePage({ onSelectTool, healthOk }: Props) {
               A local video automation studio for building videos from audio, images, video clips, media timelines, and CSV timing files.
             </p>
 
-            {/* CTA buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-              <button
-                onClick={() => onSelectTool('image')}
-                className="inline-flex items-center gap-2 rounded-xl font-bold text-sm px-5 py-3 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
-                style={{
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  color: '#fff',
-                  boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
-                  border: 'none',
-                }}
-              >
-                <IconLayers size={16} /> Start Image Timeline
-              </button>
-              <button
-                onClick={() => onSelectTool('media')}
-                className="inline-flex items-center gap-2 rounded-xl font-semibold text-sm px-5 py-3 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-default)',
-                }}
-              >
-                <IconGrid size={16} /> Open Media Timeline
-              </button>
-            </div>
 
             {/* Status badges */}
             <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
@@ -322,9 +289,6 @@ export default function StudioHomePage({ onSelectTool, healthOk }: Props) {
             </div>
             <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Active Tools</h2>
             <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>
-              {ACTIVE_TOOLS.length} Ready
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -338,52 +302,7 @@ export default function StudioHomePage({ onSelectTool, healthOk }: Props) {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════
-            WORKFLOW SECTION
-        ═══════════════════════════════════════════════════════ */}
-        <section>
-          <div className="flex items-center gap-2.5 mb-6">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
-            >
-              <IconZap size={15} style={{ color: 'var(--text-muted)' }} />
-            </div>
-            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>Recommended Workflow</h2>
-            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {WORKFLOW_STEPS.map((step, i) => (
-              <div
-                key={step.n}
-                className="card p-4 flex flex-col gap-2.5 relative"
-                style={{ borderLeft: i < WORKFLOW_STEPS.length - 1 ? undefined : undefined }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0"
-                    style={{
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                      color: '#fff',
-                    }}
-                  >
-                    {step.n}
-                  </div>
-                  {i < WORKFLOW_STEPS.length - 1 && (
-                    <div className="hidden sm:flex flex-1 items-center justify-end absolute right-[-8px] top-[18px] z-10">
-                      <IconArrowRight size={12} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{step.label}</p>
-                  <p className="text-[11px] mt-0.5 leading-snug" style={{ color: 'var(--text-muted)' }}>{step.sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* ═══════════════════════════════════════════════════════
             COMING SOON TOOLS
@@ -432,52 +351,7 @@ export default function StudioHomePage({ onSelectTool, healthOk }: Props) {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════
-            SYSTEM STATUS
-        ═══════════════════════════════════════════════════════ */}
-        <section className="pb-10">
-          <div className="flex items-center gap-2.5 mb-5">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
-            >
-              <IconWifi size={14} style={{ color: 'var(--text-muted)' }} />
-            </div>
-            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>System Status</h2>
-            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
-          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              {
-                label: 'Backend API',
-                value: healthOk === null || healthOk === undefined ? 'Connecting…' : healthOk ? 'Online' : 'Offline',
-                ok: healthOk,
-              },
-              { label: 'Frontend', value: 'Running', ok: true },
-              { label: 'Processing Mode', value: 'Local Only', ok: true },
-              { label: 'FFmpeg', value: 'Required', ok: null },
-            ].map(item => (
-              <div
-                key={item.label}
-                className="card p-4 flex flex-col gap-1.5"
-              >
-                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>
-                  {item.label}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    style={{
-                      width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
-                      background: item.ok === true ? '#22c55e' : item.ok === false ? '#ef4444' : 'var(--text-muted)',
-                    }}
-                  />
-                  <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{item.value}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
       </div>
     </div>
@@ -529,16 +403,6 @@ function ActiveToolCard({
         >
           {tool.icon}
         </div>
-        <span
-          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1"
-          style={{
-            background: 'rgba(34,197,94,0.12)',
-            color: '#22c55e',
-            border: '1px solid rgba(34,197,94,0.25)',
-          }}
-        >
-          <IconCheck size={9} /> Ready
-        </span>
       </div>
 
       {/* Text */}
