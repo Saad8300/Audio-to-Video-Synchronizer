@@ -242,3 +242,27 @@ export interface MediaTimelineSettings {
   enableIntro:           boolean
   enableOutro:           boolean
 }
+
+// ── Batch Queue ──────────────────────────────────────────────────────────────
+
+export interface BatchJob {
+  id: string
+  created_at: string
+  updated_at: string
+  source_tool: string
+  source_tool_label: string
+  title: string
+  output_name: string
+  output_type: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  progress: number
+  message: string
+  export_preset: string
+  aspect_ratio: string
+  resolution: string
+  render_profile: string
+  config?: any
+  assets?: any
+  metadata?: any
+}
+

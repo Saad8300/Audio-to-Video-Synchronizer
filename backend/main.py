@@ -1499,6 +1499,141 @@ def clear_all_history():
 # Batch Queue APIs
 # ---------------------------------------------------------------------------
 
+@app.post("/api/batch/jobs/image-timeline")
+async def api_batch_job_image_timeline(
+    # Audio — mode selector + two upload slots
+    audio_input_mode: str = Form("single"),
+    audio_file:       Optional[UploadFile] = File(None),
+    audio_zip:        Optional[UploadFile] = File(None),
+    # Required uploads
+    images_zip:      UploadFile = File(...),
+    timestamp_csv:   UploadFile = File(...),
+    # Core video settings
+    aspect_ratio:      str   = Form("9:16"),
+    export_resolution: str   = Form("1080p"),
+    fit_mode:          str   = Form("cover"),
+    transition:        str   = Form("fade"),
+    transition_duration: float = Form(0.5),
+    zoom_effect:       str   = Form("none"),
+    render_profile:    str   = Form("balanced"),
+    output_name:       Optional[str] = Form(None),
+    # Batch 9A — motion & style
+    motion_effect:    str = Form("slow_zoom_in"),
+    motion_intensity: str = Form("medium"),
+    visual_effect:    str = Form("none"),
+    effect_strength:  str = Form("medium"),
+    style_preset:     str = Form("clean_default"),
+    # Watermark
+    enable_watermark:        str   = Form("false"),
+    watermark_text:          str   = Form(""),
+    watermark_position_mode: str   = Form("preset"),
+    watermark_coordinate_mode: str = Form("design_canvas"),
+    watermark_position:      str   = Form("bottom_right"),
+    watermark_x:             int   = Form(50),
+    watermark_y:             int   = Form(50),
+    watermark_opacity:       float = Form(0.65),
+    watermark_size:          int   = Form(20),
+    watermark_margin:        int   = Form(36),
+    # Optional intro/outro
+    intro_file:    Optional[UploadFile] = File(None),
+    outro_file:    Optional[UploadFile] = File(None),
+    # Optional background music
+    bg_music_file:     Optional[UploadFile] = File(None),
+    enable_bg_music:   str   = Form("false"),
+    music_volume:      float = Form(0.12),
+    music_fade:        str   = Form("true"),
+):
+    # Create job ID and job dir
+    import uuid
+    import json
+    job_id = f"batch_{uuid.uuid4().hex[:12]}"
+    job_dir = batch_queue_store.DATA_DIR / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+    
+    saved_assets = {}
+    
+    # Helper to save upload file safely
+    async def save_upload(file_obj: Optional[UploadFile], key_name: str):
+        if file_obj and file_obj.filename:
+            safe_name = "".join(c for c in file_obj.filename if c.isalnum() or c in ".-_")
+            path = job_dir / safe_name
+            content = await file_obj.read()
+            with open(path, "wb") as f:
+                f.write(content)
+            saved_assets[key_name] = safe_name
+
+    try:
+        await save_upload(audio_file, "audio_file")
+        await save_upload(audio_zip, "audio_zip")
+        await save_upload(images_zip, "images_zip")
+        await save_upload(timestamp_csv, "timestamp_csv")
+        await save_upload(intro_file, "intro_file")
+        await save_upload(outro_file, "outro_file")
+        await save_upload(bg_music_file, "bg_music_file")
+        
+        config = {
+            "audio_input_mode": audio_input_mode,
+            "aspect_ratio": aspect_ratio,
+            "export_resolution": export_resolution,
+            "fit_mode": fit_mode,
+            "transition": transition,
+            "transition_duration": float(transition_duration),
+            "zoom_effect": zoom_effect,
+            "render_profile": render_profile,
+            "output_name": output_name,
+            "motion_effect": motion_effect,
+            "motion_intensity": motion_intensity,
+            "visual_effect": visual_effect,
+            "effect_strength": effect_strength,
+            "style_preset": style_preset,
+            "enable_watermark": enable_watermark == "true",
+            "watermark_text": watermark_text,
+            "watermark_position_mode": watermark_position_mode,
+            "watermark_coordinate_mode": watermark_coordinate_mode,
+            "watermark_position": watermark_position,
+            "watermark_x": watermark_x,
+            "watermark_y": watermark_y,
+            "watermark_opacity": watermark_opacity,
+            "watermark_size": watermark_size,
+            "watermark_margin": watermark_margin,
+            "enable_bg_music": enable_bg_music == "true",
+            "music_volume": music_volume,
+            "music_fade": music_fade == "true"
+        }
+        
+        # Save config.json
+        with open(job_dir / "config.json", "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+            
+        clean_out_name = make_clean_filename(output_name, "batch_image_timeline", ".mp4")
+        
+        # Add to queue
+        job = batch_queue_store.add_job(
+            source_tool="image_timeline",
+            source_tool_label="Image Timeline",
+            title=f"Image Timeline: {clean_out_name}",
+            output_name=clean_out_name,
+            output_type="video",
+            export_preset=style_preset,
+            aspect_ratio=aspect_ratio,
+            resolution=export_resolution,
+            render_profile=render_profile,
+            config=config,
+            assets=saved_assets
+        )
+        
+        # update ID to match our physical folder id so we can find it later easily
+        job = batch_queue_store.update_job(job["id"], {"id": job_id})
+        
+        return JSONResponse(content={"job": job})
+        
+    except Exception as e:
+        logger.error(f"Error saving batch job: {e}")
+        import shutil
+        shutil.rmtree(job_dir, ignore_errors=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
 @app.get("/api/batch/jobs")
 def api_get_batch_jobs():
     try:

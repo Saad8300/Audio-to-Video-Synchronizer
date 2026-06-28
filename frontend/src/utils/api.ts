@@ -1,6 +1,14 @@
 // utils/api.ts – API client for Audio Image Sync Studio backend
 
-import type { GenerateResponse, GenerateSettings, JobStatus, VideoTimelineSettings } from '../types'
+import type { 
+  GenerateSettings, 
+  GenerateResponse, 
+  GenerateStatus, 
+  JobStatus, 
+  VideoTimelineSettings, 
+  MediaTimelineSettings, 
+  BatchJob 
+} from '../types'
 
 const BASE_URL = '' // Vite dev proxy handles /api → http://127.0.0.1:8000
 
@@ -125,6 +133,86 @@ export async function startJob(
   }
 
   return res.json() as Promise<{ job_id: string }>
+}
+
+/**
+ * Save an Image Timeline configuration to the Batch Queue instead of running immediately.
+ */
+export async function createImageTimelineBatchJob(
+  audioInputMode: 'single' | 'zip',
+  audioFile:    File | null,
+  audioZip:     File | null,
+  imagesZip:    File,
+  timestampCsv: File,
+  settings:     GenerateSettings,
+  introFile?:   File | null,
+  outroFile?:   File | null,
+  bgMusicFile?: File | null,
+): Promise<{ job: BatchJob }> {
+  const form = new FormData()
+
+  // Required
+  form.append('audio_input_mode', audioInputMode)
+  if (audioInputMode === 'single' && audioFile) {
+    form.append('audio_file', audioFile)
+  } else if (audioInputMode === 'zip' && audioZip) {
+    form.append('audio_zip', audioZip)
+  }
+  
+  form.append('images_zip',     imagesZip)
+  form.append('timestamp_csv',  timestampCsv)
+
+  // Core video settings
+  form.append('aspect_ratio',      settings.aspectRatio)
+  form.append('export_resolution', settings.exportResolution)
+  form.append('fit_mode',          settings.fitMode)
+  form.append('transition',        settings.transition)
+  form.append('transition_duration', settings.transitionDuration)
+  form.append('render_profile',    settings.renderProfile)
+  form.append('output_name',       settings.outputName || 'video')
+
+  // Batch 9A — motion & style
+  form.append('motion_effect',    settings.motionEffect)
+  form.append('motion_intensity', settings.motionIntensity)
+  form.append('visual_effect',    settings.visualEffect)
+  form.append('effect_strength',  settings.effectStrength)
+  form.append('style_preset',     settings.stylePreset)
+
+  // Watermark
+  const watermarkActive = settings.watermarkText.trim().length > 0
+  form.append('enable_watermark',        watermarkActive ? 'true' : 'false')
+  form.append('watermark_text',          settings.watermarkText)
+  form.append('watermark_position_mode', settings.watermarkPositionMode)
+  form.append('watermark_coordinate_mode', settings.watermarkCoordinateMode)
+  form.append('watermark_position',      settings.watermarkPosition)
+  form.append('watermark_x',             String(settings.watermarkX))
+  form.append('watermark_y',             String(settings.watermarkY))
+  form.append('watermark_opacity',       (settings.watermarkOpacity / 100).toFixed(4))
+  form.append('watermark_size',          String(settings.watermarkSize))
+  form.append('watermark_margin',        String(settings.watermarkMargin))
+
+  // Background music
+  const musicActive = !!bgMusicFile
+  form.append('enable_bg_music', musicActive ? 'true' : 'false')
+  form.append('music_volume',    (settings.musicVolume / 100).toFixed(4))
+  form.append('music_fade',      settings.musicFade ? 'true' : 'false')
+
+  // Optional file uploads
+  if (introFile)   form.append('intro_file',    introFile)
+  if (outroFile)   form.append('outro_file',    outroFile)
+  if (bgMusicFile) form.append('bg_music_file', bgMusicFile)
+
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/image-timeline`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(parseErrorResponse(res.status, text))
+  }
+
+  return res.json() as Promise<{ job: BatchJob }>
 }
 
 /** Poll a job's current status. */

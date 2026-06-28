@@ -52,23 +52,7 @@ export default function BatchVideoGeneratorPage() {
     }
   }
 
-  const handleAddSample = async () => {
-    try {
-      await createBatchJob({
-        source_tool: 'image_timeline',
-        source_tool_label: 'Image Timeline',
-        title: 'Sample Batch Job ' + Math.floor(Math.random() * 1000),
-        output_name: 'sample_video.mp4',
-        export_preset: 'TikTok / Shorts 1080p',
-        aspect_ratio: '9:16',
-        resolution: '1080p',
-        render_profile: 'balanced'
-      })
-      loadData()
-    } catch (err) {
-      alert("Failed to create sample job: " + err)
-    }
-  }
+
 
   if (isLoading) {
     return (
@@ -95,16 +79,6 @@ export default function BatchVideoGeneratorPage() {
       <StudioPageHeader
         icon={<IconFilm size={16} />}
         title="Batch Video Generator"
-        actions={
-          <button
-            onClick={handleAddSample}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-            style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border-default)', color: 'var(--text-secondary)' }}
-            title="Development test button"
-          >
-            <IconPlus size={14} /> Add Sample Job
-          </button>
-        }
       />
 
       <div className="mt-8 space-y-6">

@@ -32,9 +32,10 @@ import {
   IconSparkles,
   IconVideo,
   IconLayers,
+  IconPlus,
 } from './components/icons'
 import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } from './types'
-import { checkHealth, startJob } from './utils/api'
+import { checkHealth, startJob, createImageTimelineBatchJob } from './utils/api'
 import { loadSettings, applyThemeMode, saveSettings, AppSettings } from './utils/appSettings'
 import { consumePendingTemplate, saveTemplate } from './utils/templateStore'
 
@@ -306,6 +307,10 @@ export default function App() {
   const [healthOk,        setHealthOk]        = useState<boolean | null>(null)
   const [cancelledMsg,    setCancelledMsg]    = useState<string | null>(null)
 
+  // Batch queue state
+  const [isQueuing,       setIsQueuing]       = useState(false)
+  const [queueSuccess,    setQueueSuccess]    = useState(false)
+
   // Health check
   useEffect(() => { checkHealth().then(setHealthOk) }, [])
 
@@ -345,6 +350,20 @@ export default function App() {
     } catch (err) {
       setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
       setStatus('error')
+    }
+  }
+
+  const handleAddToQueue = async () => {
+    if ((audioInputMode === 'single' ? !audioFile : !audioZip) || !imagesZip || !csvFile) return
+    setIsQueuing(true)
+    setQueueSuccess(false)
+    try {
+      await createImageTimelineBatchJob(audioInputMode, audioFile, audioZip, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
+      setQueueSuccess(true)
+    } catch (err) {
+      alert("Failed to add to queue: " + err)
+    } finally {
+      setIsQueuing(false)
     }
   }
 
@@ -851,6 +870,51 @@ export default function App() {
                           <>Select Required Files</>
                         )}
                       </button>
+
+                      {/* Add to Batch Queue */}
+                      <button
+                        onClick={handleAddToQueue}
+                        disabled={!canGenerate || isQueuing}
+                        className={`w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold transition-all ${
+                          canGenerate && !isQueuing
+                            ? 'hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98]'
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{
+                          height: 44,
+                          background: 'transparent',
+                          color: canGenerate ? 'var(--text-primary)' : 'var(--text-muted)',
+                          border: '1px solid var(--border-default)'
+                        }}
+                      >
+                        {isQueuing ? (
+                          <><IconLoader size={16} className="animate-spin" />Saving…</>
+                        ) : (
+                          <><IconLayers size={16} />Add to Batch Queue</>
+                        )}
+                      </button>
+
+                      <p className="text-[11px] text-center" style={{ color: 'var(--text-muted)' }}>
+                        Generate immediately or save this configuration to the batch queue for later.
+                      </p>
+
+                      {queueSuccess && (
+                        <div className="mt-3 p-3 rounded-xl border animate-fade-in" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-success-border)' }}>
+                          <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: 'var(--color-success)' }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-success)' }} />
+                            Added to Batch Queue
+                          </p>
+                          <div className="mt-2 flex gap-2">
+                            <button onClick={() => setActiveView('tool:batch_video')} className="text-[11px] font-bold px-2 py-1 rounded" style={{ background: 'var(--color-success)', color: '#fff' }}>
+                              Open Queue
+                            </button>
+                            <button onClick={() => setQueueSuccess(false)} className="text-[11px] font-bold px-2 py-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/5" style={{ color: 'var(--text-primary)' }}>
+                              Add Another
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
         
         
                     </div>
