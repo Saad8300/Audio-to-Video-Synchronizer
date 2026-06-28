@@ -108,8 +108,8 @@ const ACTIVE_TOOLS: {
     icon: <IconLayers size={26} />,
     title: 'Image Timeline',
     desc: 'Create videos from images, main audio, and timestamp CSV files.',
-    color: 'rgba(6,182,212,0.12)', // Cyan
-    accentColor: '#06b6d4',
+    color: 'rgba(14,165,233,0.12)', // Sky Blue
+    accentColor: '#0ea5e9',
   },
   {
     id: 'video',
@@ -124,8 +124,8 @@ const ACTIVE_TOOLS: {
     icon: <IconGrid size={26} />,
     title: 'Media Timeline',
     desc: 'Mix images, videos, and text-only rows in one flexible media timeline.',
-    color: 'rgba(99,102,241,0.12)', // Indigo
-    accentColor: '#6366f1',
+    color: 'rgba(59,130,246,0.12)', // Blue
+    accentColor: '#3b82f6',
   },
   {
     id: 'audio_merger',

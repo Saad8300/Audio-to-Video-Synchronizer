@@ -184,7 +184,6 @@ export default function ExportPresetPanel({
     current.resolution,
     current.renderProfile,
   )
-  const isCustom = activeBuiltInId === 'custom'
 
   const { savedPresets, savePreset, deletePreset } = useSavedPresets()
 
@@ -192,15 +191,21 @@ export default function ExportPresetPanel({
   const [newPresetName,   setNewPresetName]   = useState('')
   const [saveSuccess,     setSaveSuccess]     = useState(false)
 
-  function handleSelectBuiltIn(preset: ExportPreset) {
-    onApply({
-      aspectRatio:   preset.aspectRatio,
-      resolution:    preset.resolution,
-      renderProfile: preset.renderProfile,
-      motionEffect:  preset.motionEffect,
-      transition:    preset.transition,
-      visualEffect:  preset.visualEffect,
-    })
+  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value
+    if (val === 'custom') return
+    
+    const preset = BUILT_IN_PRESETS.find(p => p.id === val)
+    if (preset) {
+      onApply({
+        aspectRatio:   preset.aspectRatio,
+        resolution:    preset.resolution,
+        renderProfile: preset.renderProfile,
+        motionEffect:  preset.motionEffect,
+        transition:    preset.transition,
+        visualEffect:  preset.visualEffect,
+      })
+    }
   }
 
   function handleLoadSaved(p: SavedPreset) {
@@ -237,23 +242,29 @@ export default function ExportPresetPanel({
 
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
-            Export Preset
-          </p>
-          <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Quick-apply aspect ratio, resolution, and quality
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {isCustom ? (
-            <Badge>Custom</Badge>
-          ) : (
-            <Badge accent>{activePreset?.icon} {activePreset?.label}</Badge>
-          )}
-        </div>
+      {/* Header & Dropdown */}
+      <div>
+        <label htmlFor={`${idPrefix}-select`} className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+          Export Preset
+        </label>
+        <select
+          id={`${idPrefix}-select`}
+          value={activeBuiltInId}
+          onChange={handleSelectChange}
+          disabled={disabled}
+          className="form-select w-full mt-1.5"
+          style={{ fontSize: '12px' }}
+        >
+          <option value="custom" disabled hidden>Custom Settings</option>
+          {BUILT_IN_PRESETS.map(preset => (
+            <option key={preset.id} value={preset.id}>
+              {preset.icon} {preset.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+          Quickly apply aspect ratio, resolution, and quality.
+        </p>
       </div>
 
       {/* Active summary */}
@@ -266,20 +277,7 @@ export default function ExportPresetPanel({
         </span>
       </div>
 
-      {/* Built-in preset grid */}
-      <div className="grid grid-cols-1 gap-1.5">
-        {BUILT_IN_PRESETS.map(preset => (
-          <PresetCard
-            key={preset.id}
-            preset={preset}
-            active={preset.id === activeBuiltInId}
-            onClick={() => handleSelectBuiltIn(preset)}
-            disabled={disabled}
-          />
-        ))}
-      </div>
-
-      {/* Divider */}
+      {/* Divider for Custom Presets */}
       <div className="flex items-center gap-2 pt-1">
         <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           Custom Presets

@@ -550,12 +550,18 @@ export default function MediaTimelinePage() {
 
               <div className="space-y-1">
                 <label htmlFor="output-name" className="form-label">Output Filename</label>
-                <input
-                  id="output-name" type="text" value={settings.outputName} disabled={disabled}
-                  onChange={e => set('outputName', e.target.value.replace(/[^a-zA-Z0-9_ -]/g, ''))}
-                  placeholder="media_timeline"
-                  className="form-input"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    id="output-name" type="text" value={settings.outputName} disabled={disabled}
+                    onChange={e => set('outputName', e.target.value.replace(/[^a-zA-Z0-9_ -]/g, ''))}
+                    placeholder="media_timeline"
+                    className="form-input flex-1"
+                  />
+                  <span className="text-[10px] font-mono shrink-0 px-2 py-1.5 rounded-md"
+                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                    .mp4
+                  </span>
+                </div>
               </div>
             </div>
           </div>

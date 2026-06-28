@@ -45,6 +45,16 @@ from utils import seconds_to_mmss, FORMAT_DIMENSIONS
 from audio_helpers import prepare_single_audio, prepare_zip_audio, merge_audio_parts_in_order
 from transcription_helpers import transcribe_audio_backend, format_output
 
+def make_clean_filename(raw_name: str, default_name: str, extension: str) -> str:
+    name = raw_name.strip() if raw_name and raw_name.strip() else default_name
+    if extension and name.lower().endswith(extension.lower()):
+        name = name[:-len(extension)]
+    name = "".join(c for c in name if c.isalnum() or c in "-_ ")
+    name = name.strip().replace(" ", "_")
+    if not name:
+        name = default_name
+    return f"{name}{extension}"
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -330,11 +340,7 @@ async def jobs_start(
             f.write(content)
 
     # Determine output filename
-    safe_name       = output_name.strip() if output_name and output_name.strip() else "video"
-    safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
-    safe_name       = safe_name.strip().replace(" ", "_") or "video"
-    timestamp_str   = time.strftime("%Y%m%d_%H%M%S")
-    output_filename = f"{safe_name}_{timestamp_str}.mp4"
+    output_filename = make_clean_filename(output_name, "video", ".mp4")
     output_path     = str(OUTPUTS_DIR / output_filename)
 
     # Register job
@@ -796,11 +802,7 @@ async def jobs_start_video_timeline(
             bg_music_path = None
 
     # Output filename
-    safe_name       = output_name.strip() if output_name and output_name.strip() else "video_timeline"
-    safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
-    safe_name       = safe_name.strip().replace(" ", "_") or "video_timeline"
-    timestamp_str   = time.strftime("%Y%m%d_%H%M%S")
-    output_filename = f"{safe_name}_{timestamp_str}.mp4"
+    output_filename = make_clean_filename(output_name, "video_timeline", ".mp4")
     output_path     = str(OUTPUTS_DIR / output_filename)
 
     # Register job
@@ -1062,11 +1064,7 @@ async def jobs_start_media_timeline(
             bg_music_path = None
 
     # Output filename
-    safe_name       = output_name.strip() if output_name and output_name.strip() else "media_timeline"
-    safe_name       = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
-    safe_name       = safe_name.strip().replace(" ", "_") or "media_timeline"
-    timestamp_str   = time.strftime("%Y%m%d_%H%M%S")
-    output_filename = f"{safe_name}_{timestamp_str}.mp4"
+    output_filename = make_clean_filename(output_name, "media_timeline", ".mp4")
     output_path     = str(OUTPUTS_DIR / output_filename)
 
     # Register job
@@ -1335,13 +1333,8 @@ async def audio_merge(
                 f.write(content)
             audio_paths.append(part_path)
             
-        safe_name = output_filename.strip() if output_filename and output_filename.strip() else "merged_audio"
-        safe_name = "".join(c for c in safe_name if c.isalnum() or c in "-_ ")
-        safe_name = safe_name.strip().replace(" ", "_") or "merged_audio"
-        
         fmt = "wav" if output_format.lower() == "wav" else "mp3"
-        timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-        final_filename = f"{safe_name}_{timestamp_str}.{fmt}"
+        final_filename = make_clean_filename(output_filename, "merged_audio", f".{fmt}")
         
         output_dir = OUTPUTS_DIR / "audio"
         output_dir.mkdir(exist_ok=True)

@@ -602,7 +602,7 @@ export default function ScriptTimestampPage() {
                   const txtContent = (outputMode === 'csv' && result.segments?.length)
                     ? buildImageTimelinePreview(result.segments)
                     : result.text
-                  downloadAs(txtContent, `script_timestamp_${ts}.txt`)
+                  downloadAs(txtContent, 'script_timestamp.txt')
                 }}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                         style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
@@ -629,7 +629,7 @@ export default function ScriptTimestampPage() {
                           if (!c.includes('image,start,end,text')) c = 'image,start,end,text\n' + c
                           return c
                         })()
-                    downloadAs(csvContent, `script_timestamp_${ts}.csv`, 'text/csv')
+                    downloadAs(csvContent, 'script_timestamp.csv', 'text/csv')
                   }}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download CSV

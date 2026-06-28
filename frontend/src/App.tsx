@@ -688,7 +688,7 @@ export default function App() {
                     className="form-input flex-1"
                   />
                   <span className="text-[10px] font-mono shrink-0 px-2 py-1.5 rounded-md" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                    _YYYYMMDD.mp4
+                    .mp4
                   </span>
                 </div>
               </div>
