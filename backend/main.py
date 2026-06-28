@@ -45,6 +45,8 @@ from utils import seconds_to_mmss, FORMAT_DIMENSIONS
 from audio_helpers import prepare_single_audio, prepare_zip_audio, merge_audio_parts_in_order
 from transcription_helpers import transcribe_audio_backend, format_output
 import history_store
+import batch_queue_store
+from pydantic import BaseModel
 
 def make_clean_filename(raw_name: str, default_name: str, extension: str) -> str:
     name = raw_name.strip() if raw_name and raw_name.strip() else default_name
@@ -1492,6 +1494,100 @@ def clear_all_history():
     except Exception as e:
         logger.error(f"Error clearing history: {e}")
         return JSONResponse(status_code=500, content={"detail": "Failed to clear history"})
+
+# ---------------------------------------------------------------------------
+# Batch Queue APIs
+# ---------------------------------------------------------------------------
+
+@app.get("/api/batch/jobs")
+def api_get_batch_jobs():
+    try:
+        jobs = batch_queue_store.get_all_jobs()
+        return JSONResponse(content={"jobs": jobs})
+    except Exception as e:
+        logger.error(f"Error getting batch jobs: {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.get("/api/batch/stats")
+def api_get_batch_stats():
+    try:
+        stats = batch_queue_store.get_stats()
+        return JSONResponse(content={"stats": stats})
+    except Exception as e:
+        logger.error(f"Error getting batch stats: {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+class CreateBatchJobReq(BaseModel):
+    source_tool: str
+    source_tool_label: str
+    title: str
+    output_name: str
+    export_preset: str = ""
+    aspect_ratio: str = ""
+    resolution: str = ""
+    render_profile: str = ""
+    config: dict = {}
+    metadata: dict = {}
+
+@app.post("/api/batch/jobs")
+def api_create_batch_job(req: CreateBatchJobReq):
+    try:
+        job = batch_queue_store.add_job(
+            source_tool=req.source_tool,
+            source_tool_label=req.source_tool_label,
+            title=req.title,
+            output_name=req.output_name,
+            export_preset=req.export_preset,
+            aspect_ratio=req.aspect_ratio,
+            resolution=req.resolution,
+            render_profile=req.render_profile,
+            config=req.config,
+            metadata=req.metadata
+        )
+        return JSONResponse(content={"job": job})
+    except Exception as e:
+        logger.error(f"Error creating batch job: {e}")
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+@app.get("/api/batch/jobs/{job_id}")
+def api_get_batch_job(job_id: str):
+    job = batch_queue_store.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JSONResponse(content={"job": job})
+
+class UpdateBatchJobReq(BaseModel):
+    title: Optional[str] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+    progress: Optional[int] = None
+    metadata: Optional[dict] = None
+
+@app.patch("/api/batch/jobs/{job_id}")
+def api_update_batch_job(job_id: str, req: UpdateBatchJobReq):
+    updates = {}
+    if req.title is not None: updates["title"] = req.title
+    if req.status is not None: updates["status"] = req.status
+    if req.message is not None: updates["message"] = req.message
+    if req.progress is not None: updates["progress"] = req.progress
+    if req.metadata is not None: updates["metadata"] = req.metadata
+    
+    job = batch_queue_store.update_job(job_id, updates)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JSONResponse(content={"job": job})
+
+@app.delete("/api/batch/jobs/completed")
+def api_clear_completed_batch_jobs():
+    cleared = batch_queue_store.clear_completed_jobs()
+    return JSONResponse(content={"cleared": cleared})
+
+@app.delete("/api/batch/jobs/{job_id}")
+def api_delete_batch_job(job_id: str):
+    success = batch_queue_store.delete_job(job_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JSONResponse(content={"success": True})
 
 @app.get("/outputs/{path:path}")
 async def serve_output(path: str):

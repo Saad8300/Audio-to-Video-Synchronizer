@@ -425,3 +425,57 @@ export async function clearHistory(): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/history`, { method: 'DELETE' })
   if (!res.ok) throw new Error("Failed to clear history")
 }
+
+// ---------------------------------------------------------------------------
+// Batch Video Generator API (Batch 15A)
+// ---------------------------------------------------------------------------
+
+export async function getBatchJobs(): Promise<any[]> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs`)
+  if (!res.ok) throw new Error("Failed to load batch jobs")
+  const data = await res.json()
+  return data.jobs || []
+}
+
+export async function getBatchStats(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/stats`)
+  if (!res.ok) throw new Error("Failed to load batch stats")
+  const data = await res.json()
+  return data.stats || {}
+}
+
+export async function createBatchJob(payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  if (!res.ok) throw new Error("Failed to create batch job")
+  return res.json()
+}
+
+export async function getBatchJob(id: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${id}`)
+  if (!res.ok) throw new Error("Failed to get batch job")
+  return res.json()
+}
+
+export async function updateBatchJob(id: string, payload: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  if (!res.ok) throw new Error("Failed to update batch job")
+  return res.json()
+}
+
+export async function deleteBatchJob(id: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to delete batch job")
+}
+
+export async function clearCompletedBatchJobs(): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/completed`, { method: 'DELETE' })
+  if (!res.ok) throw new Error("Failed to clear completed jobs")
+}

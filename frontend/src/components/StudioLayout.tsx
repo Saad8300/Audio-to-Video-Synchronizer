@@ -13,7 +13,7 @@ import {
   IconChevronRight,
 } from './icons'
 
-export type StudioTab = 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'help'
+export type StudioTab = 'tools' | 'batch_video' | 'dashboard' | 'history' | 'templates' | 'settings' | 'help'
 
 interface StudioLayoutProps {
   children: ReactNode
@@ -38,6 +38,7 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
 
   const tabs: { id: StudioTab; label: string; icon: ReactNode }[] = [
     { id: 'tools',     label: 'Tools',       icon: <IconZap size={17} /> },
+    { id: 'batch_video', label: 'Batch',       icon: <IconLayers size={17} /> },
     { id: 'dashboard', label: 'Dashboard',   icon: <IconDashboard size={17} /> },
     { id: 'history',   label: 'History',     icon: <IconHistory size={17} /> },
     { id: 'templates', label: 'Templates',   icon: <IconLayers size={17} /> },

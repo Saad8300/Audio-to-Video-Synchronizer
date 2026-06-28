@@ -18,6 +18,7 @@ import StudioSettingsPage from './components/StudioSettingsPage'
 import StudioTemplatesPage from './components/StudioTemplatesPage'
 import AudioMergerPage from './components/AudioMergerPage'
 import ScriptTimestampPage from './components/ScriptTimestampPage'
+import BatchVideoGeneratorPage from './components/BatchVideoGeneratorPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
 import ExportPresetPanel from './components/ExportPresetPanel'
 import {
@@ -198,7 +199,7 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp'
+export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp' | 'tool:batch_video'
 
 export default function App() {
   const [appSettingsState, setAppSettingsState] = useState<AppSettings>(() => loadSettings())
@@ -226,7 +227,7 @@ export default function App() {
     if (s.startupPage === 'landing') return 'landing'
     if (s.startupPage === 'studio-tools') return 'tools'
     if (s.startupPage === 'last-used') {
-      const validTools = ['tools', 'dashboard', 'history', 'settings', 'tool:image', 'tool:video', 'tool:media', 'tool:audio_merger', 'tool:script_timestamp']
+      const validTools = ['tools', 'dashboard', 'history', 'settings', 'tool:image', 'tool:video', 'tool:media', 'tool:audio_merger', 'tool:script_timestamp', 'tool:batch_video']
       if (validTools.includes(s.lastUsedPage)) {
         return s.lastUsedPage as ViewMode
       }
@@ -499,6 +500,7 @@ export default function App() {
       {activeView === 'tool:audio_merger' && <AudioMergerPage />}
       {activeView === 'tool:script_timestamp' && <ScriptTimestampPage />}
       {activeView === 'tool:media' && <MediaTimelinePage />}
+      {activeView === 'tool:batch_video' && <BatchVideoGeneratorPage />}
       {activeView === 'tool:video' && <VideoTimelinePage />}
 
       {activeView === 'tool:image' && (

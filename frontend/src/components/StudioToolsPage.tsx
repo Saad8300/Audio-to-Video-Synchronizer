@@ -71,7 +71,7 @@ function IconLock({ size = 14 }: { size?: number }) {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type ViewMode = 'home' | 'image' | 'video' | 'media' | 'audio_merger' | 'script_timestamp'
+export type ViewMode = 'home' | 'image' | 'video' | 'media' | 'audio_merger' | 'script_timestamp' | 'batch_video'
 
 interface Props {
   onSelectTool: (tool: ViewMode) => void
@@ -121,6 +121,13 @@ const ACTIVE_TOOLS: {
     desc: 'Transcribe voice audio and generate timestamped scripts.',
     accentColor: '#f59e0b',
   },
+  {
+    id: 'batch_video',
+    icon: <IconFilm size={22} />,
+    title: 'Batch Video Generator',
+    desc: 'Queue multiple video export jobs and run them one by one.',
+    accentColor: '#4ade80',
+  },
 ]
 
 // ── Upcoming tools ───────────────────────────────────────────────────────────
@@ -136,7 +143,6 @@ const UPCOMING_TOOLS: {
   { icon: <IconCpu size={20} />,       title: 'Voice Cloning',         desc: 'Clone your own voice for custom voiceover generation.',              accentColor: '#e879f9' },
   { icon: <IconLayers size={20} />,    title: 'Subtitle Generator',    desc: 'Auto-generate SRT subtitle files for any video export.',             accentColor: '#38bdf8' },
   { icon: <IconImage size={20} />,     title: 'Thumbnail Maker',       desc: 'Design polished video thumbnails from templates and images.',         accentColor: '#fb923c' },
-  { icon: <IconFilm size={20} />,      title: 'Batch Video Generator', desc: 'Run multiple video export jobs from a single bulk configuration.',  accentColor: '#4ade80' },
   { icon: <IconCpu size={20} />,       title: 'AI Script Helper',      desc: 'Draft and edit video scripts using a local AI writing assistant.',   accentColor: '#f472b6' },
   { icon: <IconBriefcase size={20} />, title: 'Brand Kit',             desc: 'Save your logo, colors, and fonts for consistent video branding.',   accentColor: '#fbbf24' },
 ]
