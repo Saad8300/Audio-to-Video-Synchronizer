@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { IconSun, IconMoon, IconSettings, IconMonitor } from './icons'
-import { AppSettings, loadSettings, saveSettings, resetSettings, applyThemeMode, ThemeMode, AccentColor, StartupPage, ExportPreset } from '../utils/appSettings'
+import { IconSettings } from './icons'
+import {
+  AppSettings, loadSettings, saveSettings, resetSettings, applyThemeMode,
+  ThemeMode, AccentColor, StartupPage, ExportPreset,
+  loadSidebarItems, saveSidebarItems, resetSidebarItems, SidebarItemId, ALL_SIDEBAR_ITEMS
+} from '../utils/appSettings'
 import StudioPageHeader from './StudioPageHeader'
 
 export default function StudioSettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [sidebarItems, setSidebarItems] = useState<SidebarItemId[]>(() => loadSidebarItems())
 
   useEffect(() => {
     setSettings(loadSettings())
@@ -15,8 +20,6 @@ export default function StudioSettingsPage() {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const updated = saveSettings({ [key]: value })
     setSettings(updated)
-    
-    // Immediate apply for theme
     if (key === 'themeMode') {
       applyThemeMode(value as ThemeMode)
     }
@@ -29,6 +32,37 @@ export default function StudioSettingsPage() {
       applyThemeMode(reset.themeMode)
     }
   }
+
+  // ── Sidebar helpers ──────────────────────────────────────────────────────────
+  const saveSidebar = (items: SidebarItemId[]) => {
+    setSidebarItems(items)
+    saveSidebarItems(items)
+    window.dispatchEvent(new Event('syncframe-sidebar-changed'))
+  }
+
+  const moveItem = (idx: number, dir: -1 | 1) => {
+    const next = [...sidebarItems]
+    const swap = idx + dir
+    if (swap < 0 || swap >= next.length) return
+    ;[next[idx], next[swap]] = [next[swap], next[idx]]
+    saveSidebar(next)
+  }
+
+  const removeItem = (id: SidebarItemId) => {
+    saveSidebar(sidebarItems.filter(i => i !== id))
+  }
+
+  const addItem = (id: SidebarItemId) => {
+    if (!sidebarItems.includes(id)) saveSidebar([...sidebarItems, id])
+  }
+
+  const handleResetSidebar = () => {
+    const reset = resetSidebarItems()
+    setSidebarItems(reset)
+    window.dispatchEvent(new Event('syncframe-sidebar-changed'))
+  }
+
+  const hiddenItems = ALL_SIDEBAR_ITEMS.filter(i => !sidebarItems.includes(i.id))
 
   return (
     <div className="w-full px-5 sm:px-8 py-8 space-y-8 pb-20 animate-fade-in" style={{ maxWidth: 900 }}>
@@ -80,7 +114,7 @@ export default function StudioSettingsPage() {
           </div>
         </section>
 
-        {/* Defaults */}
+        {/* Default Export Settings */}
         <section className="card p-6 space-y-6">
           <h2 className="text-sm font-bold uppercase tracking-widest border-b pb-2 mb-2" style={{ color: 'var(--text-muted)', borderColor: 'var(--border-subtle)' }}>Default Export Settings</h2>
           
@@ -195,6 +229,103 @@ export default function StudioSettingsPage() {
               onChange={(e) => updateSetting('confirmBeforeClearHistory', e.target.checked)}
             />
           </label>
+        </section>
+
+        {/* ── Sidebar Menu Customization ── */}
+        <section className="card p-6 space-y-5">
+          <div className="flex items-center justify-between gap-4 border-b pb-3" style={{ borderColor: 'var(--border-subtle)' }}>
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Sidebar Menu</h2>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                Choose which items appear in the sidebar and in what order. Changes apply immediately.
+              </p>
+            </div>
+            <button
+              onClick={handleResetSidebar}
+              className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 shrink-0"
+              style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+            >
+              Reset Default
+            </button>
+          </div>
+
+          {/* Visible items */}
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-2.5" style={{ color: 'var(--text-muted)' }}>
+              Visible in Sidebar ({sidebarItems.length})
+            </p>
+            <div className="space-y-1.5">
+              {sidebarItems.map((id, idx) => {
+                const meta = ALL_SIDEBAR_ITEMS.find(i => i.id === id)
+                return (
+                  <div
+                    key={id}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 group transition-colors"
+                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+                  >
+                    <div className="flex flex-col gap-0.5 shrink-0 opacity-40 group-hover:opacity-70">
+                      {[0,1,2].map(i => <div key={i} style={{ width: 12, height: 1.5, background: 'var(--text-muted)', borderRadius: 1 }} />)}
+                    </div>
+                    <span className="text-[10px] font-black w-5 text-center tabular-nums" style={{ color: 'var(--text-muted)' }}>{idx + 1}</span>
+                    <span className="flex-1 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{meta?.label ?? id}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => moveItem(idx, -1)}
+                        disabled={idx === 0}
+                        title="Move up"
+                        className="p-1 rounded-lg transition-colors hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-25"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                      </button>
+                      <button
+                        onClick={() => moveItem(idx, 1)}
+                        disabled={idx === sidebarItems.length - 1}
+                        title="Move down"
+                        className="p-1 rounded-lg transition-colors hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-25"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      <button
+                        onClick={() => removeItem(id)}
+                        title="Remove from sidebar"
+                        className="p-1 rounded-lg transition-colors hover:bg-red-500/10 ml-0.5"
+                        style={{ color: 'var(--color-error)' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+              {sidebarItems.length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>No items visible. Add items from the list below.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Available to add */}
+          {hiddenItems.length > 0 && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest mb-2.5" style={{ color: 'var(--text-muted)' }}>
+                Available to Add
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {hiddenItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => addItem(item.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all hover:scale-105 active:scale-95"
+                    style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Reset */}

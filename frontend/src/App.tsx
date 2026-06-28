@@ -9,8 +9,8 @@ import ProgressOverlay from './components/ProgressOverlay'
 import { type AppMode } from './components/AppModeSwitcher'
 import VideoTimelinePage from './components/VideoTimelinePage'
 import MediaTimelinePage from './components/MediaTimelinePage'
+import LandingPage from './components/LandingPage'
 import StudioLayout from './components/StudioLayout'
-import StudioHome from './components/StudioHome'
 import StudioToolsPage from './components/StudioToolsPage'
 import StudioDashboardPage from './components/StudioDashboardPage'
 import StudioHistoryPage from './components/StudioHistoryPage'
@@ -389,7 +389,7 @@ export default function App() {
   // Derived
 
   if (activeView === 'landing') {
-    return <StudioHome onSelectTool={(t) => setActiveView(`tool:${t}` as ViewMode)} backendStatusOk={healthOk} />
+    return <LandingPage onEnterStudio={() => setActiveView('tools')} onViewTools={() => setActiveView('tools')} />
   }
 
   return (
@@ -480,27 +480,60 @@ export default function App() {
       {/* ── Back Navigation for Tools ── */}
       {isTool && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5 pb-1">
-          <button
-            onClick={() => setActiveView('landing')}
-            className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer rounded-lg px-2.5 py-1.5"
-            style={{
-              color: 'var(--text-secondary)',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = 'var(--accent-primary)'
-              e.currentTarget.style.borderColor = 'var(--accent-border)'
-              e.currentTarget.style.background = 'var(--accent-subtle)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = 'var(--text-secondary)'
-              e.currentTarget.style.borderColor = 'var(--border-subtle)'
-              e.currentTarget.style.background = 'var(--bg-elevated)'
-            }}
-          >
-            <span aria-hidden="true">&larr;</span> Back to Studio Home
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveView('tools')}
+              className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer rounded-lg px-2.5 py-1.5"
+              style={{
+                color: 'var(--text-secondary)',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = 'var(--accent-primary)'
+                e.currentTarget.style.borderColor = 'var(--accent-border)'
+                e.currentTarget.style.background = 'var(--accent-subtle)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--text-secondary)'
+                e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                e.currentTarget.style.background = 'var(--bg-elevated)'
+              }}
+            >
+              <span aria-hidden="true">&larr;</span> Back
+            </button>
+            <button
+              onClick={() => {
+                const current = activeView
+                setActiveView('tools')
+                setTimeout(() => setActiveView(current), 50)
+              }}
+              title="Refresh page"
+              aria-label="Refresh page"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-lg transition-colors cursor-pointer"
+              style={{
+                color: 'var(--text-secondary)',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = 'var(--accent-primary)'
+                e.currentTarget.style.borderColor = 'var(--accent-border)'
+                e.currentTarget.style.background = 'var(--accent-subtle)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = 'var(--text-secondary)'
+                e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                e.currentTarget.style.background = 'var(--bg-elevated)'
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 

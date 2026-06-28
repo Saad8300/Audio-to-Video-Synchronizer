@@ -171,6 +171,42 @@ function StatusIcon({ status, cancelling }: { status?: string, cancelling: boole
   )
 }
 
+// ─── Live Activity Log ────────────────────────────────────────────────────────
+
+function LiveActivityLog({ log, isActive }: { log: string[]; isActive: boolean }) {
+  if (log.length === 0) return null
+  return (
+    <div style={{
+      background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
+      borderRadius: 12, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+        {isActive && (
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, animation: 'livePulse 1.8s ease-in-out infinite' }} />
+        )}
+        <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          {isActive ? 'Live Activity' : 'Activity Log'}
+        </span>
+      </div>
+      {/* Log lines */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {log.map((entry, i) => {
+          const isCurrent = i === log.length - 1 && isActive
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isCurrent ? 1 : 0.45 + (i / log.length) * 0.4 }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', flexShrink: 0, background: isCurrent ? '#10b981' : 'var(--border-default)' }} />
+              <span style={{ fontSize: 11, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'ui-monospace, monospace', fontWeight: isCurrent ? 600 : 400 }}>
+                {entry}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onClose, renderSpec }: ProgressOverlayProps) {
@@ -178,6 +214,8 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
   const [pollError,   setPollError]   = useState<string | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [cancelling,  setCancelling]  = useState(false)
+  const [activityLog, setActivityLog] = useState<string[]>([])
+  const lastStepRef  = useRef<string>('')
   const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
   const completedRef = useRef(false)
 
@@ -189,12 +227,22 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
     if (!jobId) return
     completedRef.current = false
     setPollError(null); setJobStatus(null); setShowConfirm(false); setCancelling(false)
+    setActivityLog([]); lastStepRef.current = ''
 
     const poll = async () => {
       if (completedRef.current) return
       try {
         const status = await getJobStatus(jobId)
         setJobStatus(status); setPollError(null)
+        // Append new unique step messages to the activity log
+        const newStep = status.current_step
+        if (newStep && newStep !== lastStepRef.current) {
+          lastStepRef.current = newStep
+          setActivityLog(prev => {
+            const filtered = prev.filter(s => s !== newStep)
+            return [...filtered, newStep].slice(-5)
+          })
+        }
         if (status.status === 'completed' || status.status === 'failed') {
           completedRef.current = true; stopPolling(); onJobComplete(status)
         } else if (status.status === 'cancelled') {
@@ -275,6 +323,10 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
           0%   { opacity: 0; transform: scale(0.7); }
           70%  { transform: scale(1.1); }
           100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes livePulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50%       { opacity: 1;   transform: scale(1.2); box-shadow: 0 0 6px #10b981; }
         }
       `}</style>
 
@@ -376,6 +428,9 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
 
               {/* Zone 3 — Frame scanner */}
               <FrameScanner active={isActive} status={jobStatus?.status} />
+
+              {/* Zone 3b — Live Activity Log */}
+              <LiveActivityLog log={activityLog} isActive={isActive} />
 
               {/* Zone 4 — Progress */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
