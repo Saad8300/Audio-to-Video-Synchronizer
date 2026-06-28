@@ -141,10 +141,10 @@ const UPCOMING_TOOLS: {
   { icon: <IconMic size={20} />,       title: 'Voice Generator',       desc: 'Generate natural-sounding voiceovers from text scripts.',            accentColor: '#a78bfa' },
   { icon: <IconBook size={20} />,      title: 'Voice Library',         desc: 'Browse and preview a local library of voice models.',                accentColor: '#c084fc' },
   { icon: <IconCpu size={20} />,       title: 'Voice Cloning',         desc: 'Clone your own voice for custom voiceover generation.',              accentColor: '#e879f9' },
-  { icon: <IconLayers size={20} />,    title: 'Subtitle Generator',    desc: 'Auto-generate SRT subtitle files for any video export.',             accentColor: '#38bdf8' },
-  { icon: <IconImage size={20} />,     title: 'Thumbnail Maker',       desc: 'Design polished video thumbnails from templates and images.',         accentColor: '#fb923c' },
-  { icon: <IconCpu size={20} />,       title: 'AI Script Helper',      desc: 'Draft and edit video scripts using a local AI writing assistant.',   accentColor: '#f472b6' },
   { icon: <IconBriefcase size={20} />, title: 'Brand Kit',             desc: 'Save your logo, colors, and fonts for consistent video branding.',   accentColor: '#fbbf24' },
+  { icon: <IconFilm size={20} />,      title: 'AI Video Repurposer',   desc: 'Turn long-form content into multiple short-form video exports.',     accentColor: '#ec4899' },
+  { icon: <IconZap size={20} />,       title: 'Smart Auto Editor',     desc: 'Auto-cut, sync, and polish timeline videos with intelligent editing presets.', accentColor: '#f43f5e' },
+  { icon: <IconLayers size={20} />,    title: 'Caption Style Studio',  desc: 'Design advanced caption styles, fonts, colors, and animated text presets.', accentColor: '#8b5cf6' },
 ]
 
 // ── Page ─────────────────────────────────────────────────────────────────────
