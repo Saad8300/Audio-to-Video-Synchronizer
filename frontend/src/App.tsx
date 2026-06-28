@@ -13,6 +13,7 @@ import StudioHomePage from './components/StudioHomePage'
 import AudioMergerPage from './components/AudioMergerPage'
 import ScriptTimestampPage from './components/ScriptTimestampPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
+import ExportPresetPanel from './components/ExportPresetPanel'
 import {
   IconMusic,
   IconImage,
@@ -629,6 +630,31 @@ export default function App() {
                     icon={<IconVideo size={14} />} file={outroFile} onChange={setOutroFile} disabled={isLoading} />
                 </div>
               </div>
+            </div>
+
+            {/* Export Preset card */}
+            <div className="card p-5">
+              <ExportPresetPanel
+                idPrefix="img"
+                disabled={isLoading}
+                current={{
+                  aspectRatio:   settings.aspectRatio,
+                  resolution:    settings.exportResolution,
+                  renderProfile: settings.renderProfile,
+                  motionEffect:  settings.motionEffect,
+                  transition:    settings.transition,
+                  visualEffect:  settings.visualEffect,
+                }}
+                onApply={vals => setSettings(s => ({
+                  ...s,
+                  aspectRatio:      vals.aspectRatio,
+                  exportResolution: vals.resolution,
+                  renderProfile:    vals.renderProfile,
+                  motionEffect:     vals.motionEffect,
+                  transition:       vals.transition,
+                  visualEffect:     vals.visualEffect,
+                }))}
+              />
             </div>
 
             {/* Video Settings card */}

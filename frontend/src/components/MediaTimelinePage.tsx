@@ -14,6 +14,7 @@ import {
 } from './icons'
 import ProgressOverlay from './ProgressOverlay'
 import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
+import ExportPresetPanel from './ExportPresetPanel'
 import type {
   MediaTimelineSettings,
   GenerateStatus,
@@ -496,6 +497,30 @@ export default function MediaTimelinePage() {
                   icon={<IconFilm size={14} />} file={outroFile} onChange={handleOutroChange} disabled={disabled} />
               </div>
             </div>
+          </div>
+
+          {/* Export Preset card */}
+          <div className="card p-5">
+            <ExportPresetPanel
+              idPrefix="mt"
+              disabled={disabled}
+              current={{
+                aspectRatio:   settings.aspectRatio,
+                resolution:    settings.exportResolution,
+                renderProfile: settings.renderProfile,
+                motionEffect:  settings.motionStyle,
+                transition:    settings.transition,
+                visualEffect:  settings.visualEffect,
+              }}
+              onApply={vals => {
+                set('aspectRatio',      vals.aspectRatio)
+                set('exportResolution', vals.resolution)
+                set('renderProfile',    vals.renderProfile)
+                set('motionStyle',      vals.motionEffect)
+                set('transition',       vals.transition)
+                set('visualEffect',     vals.visualEffect)
+              }}
+            />
           </div>
 
           {/* Basic Settings */}
