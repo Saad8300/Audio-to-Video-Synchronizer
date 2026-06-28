@@ -211,16 +211,17 @@ images.zip
 
 ---
 
-## ⚙️ App Settings & Preferences
+## ⚙️ App Settings & Templates
 
-SyncFrame Studio includes a local **Settings** page where you can customize your workspace. All settings are stored locally in your browser.
+SyncFrame Studio includes a local **Settings** page and a **Templates** library where you can customize your workspace and save your favorite workflows. All settings and templates are stored locally in your browser.
 
+- **Templates**: Save any tool's current configuration (Video Settings, Audio format, Transcript settings, etc.) as a reusable template. Built-in templates for TikTok, YouTube, and podcasts are also included.
 - **Theme & Appearance**: Switch between dark mode (default) and light mode, and choose a custom accent color for the app.
 - **Default Export Settings**: Set your preferred default export preset (e.g., `TikTok 1080p`), default video filename, and default audio/script filenames. These defaults apply every time you open a tool.
 - **Startup Behavior**: Choose which page the app opens to when you start it (e.g., always open the Landing Page, always open Tools, or remember the last used page).
 - **History Behavior**: Toggle whether the app asks for confirmation before clearing your local history.
 
-You can access Settings from the sidebar in the Studio dashboard.
+You can access Settings and Templates from the sidebar in the Studio dashboard.
 
 ---
 

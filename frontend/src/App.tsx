@@ -15,6 +15,7 @@ import StudioToolsPage from './components/StudioToolsPage'
 import StudioDashboardPage from './components/StudioDashboardPage'
 import StudioHistoryPage from './components/StudioHistoryPage'
 import StudioSettingsPage from './components/StudioSettingsPage'
+import StudioTemplatesPage from './components/StudioTemplatesPage'
 import AudioMergerPage from './components/AudioMergerPage'
 import ScriptTimestampPage from './components/ScriptTimestampPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
@@ -33,6 +34,7 @@ import {
 import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } from './types'
 import { checkHealth, startJob } from './utils/api'
 import { loadSettings, applyThemeMode, saveSettings, AppSettings } from './utils/appSettings'
+import { consumePendingTemplate, saveTemplate } from './utils/templateStore'
 
 // ── Default settings ────────────────────────────────────────────────────────
 
@@ -195,7 +197,7 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp'
+export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp'
 
 export default function App() {
   const [appSettingsState, setAppSettingsState] = useState<AppSettings>(() => loadSettings())
@@ -232,10 +234,18 @@ export default function App() {
     return 'landing'
   })
 
+  const isTool = activeView.startsWith('tool:')
+
   // Reset scroll position when navigating
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-  }, [activeView])
+    if (activeView === 'tool:image' || (isTool && activeView === 'tools')) {
+      const pending = consumePendingTemplate('image')
+      if (pending) {
+        setSettings(s => ({ ...s, ...pending }))
+      }
+    }
+  }, [activeView, isTool])
 
   const handleModeChange = (mode: ViewMode) => {
     setActiveView(mode)
@@ -247,7 +257,20 @@ export default function App() {
     }
   }
 
-  // Required files
+  const handleSaveAsTemplate = () => {
+    const name = window.prompt('Enter template name:', 'My Image Template')
+    if (name) {
+      saveTemplate({
+        name,
+        tool: 'image',
+        description: 'Saved from Image Timeline',
+        settings
+      })
+      alert('Template saved to your templates library!')
+    }
+  }
+
+  // ── File handling ──
   const [audioInputMode, setAudioInputMode] = useState<'single' | 'zip'>('single')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [audioZip,  setAudioZip]  = useState<File | null>(null)
@@ -360,8 +383,6 @@ export default function App() {
     return <LandingPage onEnterStudio={() => setActiveView('tools')} onViewTools={() => setActiveView('tools')} />
   }
 
-  const isTool = activeView.startsWith('tool:')
-
   return (
     <StudioLayout
       activeTab={activeView}
@@ -444,6 +465,7 @@ export default function App() {
         {activeView === 'tools' && <StudioToolsPage onSelectTool={v => setActiveView(`tool:${v}` as ViewMode)} />}
         {activeView === 'dashboard' && <StudioDashboardPage />}
         {activeView === 'history' && <StudioHistoryPage />}
+        {activeView === 'templates' && <StudioTemplatesPage onUseTemplate={(tool) => setActiveView(`tool:${tool}` as ViewMode)} />}
         {activeView === 'settings' && <StudioSettingsPage />}
 
       {/* ── Back Navigation for Tools ── */}
@@ -618,9 +640,14 @@ export default function App() {
         
                     {/* Video Settings card */}
                     <div className="card p-5 space-y-4">
-                      <div>
-                        <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Video Settings</h2>
-                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Configure core dimensions and playback behaviors.</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Video Settings</h2>
+                          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Configure core dimensions and playback behaviors.</p>
+                        </div>
+                        <button onClick={handleSaveAsTemplate} className="text-[10px] font-bold px-2 py-1 bg-[var(--bg-input)] hover:bg-[var(--accent-primary)] hover:text-white rounded border border-[var(--border-subtle)] transition-colors">
+                          Save as Template
+                        </button>
                       </div>
         
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

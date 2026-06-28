@@ -11,6 +11,7 @@ import {
   IconPlayCircle
 } from './icons'
 import { loadSettings } from '../utils/appSettings'
+import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
 interface AudioPart {
   id: string
@@ -29,6 +30,14 @@ export default function AudioMergerPage() {
   const [parts, setParts] = useState<AudioPart[]>([])
   const [outputFormat, setOutputFormat] = useState<'wav' | 'mp3'>('wav')
   const [outputName, setOutputName] = useState<string>(() => loadSettings().defaultAudioFilename)
+
+  React.useEffect(() => {
+    const pending = consumePendingTemplate('audio_merger')
+    if (pending) {
+      if (pending.outputFormat) setOutputFormat(pending.outputFormat as any)
+      if (pending.outputName) setOutputName(pending.outputName as string)
+    }
+  }, [])
   
   const [status, setStatus] = useState<'idle' | 'merging' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string>('')
@@ -280,8 +289,27 @@ export default function AudioMergerPage() {
         {/* ── Right Column: Settings & Actions ── */}
         <div className="lg:col-span-4 space-y-6">
           <div className="card p-5 space-y-4">
-            <div>
+            <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Output Settings</h2>
+              <button 
+                onClick={() => {
+                  const name = window.prompt('Enter template name:', 'My Audio Template')
+                  if (name) {
+                    saveTemplate({ 
+                      name, 
+                      tool: 'audio_merger', 
+                      description: 'Saved from Audio Merger', 
+                      settings: { outputFormat, outputName } 
+                    })
+                    alert('Template saved to your templates library!')
+                  }
+                }} 
+                className="text-[10px] font-bold px-2 py-1 bg-[var(--bg-input)] hover:bg-[var(--accent-primary)] hover:text-white rounded border border-[var(--border-subtle)] transition-colors"
+              >
+                Save as Template
+              </button>
+            </div>
+            <div>
               <div className="flex items-center gap-2 mt-1 mb-3">
                 <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
               </div>

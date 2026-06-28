@@ -12,6 +12,7 @@ import {
 } from './icons'
 import ToolPageHeader from './ToolPageHeader'
 import { loadSettings } from '../utils/appSettings'
+import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
 function IconMic({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
   return (
@@ -138,6 +139,18 @@ export default function ScriptTimestampPage() {
   const [segmentationIntensity, setSegmentationIntensity] = useState('detailed')
   const [outputMode, setOutputMode] = useState('csv')
   const [outputName, setOutputName] = useState(() => loadSettings().defaultScriptFilename)
+
+  useEffect(() => {
+    const pending = consumePendingTemplate('script_timestamp')
+    if (pending) {
+      if (pending.modelKey) setModelKey(pending.modelKey as string)
+      if (pending.language) setLanguage(pending.language as string)
+      if (pending.outputStyle) setOutputStyle(pending.outputStyle as string)
+      if (pending.segmentationIntensity) setSegmentationIntensity(pending.segmentationIntensity as string)
+      if (pending.outputMode) setOutputMode(pending.outputMode as string)
+      if (pending.outputName) setOutputName(pending.outputName as string)
+    }
+  }, [])
   
   // Original Script
   const [originalScript, setOriginalScript] = useState('')
@@ -391,7 +404,26 @@ export default function ScriptTimestampPage() {
 
           {/* Settings */}
           <div className="card p-5 space-y-4">
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Settings</h2>
+              <button 
+                onClick={() => {
+                  const name = window.prompt('Enter template name:', 'My Script Template')
+                  if (name) {
+                    saveTemplate({ 
+                      name, 
+                      tool: 'script_timestamp', 
+                      description: 'Saved from Script Timestamp', 
+                      settings: { modelKey, language, outputStyle, segmentationIntensity, outputMode, outputName } 
+                    })
+                    alert('Template saved to your templates library!')
+                  }
+                }} 
+                className="text-[10px] font-bold px-2 py-1 bg-[var(--bg-input)] hover:bg-[var(--accent-primary)] hover:text-white rounded border border-[var(--border-subtle)] transition-colors"
+              >
+                Save as Template
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">

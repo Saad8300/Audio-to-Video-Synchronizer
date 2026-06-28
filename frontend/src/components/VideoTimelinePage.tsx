@@ -38,6 +38,7 @@ import type {
 } from '../types'
 import { startVideoTimelineJob } from '../utils/api'
 import { loadSettings } from '../utils/appSettings'
+import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -364,6 +365,13 @@ export default function VideoTimelinePage() {
   const set = <K extends keyof VideoTimelineSettings>(key: K, val: VideoTimelineSettings[K]) =>
     setSettings(s => ({ ...s, [key]: val }))
 
+  React.useEffect(() => {
+    const pending = consumePendingTemplate('video')
+    if (pending) {
+      setSettings(s => ({ ...s, ...pending }))
+    }
+  }, [])
+
   // Auto-enable intro/outro when files uploaded
   const handleIntroChange = (f: File | null) => {
     setIntroFile(f)
@@ -642,9 +650,23 @@ export default function VideoTimelinePage() {
 
             {/* Basic Settings */}
             <div className="card p-5 space-y-4">
-              <div>
-                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Video Settings</h2>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Configure core dimensions and playback behaviors.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Video Settings</h2>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Configure core dimensions and playback behaviors.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    const name = window.prompt('Enter template name:', 'My Video Template')
+                    if (name) {
+                      saveTemplate({ name, tool: 'video', description: 'Saved from Video Timeline', settings })
+                      alert('Template saved to your templates library!')
+                    }
+                  }} 
+                  className="text-[10px] font-bold px-2 py-1 bg-[var(--bg-input)] hover:bg-[var(--accent-primary)] hover:text-white rounded border border-[var(--border-subtle)] transition-colors"
+                >
+                  Save as Template
+                </button>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

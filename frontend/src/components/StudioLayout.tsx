@@ -8,10 +8,11 @@ import {
   IconDashboard,
   IconMenu,
   IconX,
-  IconHelpCircle
+  IconHelpCircle,
+  IconLayers
 } from './icons'
 
-export type StudioTab = 'tools' | 'dashboard' | 'history' | 'settings' | 'help'
+export type StudioTab = 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'help'
 
 interface StudioLayoutProps {
   children: ReactNode
@@ -29,6 +30,7 @@ export default function StudioLayout({ children, activeTab, onNavigate, isDark, 
     { id: 'tools', label: 'Tools', icon: <IconZap size={18} /> },
     { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard size={18} /> },
     { id: 'history', label: 'History', icon: <IconHistory size={18} /> },
+    { id: 'templates', label: 'Templates', icon: <IconLayers size={18} /> },
     { id: 'settings', label: 'Settings', icon: <IconSettings size={18} /> },
     { id: 'help', label: 'Help / Guide', icon: <IconHelpCircle size={18} /> },
   ]

@@ -23,6 +23,7 @@ import type {
 } from '../types'
 import { startMediaTimelineJob } from '../utils/api'
 import { loadSettings } from '../utils/appSettings'
+import { consumePendingTemplate, saveTemplate } from '../utils/templateStore'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -322,6 +323,13 @@ export default function MediaTimelinePage() {
     setSettings(prev => ({ ...prev, [k]: v }))
   }, [])
 
+  React.useEffect(() => {
+    const pending = consumePendingTemplate('media')
+    if (pending) {
+      setSettings(s => ({ ...s, ...pending }))
+    }
+  }, [])
+
   const handleIntroChange = (f: File | null) => {
     setIntroFile(f)
     set('enableIntro', !!f)
@@ -537,9 +545,23 @@ export default function MediaTimelinePage() {
 
           {/* Basic Settings */}
           <div className="card p-5 space-y-4">
-            <div>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Video Settings</h2>
-              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Configure core dimensions and playback behaviors.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Video Settings</h2>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Configure core dimensions and playback behaviors.</p>
+              </div>
+              <button 
+                onClick={() => {
+                  const name = window.prompt('Enter template name:', 'My Media Template')
+                  if (name) {
+                    saveTemplate({ name, tool: 'media', description: 'Saved from Media Timeline', settings })
+                    alert('Template saved to your templates library!')
+                  }
+                }} 
+                className="text-[10px] font-bold px-2 py-1 bg-[var(--bg-input)] hover:bg-[var(--accent-primary)] hover:text-white rounded border border-[var(--border-subtle)] transition-colors"
+              >
+                Save as Template
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
