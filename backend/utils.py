@@ -15,6 +15,23 @@ import pandas as pd
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 
+def make_clean_filename(raw_name: str, default_name: str = "output", extension: str = "") -> str:
+    """
+    Clean output filenames safely:
+    - remove invalid filename characters
+    - avoid empty names
+    - preserve clean extensions
+    - avoid duplicate extensions like `.mp4.mp4`
+    - return a safe local filename
+    """
+    name = raw_name.strip() if raw_name and raw_name.strip() else default_name
+    if extension and name.lower().endswith(extension.lower()):
+        name = name[:-len(extension)]
+    name = "".join(c for c in name if c.isalnum() or c in "-_ ")
+    name = name.strip().replace(" ", "_")
+    if not name:
+        name = default_name
+    return f"{name}{extension}"
 
 # ---------------------------------------------------------------------------
 # Time parsing helpers
