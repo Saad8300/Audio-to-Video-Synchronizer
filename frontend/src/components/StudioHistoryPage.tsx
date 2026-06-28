@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { IconHistory, IconTrash, IconDownload, IconAlertCircle } from './icons'
 import { getHistory, deleteHistoryItem, clearHistory } from '../utils/api'
+import { loadSettings } from '../utils/appSettings'
 
 export default function StudioHistoryPage() {
   const [history, setHistory] = useState<any[]>([])
@@ -70,7 +71,14 @@ export default function StudioHistoryPage() {
         
         {history.length > 0 && (
           <button 
-            onClick={() => setShowClearConfirm(true)}
+            onClick={() => {
+              const s = loadSettings()
+              if (s.confirmBeforeClearHistory) {
+                setShowClearConfirm(true)
+              } else {
+                handleClearAll()
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all self-start sm:self-auto hover:bg-red-500/10 text-red-500"
             style={{ border: '1px solid var(--border-subtle)' }}
           >

@@ -32,6 +32,7 @@ import {
 } from './components/icons'
 import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } from './types'
 import { checkHealth, startJob } from './utils/api'
+import { loadSettings, applyThemeMode, saveSettings, AppSettings } from './utils/appSettings'
 
 // ── Default settings ────────────────────────────────────────────────────────
 
@@ -69,22 +70,7 @@ const DEFAULT_SETTINGS: GenerateSettings = {
 
 // ── Theme helpers ───────────────────────────────────────────────────────────
 
-function getInitialDark(): boolean {
-  try {
-    const saved = localStorage.getItem('theme')
-    if (saved === 'light') return false
-    if (saved === 'dark')  return true
-  } catch { /* noop */ }
-  return true
-}
-
-function applyTheme(dark: boolean) {
-  const root = document.documentElement
-  if (dark) { root.classList.add('dark'); root.classList.remove('light') }
-  else       { root.classList.remove('dark'); root.classList.add('light') }
-  try { localStorage.setItem('theme', dark ? 'dark' : 'light') } catch { /* noop */ }
-}
-
+// Replaced by appSettings.ts
 
 // ── Reusable select ─────────────────────────────────────────────────────────
 
@@ -212,24 +198,52 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp'
 
 export default function App() {
-  // Theme
-  const [isDark, setIsDark] = useState<boolean>(getInitialDark)
-  useEffect(() => { applyTheme(isDark) }, [isDark])
-  useEffect(() => { applyTheme(getInitialDark()) }, [])
-  const toggleTheme = () => setIsDark(d => !d)
+  const [appSettingsState, setAppSettingsState] = useState<AppSettings>(() => loadSettings())
+  
+  // Apply theme on load
+  useEffect(() => {
+    applyThemeMode(appSettingsState.themeMode)
+  }, [appSettingsState.themeMode])
 
-  const [activeView, setActiveView] = useState<ViewMode>('landing')
+  const toggleTheme = () => {
+    // If it's system, we check current. If it's dark/light, we flip.
+    const isCurrentlyDark = document.documentElement.classList.contains('dark')
+    const newMode = isCurrentlyDark ? 'light' : 'dark'
+    const newSettings = saveSettings({ themeMode: newMode })
+    setAppSettingsState(newSettings)
+    applyThemeMode(newMode)
+  }
+
+  // Derive isDark for legacy prop passing to StudioLayout
+  const isDark = appSettingsState.themeMode === 'dark' || (appSettingsState.themeMode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  // Initialize view mode based on startupPage setting
+  const [activeView, setActiveView] = useState<ViewMode>(() => {
+    const s = loadSettings()
+    if (s.startupPage === 'landing') return 'landing'
+    if (s.startupPage === 'studio-tools') return 'tools'
+    if (s.startupPage === 'last-used') {
+      const validTools = ['tools', 'dashboard', 'history', 'settings', 'tool:image', 'tool:video', 'tool:media', 'tool:audio_merger', 'tool:script_timestamp']
+      if (validTools.includes(s.lastUsedPage)) {
+        return s.lastUsedPage as ViewMode
+      }
+      return 'tools'
+    }
+    return 'landing'
+  })
 
   // Reset scroll position when navigating
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [activeView])
 
-
   const handleModeChange = (mode: ViewMode) => {
     setActiveView(mode)
     if (mode !== 'landing') {
       try { localStorage.setItem('appMode', mode) } catch { /* noop */ }
+      
+      // Update lastUsedPage
+      saveSettings({ lastUsedPage: mode })
     }
   }
 
@@ -247,7 +261,18 @@ export default function App() {
   const [bgMusicFile,  setBgMusicFile]  = useState<File | null>(null)
 
   // Settings
-  const [settings, setSettings] = useState<GenerateSettings>(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState<GenerateSettings>(() => {
+    const s = loadSettings()
+    return {
+      ...DEFAULT_SETTINGS,
+      outputName: s.defaultVideoFilename,
+      exportResolution: s.defaultExportPreset.includes('4k') ? '4K' : '1080p',
+      aspectRatio: s.defaultExportPreset.includes('tiktok') ? '9:16' : 
+                   s.defaultExportPreset.includes('youtube') ? '16:9' : 
+                   s.defaultExportPreset === 'instagram_reel' ? '9:16' :
+                   s.defaultExportPreset === 'square_post' ? '1:1' : '9:16',
+    }
+  })
 
   // Generation state
   const [status,          setStatus]          = useState<GenerateStatus>('idle')
@@ -418,7 +443,7 @@ export default function App() {
       {activeView === 'tools' && <StudioToolsPage onSelectTool={v => setActiveView(`tool:${v}` as ViewMode)} />}
       {activeView === 'dashboard' && <StudioDashboardPage />}
       {activeView === 'history' && <StudioHistoryPage />}
-      {activeView === 'settings' && <StudioSettingsPage isDark={isDark} toggleTheme={toggleTheme} />}
+      {activeView === 'settings' && <StudioSettingsPage />}
 
       {/* ── Back Navigation for Tools ── */}
       {isTool && (

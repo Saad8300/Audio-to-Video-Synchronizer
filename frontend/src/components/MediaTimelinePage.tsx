@@ -22,6 +22,7 @@ import type {
   GenerateResponse,
 } from '../types'
 import { startMediaTimelineJob } from '../utils/api'
+import { loadSettings } from '../utils/appSettings'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -297,8 +298,19 @@ export default function MediaTimelinePage() {
   const [timelineCsv, setTimelineCsv] = useState<File | null>(null)
   const [introFile, setIntroFile] = useState<File | null>(null)
   const [outroFile, setOutroFile] = useState<File | null>(null)
-  
-  const [settings, setSettings] = useState<MediaTimelineSettings>(DEFAULT_SETTINGS)
+  // Settings
+  const [settings, setSettings] = useState<MediaTimelineSettings>(() => {
+    const s = loadSettings()
+    return {
+      ...DEFAULT_SETTINGS,
+      outputName: s.defaultVideoFilename,
+      exportResolution: s.defaultExportPreset.includes('4k') ? '4K' : '1080p',
+      aspectRatio: s.defaultExportPreset.includes('tiktok') ? '9:16' : 
+                   s.defaultExportPreset.includes('youtube') ? '16:9' : 
+                   s.defaultExportPreset === 'instagram_reel' ? '9:16' :
+                   s.defaultExportPreset === 'square_post' ? '1:1' : '9:16',
+    }
+  })
 
   const [status, setStatus] = useState<GenerateStatus>('idle')
   const [jobId, setJobId] = useState<string | null>(null)

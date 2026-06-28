@@ -10,6 +10,7 @@ import {
   IconDownload,
   IconPlayCircle
 } from './icons'
+import { loadSettings } from '../utils/appSettings'
 
 interface AudioPart {
   id: string
@@ -27,7 +28,7 @@ interface MergeResponse {
 export default function AudioMergerPage() {
   const [parts, setParts] = useState<AudioPart[]>([])
   const [outputFormat, setOutputFormat] = useState<'wav' | 'mp3'>('wav')
-  const [outputName, setOutputName] = useState<string>('merged_audio')
+  const [outputName, setOutputName] = useState<string>(() => loadSettings().defaultAudioFilename)
   
   const [status, setStatus] = useState<'idle' | 'merging' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string>('')

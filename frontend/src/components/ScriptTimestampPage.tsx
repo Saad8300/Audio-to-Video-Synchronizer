@@ -11,6 +11,7 @@ import {
   IconChevronRight
 } from './icons'
 import ToolPageHeader from './ToolPageHeader'
+import { loadSettings } from '../utils/appSettings'
 
 function IconMic({ size = 24, style }: { size?: number; style?: React.CSSProperties }) {
   return (
@@ -136,6 +137,7 @@ export default function ScriptTimestampPage() {
   const [outputStyle, setOutputStyle] = useState('visual_beat')
   const [segmentationIntensity, setSegmentationIntensity] = useState('detailed')
   const [outputMode, setOutputMode] = useState('csv')
+  const [outputName, setOutputName] = useState(() => loadSettings().defaultScriptFilename)
   
   // Original Script
   const [originalScript, setOriginalScript] = useState('')
@@ -432,7 +434,7 @@ export default function ScriptTimestampPage() {
                 </p>
               </div>
 
-              <div className="space-y-1 sm:col-span-2">
+              <div className="space-y-1 sm:col-span-1">
                 <label className="form-label">Output Format</label>
                 <select value={outputMode}
                         onChange={e => setOutputMode(e.target.value)}
@@ -442,6 +444,18 @@ export default function ScriptTimestampPage() {
                 <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {OUTPUT_MODES.find(m => m.value === outputMode)?.desc}
                 </p>
+              </div>
+
+              <div className="space-y-1 sm:col-span-1">
+                <label className="form-label">Output Filename</label>
+                <input 
+                  type="text" 
+                  className="form-input bg-[var(--bg-input)]"
+                  value={outputName}
+                  onChange={e => setOutputName(e.target.value)}
+                  disabled={status === 'transcribing'}
+                  placeholder="script_timestamp"
+                />
               </div>
             </div>
           </div>
@@ -602,7 +616,7 @@ export default function ScriptTimestampPage() {
                   const txtContent = (outputMode === 'csv' && result.segments?.length)
                     ? buildImageTimelinePreview(result.segments)
                     : result.text
-                  downloadAs(txtContent, 'script_timestamp.txt')
+                  downloadAs(txtContent, `${outputName}.txt`)
                 }}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                         style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
@@ -610,7 +624,7 @@ export default function ScriptTimestampPage() {
                 </button>
 
                 {(result.output_format === 'srt' || result.format === 'srt') && (
-                  <button onClick={() => downloadAs(result.text, `${baseName}.srt`)}
+                  <button onClick={() => downloadAs(result.text, `${outputName}.srt`)}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download SRT
                   </button>
@@ -629,7 +643,7 @@ export default function ScriptTimestampPage() {
                           if (!c.includes('image,start,end,text')) c = 'image,start,end,text\n' + c
                           return c
                         })()
-                    downloadAs(csvContent, 'script_timestamp.csv', 'text/csv')
+                    downloadAs(csvContent, `${outputName}.csv`, 'text/csv')
                   }}
                           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg btn-primary transition-colors">
                     <IconDownload size={13} /> Download CSV
