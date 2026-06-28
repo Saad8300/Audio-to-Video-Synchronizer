@@ -46,6 +46,7 @@ from audio_helpers import prepare_single_audio, prepare_zip_audio, merge_audio_p
 from transcription_helpers import transcribe_audio_backend, format_output
 import history_store
 import batch_queue_store
+import batch_queue_runner
 from pydantic import BaseModel
 
 def make_clean_filename(raw_name: str, default_name: str, extension: str) -> str:
@@ -137,16 +138,24 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def startup_event():
+    logger.info("Starting Audio Image Sync Studio Backend...")
+    # Reset any jobs stuck in running state from a previous crash
+    jobs = batch_queue_store.get_all_jobs()
+    stuck_jobs = [j for j in jobs if j.get("status") == "running"]
+    for j in stuck_jobs:
+        logger.warning(f"Resetting stuck job {j['id']} to failed.")
+        batch_queue_store.update_job(j["id"], {
+            "status": "failed",
+            "message": "Interrupted by backend restart."
+        })
 
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
@@ -1722,6 +1731,48 @@ def api_delete_batch_job(job_id: str):
     success = batch_queue_store.delete_job(job_id)
     if not success:
         raise HTTPException(status_code=404, detail="Job not found")
+    return JSONResponse(content={"success": True})
+
+# ── Batch Queue Control Endpoints ─────────────────────────────────────────────
+
+@app.get("/api/batch/state")
+def api_get_batch_state():
+    state = batch_queue_runner.get_state()
+    return JSONResponse(content=state)
+
+@app.post("/api/batch/start")
+def api_start_batch_queue():
+    res = batch_queue_runner.start_runner()
+    return JSONResponse(content=res)
+
+@app.post("/api/batch/pause-after-current")
+def api_pause_batch_queue():
+    res = batch_queue_runner.pause_after_current()
+    return JSONResponse(content=res)
+
+@app.post("/api/batch/stop")
+def api_stop_batch_queue():
+    res = batch_queue_runner.stop_runner()
+    return JSONResponse(content=res)
+
+@app.post("/api/batch/retry-failed")
+def api_retry_failed_batch_jobs():
+    jobs = batch_queue_store.get_all_jobs()
+    failed_jobs = [j for j in jobs if j.get("status") == "failed"]
+    count = 0
+    for j in failed_jobs:
+        batch_queue_store.update_job(j["id"], {"status": "queued", "progress": 0, "message": "Retrying"})
+        count += 1
+    return JSONResponse(content={"retried_count": count})
+
+@app.post("/api/batch/jobs/{job_id}/retry")
+def api_retry_single_batch_job(job_id: str):
+    job = batch_queue_store.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.get("status") not in ["failed", "cancelled", "completed"]:
+        raise HTTPException(status_code=400, detail="Only failed, cancelled, or completed jobs can be retried.")
+    batch_queue_store.update_job(job_id, {"status": "queued", "progress": 0, "message": "Retrying"})
     return JSONResponse(content={"success": True})
 
 @app.get("/outputs/{path:path}")

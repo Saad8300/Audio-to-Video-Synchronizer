@@ -567,3 +567,51 @@ export async function clearCompletedBatchJobs(): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/batch/jobs/completed`, { method: 'DELETE' })
   if (!res.ok) throw new Error("Failed to clear completed jobs")
 }
+
+// ---------------------------------------------------------------------------
+// Batch Queue Runner API (Batch 15C)
+// ---------------------------------------------------------------------------
+
+export interface BatchState {
+  is_running: boolean
+  current_job_id: string | null
+  paused_after_current: boolean
+  stopping: boolean
+  message: string
+}
+
+export async function getBatchState(): Promise<BatchState> {
+  const res = await fetch(`${BASE_URL}/api/batch/state`)
+  if (!res.ok) throw new Error("Failed to get batch state")
+  return res.json()
+}
+
+export async function startBatchQueue(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/start`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to start batch queue")
+  return res.json()
+}
+
+export async function pauseBatchAfterCurrent(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/pause-after-current`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to pause batch queue")
+  return res.json()
+}
+
+export async function stopBatchQueue(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/stop`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to stop batch queue")
+  return res.json()
+}
+
+export async function retryFailedBatchJobs(): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/retry-failed`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to retry failed jobs")
+  return res.json()
+}
+
+export async function retryBatchJob(jobId: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/batch/jobs/${jobId}/retry`, { method: 'POST' })
+  if (!res.ok) throw new Error("Failed to retry job")
+  return res.json()
+}

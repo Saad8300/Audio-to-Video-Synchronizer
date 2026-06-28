@@ -6,7 +6,9 @@ import {
 } from './icons'
 import {
   getBatchJobs, getBatchStats, deleteBatchJob,
-  clearCompletedBatchJobs, createBatchJob
+  clearCompletedBatchJobs, getBatchState, startBatchQueue,
+  pauseBatchAfterCurrent, stopBatchQueue, retryFailedBatchJobs,
+  retryBatchJob, BatchState
 } from '../utils/api'
 
 export default function BatchVideoGeneratorPage() {
@@ -17,11 +19,15 @@ export default function BatchVideoGeneratorPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
+  const [batchState, setBatchState] = useState<BatchState | null>(null)
+  const [isQueueLoading, setIsQueueLoading] = useState(false)
+  
   const loadData = async () => {
     try {
-      const [j, s] = await Promise.all([getBatchJobs(), getBatchStats()])
+      const [j, s, st] = await Promise.all([getBatchJobs(), getBatchStats(), getBatchState()])
       setJobs(j)
       setStats(s)
+      setBatchState(st)
       setError(null)
     } catch (err) {
       setError(String(err))
@@ -30,11 +36,20 @@ export default function BatchVideoGeneratorPage() {
     }
   }
 
+  // Polling logic
   useEffect(() => {
     loadData()
-  }, [])
+    const interval = setInterval(() => {
+      loadData()
+    }, batchState?.is_running ? 2000 : 8000)
+    return () => clearInterval(interval)
+  }, [batchState?.is_running])
 
   const handleDelete = async (id: string) => {
+    if (batchState?.current_job_id === id) {
+      alert("Cannot delete a running job. Stop the queue after current job first.")
+      return
+    }
     try {
       await deleteBatchJob(id)
       loadData()
@@ -49,6 +64,55 @@ export default function BatchVideoGeneratorPage() {
       loadData()
     } catch (err) {
       alert("Failed to clear completed: " + err)
+    }
+  }
+
+  const handleStartQueue = async () => {
+    setIsQueueLoading(true)
+    try {
+      await startBatchQueue()
+      await loadData()
+    } catch (e) {
+      alert("Failed to start queue: " + e)
+    } finally { setIsQueueLoading(false) }
+  }
+
+  const handlePauseQueue = async () => {
+    setIsQueueLoading(true)
+    try {
+      await pauseBatchAfterCurrent()
+      await loadData()
+    } catch (e) {
+      alert("Failed to pause queue: " + e)
+    } finally { setIsQueueLoading(false) }
+  }
+
+  const handleStopQueue = async () => {
+    setIsQueueLoading(true)
+    try {
+      await stopBatchQueue()
+      await loadData()
+    } catch (e) {
+      alert("Failed to stop queue: " + e)
+    } finally { setIsQueueLoading(false) }
+  }
+
+  const handleRetryFailed = async () => {
+    setIsQueueLoading(true)
+    try {
+      await retryFailedBatchJobs()
+      await loadData()
+    } catch (e) {
+      alert("Failed to retry jobs: " + e)
+    } finally { setIsQueueLoading(false) }
+  }
+
+  const handleRetrySingle = async (id: string) => {
+    try {
+      await retryBatchJob(id)
+      await loadData()
+    } catch (e) {
+      alert("Failed to retry job: " + e)
     }
   }
 
@@ -92,17 +156,55 @@ export default function BatchVideoGeneratorPage() {
           <StatCard title="Failed" value={stats.failed} color="#ef4444" />
         </div>
 
+        {/* ── QUEUE STATUS BANNER ── */}
+        {batchState && batchState.is_running && (
+          <div className="card p-4 flex items-center justify-between" style={{ background: 'var(--bg-input)', borderColor: '#a855f7' }}>
+            <div className="flex items-center gap-3">
+              <IconLoader size={18} className="animate-spin" style={{ color: '#a855f7' }} />
+              <div>
+                <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {batchState.stopping ? "Stopping Queue..." : batchState.paused_after_current ? "Pausing after current job..." : "Queue is Running"}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{batchState.message}</div>
+              </div>
+            </div>
+            <div className="text-sm font-semibold" style={{ color: '#a855f7' }}>
+              {stats.completed} / {stats.total} Completed
+            </div>
+          </div>
+        )}
+
         {/* ── QUEUE CONTROLS ── */}
         <div className="card p-4 flex flex-wrap items-center gap-3">
-          <button disabled className="btn-control opacity-50 cursor-not-allowed">
+          <button 
+            onClick={handleStartQueue}
+            disabled={isQueueLoading || stats.queued === 0 || (batchState?.is_running && !batchState.stopping)} 
+            className={`btn-control ${(!batchState?.is_running && stats.queued > 0) ? 'hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+          >
             <IconPlay size={16} /> Start Queue
           </button>
-          <button disabled className="btn-control opacity-50 cursor-not-allowed">
+          <button 
+            onClick={handlePauseQueue}
+            disabled={isQueueLoading || !batchState?.is_running || batchState.paused_after_current || batchState.stopping} 
+            className={`btn-control ${batchState?.is_running && !batchState.paused_after_current && !batchState.stopping ? 'hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+          >
             <IconPause size={16} /> Pause After Current
           </button>
-          <button disabled className="btn-control opacity-50 cursor-not-allowed">
+          <button 
+            onClick={handleStopQueue}
+            disabled={isQueueLoading || !batchState?.is_running || batchState.stopping} 
+            className={`btn-control ${batchState?.is_running && !batchState.stopping ? 'hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+          >
             <IconSquare size={16} /> Stop Queue
           </button>
+          <button 
+            onClick={handleRetryFailed}
+            disabled={isQueueLoading || stats.failed === 0} 
+            className={`btn-control ${stats.failed > 0 ? 'hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+          >
+            <IconLoader size={16} /> Retry Failed
+          </button>
+          
           <div className="flex-1" />
           <button 
             onClick={handleClearCompleted}
@@ -143,14 +245,57 @@ export default function BatchVideoGeneratorPage() {
                   <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {job.export_preset || job.aspect_ratio} • {job.output_name}
                   </p>
+                  
+                  {/* Progress and messages */}
+                  {job.status === 'running' && (
+                    <div className="mt-2 w-full max-w-xs bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                      <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${job.progress}%` }}></div>
+                      <div className="text-[10px] mt-1 text-purple-500 font-medium">{job.progress}% - {job.message}</div>
+                    </div>
+                  )}
+                  {job.status === 'failed' && (
+                    <div className="mt-1 text-[11px] font-semibold text-red-500 truncate max-w-md">
+                      {job.message}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="shrink-0 flex items-center gap-2">
+                  {job.status === 'completed' && job.output_url && (
+                    <>
+                      <a 
+                        href={`http://127.0.0.1:8000${job.output_url}`}
+                        target="_blank" rel="noreferrer"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                        style={{ color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}
+                      >
+                        Open
+                      </a>
+                      <a 
+                        href={`http://127.0.0.1:8000${job.output_url}`}
+                        download
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors hover:opacity-90 shadow-sm"
+                        style={{ background: 'var(--color-accent)' }}
+                      >
+                        Download
+                      </a>
+                    </>
+                  )}
+                  {job.status === 'failed' && (
+                    <button 
+                      onClick={() => handleRetrySingle(job.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}
+                    >
+                      Retry
+                    </button>
+                  )}
                   <button 
                     onClick={() => handleDelete(job.id)}
-                    className="p-2 rounded-lg transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+                    disabled={job.status === 'running'}
+                    className={`p-2 rounded-lg transition-colors ${job.status === 'running' ? 'opacity-30 cursor-not-allowed' : 'hover:bg-black/10 dark:hover:bg-white/10'}`}
                     style={{ color: 'var(--text-muted)' }}
-                    title="Delete Job"
+                    title={job.status === 'running' ? "Cannot delete running job" : "Delete Job"}
                   >
                     <IconTrash size={16} />
                   </button>
