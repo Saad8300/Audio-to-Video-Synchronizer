@@ -400,14 +400,6 @@ export default function StudioDashboardPage() {
         icon={<IconDashboard size={16} />}
         title="Dashboard"
         subtitle="Your local SyncFrame Studio analytics and export activity."
-        actions={
-          hasActivity ? (
-            <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)' }}>
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-breathe" />
-              {stats.total_exports} export{stats.total_exports !== 1 ? 's' : ''}
-            </div>
-          ) : undefined
-        }
       />
 
       {/* ── Loading State ── */}

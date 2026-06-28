@@ -3,7 +3,7 @@ import React from 'react'
 interface Props {
   icon?: React.ReactNode
   title: string
-  subtitle: string
+  subtitle?: string
   actions?: React.ReactNode
 }
 
@@ -27,9 +27,6 @@ export default function StudioPageHeader({ icon, title, subtitle, actions }: Pro
           <h1 className="text-2xl font-black tracking-tight leading-tight" style={{ color: 'var(--text-primary)' }}>
             {title}
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {subtitle}
-          </p>
         </div>
       </div>
       {actions && (

@@ -158,9 +158,6 @@ export default function StudioToolsPage({ onSelectTool }: Props) {
         <div className="flex items-center gap-2 mb-4">
           <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Active Tools</span>
           <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)' }}>
-            {ACTIVE_TOOLS.length} available
-          </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {ACTIVE_TOOLS.map(tool => (
@@ -174,9 +171,6 @@ export default function StudioToolsPage({ onSelectTool }: Props) {
         <div className="flex items-center gap-2 mb-4">
           <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Upcoming Release</span>
           <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-            {UPCOMING_TOOLS.length} planned
-          </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {UPCOMING_TOOLS.map(tool => (
@@ -233,9 +227,6 @@ function ActiveToolCard({
         >
           {tool.icon}
         </div>
-        <div className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)' }}>
-          Ready
-        </div>
       </div>
 
       <div className="flex-1 space-y-1">
@@ -285,10 +276,6 @@ function UpcomingToolCard({
         >
           {tool.icon}
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}>
-          <IconLock size={9} />
-          Upcoming
-        </div>
       </div>
 
       <div className="flex-1 space-y-1">
@@ -298,11 +285,6 @@ function UpcomingToolCard({
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
           {tool.desc}
         </p>
-      </div>
-
-      <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-        <IconLock size={10} />
-        Not yet available
       </div>
     </div>
   )
