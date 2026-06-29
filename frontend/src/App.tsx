@@ -22,6 +22,8 @@ import BatchVideoGeneratorPage from './components/BatchVideoGeneratorPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
 import ExportPresetPanel from './components/ExportPresetPanel'
 import { TextOverlayPanel } from './components/TextOverlayPanel'
+import NotificationToastProvider from './components/NotificationToastProvider'
+import { notifyBackendDisconnected, notifyBackendReconnected, notifyRenderCompleted, notifyRenderFailed } from './utils/notifications'
 import {
   IconMusic,
   IconImage,
@@ -326,6 +328,20 @@ export default function App() {
   // Health check
   useEffect(() => { checkHealth().then(setHealthOk) }, [])
 
+  // Health check watch for notifications
+  const [prevHealth, setPrevHealth] = useState<boolean | null>(null)
+  
+  useEffect(() => {
+    if (healthOk !== prevHealth) {
+      if (prevHealth === true && healthOk === false) {
+        notifyBackendDisconnected()
+      } else if (prevHealth === false && healthOk === true) {
+        notifyBackendReconnected()
+      }
+      setPrevHealth(healthOk)
+    }
+  }, [healthOk, prevHealth])
+
   // Audio duration detection (single file only)
   useEffect(() => {
     if (audioInputMode !== 'single' || !audioFile) { setAudioDuration(null); return }
@@ -401,6 +417,7 @@ export default function App() {
         errors:   jobStatus.errors,
       })
       setStatus('done')
+      notifyRenderCompleted(jobStatus.output_filename ?? undefined)
     } else {
       setResult({
         success: false,
@@ -409,6 +426,7 @@ export default function App() {
         timeline_report: jobStatus.timeline_report,
       })
       setStatus('error')
+      notifyRenderFailed(jobStatus.errors[0] || 'Unknown error')
     }
   }, [])
 
@@ -425,14 +443,16 @@ export default function App() {
   }
 
   return (
-    <StudioLayout
-      activeTab={activeView}
-      onNavigate={(v) => setActiveView(v as ViewMode)}
-      isDark={isDark}
-      toggleTheme={toggleTheme}
-      backendStatus={<StatusDot ok={healthOk} />}
-    >
-      {/* ── Progress overlay ── */}
+    <>
+      <NotificationToastProvider />
+      <StudioLayout
+        activeTab={activeView}
+        onNavigate={(v) => setActiveView(v as ViewMode)}
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        backendStatus={<StatusDot ok={healthOk} />}
+      >
+        {/* ── Progress overlay ── */}
       {currentJobId && (
         <ProgressOverlay
           jobId={currentJobId}
@@ -1009,5 +1029,6 @@ export default function App() {
       )}
       </div>
     </StudioLayout>
+    </>
   )
 }

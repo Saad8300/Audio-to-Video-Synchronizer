@@ -13,6 +13,7 @@ import {
   pauseBatchAfterCurrent, stopBatchQueue, retryFailedBatchJobs,
   retryBatchJob, BatchState
 } from '../utils/api'
+import { notifyBatchQueueCompleted, notifyBatchJobFailed } from '../utils/notifications'
 
 export default function BatchVideoGeneratorPage() {
   const [jobs, setJobs] = useState<any[]>([])
@@ -24,6 +25,22 @@ export default function BatchVideoGeneratorPage() {
   
   const [batchState, setBatchState] = useState<BatchState | null>(null)
   const [isQueueLoading, setIsQueueLoading] = useState(false)
+  
+  const [prevIsRunning, setPrevIsRunning] = useState<boolean | null>(null)
+  const [prevFailedCount, setPrevFailedCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (prevIsRunning === true && batchState?.is_running === false && stats?.queued === 0) {
+      notifyBatchQueueCompleted(stats.completed, stats.failed)
+    }
+    
+    if (prevFailedCount !== null && stats.failed > prevFailedCount) {
+      notifyBatchJobFailed("A job in the batch queue failed.")
+    }
+
+    if (batchState) setPrevIsRunning(batchState.is_running)
+    if (stats) setPrevFailedCount(stats.failed)
+  }, [batchState?.is_running, stats?.failed])
   
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterTool, setFilterTool] = useState<string>('all')

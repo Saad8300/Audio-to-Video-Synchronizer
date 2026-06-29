@@ -396,5 +396,68 @@
       "text_overlay_enabled": true,
       "text_overlay_mode": "whole_video"
     }
+  },
+  {
+    "id": "hist_2d0282e17ebf",
+    "created_at": "2026-06-29T10:46:18.206296Z",
+    "tool": "batch_video_generator",
+    "tool_label": "Batch Video Generator",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": null,
+    "resolution": "720p",
+    "aspect_ratio": "9:16",
+    "render_profile": "fast_preview",
+    "file_size_bytes": 14826854,
+    "status": "completed",
+    "metadata": {
+      "batch_job_id": "batch_dca742c9bc13",
+      "source_tool": "image_timeline",
+      "generated_via": "batch_queue"
+    }
+  },
+  {
+    "id": "hist_56c9e1688c71",
+    "created_at": "2026-06-29T10:50:42.742391Z",
+    "tool": "batch_video_generator",
+    "tool_label": "Batch Video Generator",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": null,
+    "resolution": "1080p",
+    "aspect_ratio": "9:16",
+    "render_profile": "balanced",
+    "file_size_bytes": 20918021,
+    "status": "completed",
+    "metadata": {
+      "batch_job_id": "batch_73bbbc2ce113",
+      "source_tool": "image_timeline",
+      "generated_via": "batch_queue"
+    }
+  },
+  {
+    "id": "hist_90b21d0a6622",
+    "created_at": "2026-06-29T11:17:31.907759Z",
+    "tool": "batch_video_generator",
+    "tool_label": "Batch Video Generator",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": null,
+    "resolution": "4K",
+    "aspect_ratio": "9:16",
+    "render_profile": "high_quality",
+    "file_size_bytes": 62297312,
+    "status": "completed",
+    "metadata": {
+      "batch_job_id": "batch_0cc5b3c492e0",
+      "source_tool": "image_timeline",
+      "generated_via": "batch_queue"
+    }
   }
 ]
