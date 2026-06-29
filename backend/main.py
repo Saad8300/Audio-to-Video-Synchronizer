@@ -249,22 +249,6 @@ async def jobs_start(
         if ext not in ALLOWED_MUSIC_EXTS:
             raise HTTPException(400, f"Unsupported music file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_MUSIC_EXTS))}")
 
-    # ── Validate / normalise watermark ──────────────────────────────────────
-    wm_text     = watermark_text.strip()[:100]           # cap at 100 chars
-    wm_mode     = watermark_position_mode.strip().lower()
-    wm_coord_mode = watermark_coordinate_mode.strip().lower()
-    if wm_mode not in {"preset", "custom"}:
-        wm_mode = "preset"
-    wm_position = watermark_position.lower().replace("-", "_")
-    if wm_position not in VALID_WM_POSITIONS:
-        wm_position = "bottom_right"
-    wm_x = int(watermark_x)
-    wm_y = int(watermark_y)
-    wm_size = max(1, min(100, int(watermark_size)))
-    wm_opacity = max(0.0, min(1.0, float(watermark_opacity)))
-    wm_margin  = max(5, min(int(watermark_margin), 200))
-    wm_enabled = enable_watermark.strip().lower() == "true"
-
     # ── Normalise other settings ─────────────────────────────────────────────
     enable_music_bool  = enable_bg_music.strip().lower() == "true"
     music_fade_bool    = music_fade.strip().lower() == "true"
@@ -378,12 +362,11 @@ async def jobs_start(
                 transition_duration=transition_dur_safe,
                 zoom_effect=zoom_effect,
                 render_profile=render_profile,
-                # Batch 9A
+                style_preset=style_preset,
                 motion_effect=motion_effect_safe,
                 motion_intensity=motion_intensity_safe,
                 visual_effect=visual_effect_safe,
                 effect_strength=effect_strength_safe,
-                # Watermark
                 # Batch 2/6
                 intro_path=intro_path,
                 outro_path=outro_path,
@@ -1529,7 +1512,6 @@ async def api_batch_job_image_timeline(
             "visual_effect": visual_effect,
             "effect_strength": effect_strength,
             "style_preset": style_preset,
-            "enable_watermark": enable_watermark == "true",
             "enable_bg_music": enable_bg_music == "true",
             "music_volume": music_volume,
             "music_fade": music_fade == "true"

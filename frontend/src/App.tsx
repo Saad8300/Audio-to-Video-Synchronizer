@@ -189,7 +189,7 @@ function SummaryChip({ label, value, active }: { label: string; value: string; a
 
 // ── App ─────────────────────────────────────────────────────────────────────
 
-export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp' | 'tool:batch_video'
+export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'templates' | 'settings' | 'tool:image' | 'tool:video' | 'tool:media' | 'tool:audio_merger' | 'tool:script_timestamp' | 'tool:batch_video' | 'batch_video'
 
 export default function App() {
   const [appSettingsState, setAppSettingsState] = useState<AppSettings>(() => loadSettings())
@@ -226,7 +226,7 @@ export default function App() {
     return 'landing'
   })
 
-  const isTool = activeView.startsWith('tool:')
+  const isTool = typeof activeView === 'string' && (activeView.startsWith('tool:') || activeView === 'batch_video')
 
   // Reset scroll position when navigating
   useEffect(() => {
@@ -299,6 +299,7 @@ export default function App() {
   // Batch queue state
   const [isQueuing,       setIsQueuing]       = useState(false)
   const [queueSuccess,    setQueueSuccess]    = useState(false)
+  const [refreshKey,      setRefreshKey]      = useState(0)
 
   // Health check
   useEffect(() => { checkHealth().then(setHealthOk) }, [])
@@ -470,7 +471,13 @@ export default function App() {
       )}
 
       {/* ── View Router ── */}
-      <div key={activeView} className="animate-fade-in flex-1 flex flex-col min-w-0">
+      <div key={`${activeView}-${refreshKey}`} className="animate-fade-in flex-1 flex flex-col min-w-0">
+        {/* Safe fallback for unknown views */}
+        {![
+          'landing', 'tools', 'dashboard', 'history', 'templates', 'settings',
+          'tool:audio_merger', 'tool:script_timestamp', 'tool:media', 
+          'tool:batch_video', 'batch_video', 'tool:video', 'tool:image'
+        ].includes(activeView as string) && <StudioToolsPage onSelectTool={v => setActiveView(`tool:${v}` as ViewMode)} />}
         {activeView === 'tools' && <StudioToolsPage onSelectTool={v => setActiveView(`tool:${v}` as ViewMode)} />}
         {activeView === 'dashboard' && <StudioDashboardPage />}
         {activeView === 'history' && <StudioHistoryPage />}
@@ -504,9 +511,23 @@ export default function App() {
             </button>
             <button
               onClick={() => {
-                const current = activeView
-                setActiveView('tools')
-                setTimeout(() => setActiveView(current), 50)
+                if (activeView === 'tool:image') {
+                  setAudioInputMode('single')
+                  setAudioFile(null)
+                  setAudioZip(null)
+                  setImagesZip(null)
+                  setCsvFile(null)
+                  setIntroFile(null)
+                  setOutroFile(null)
+                  setBgMusicFile(null)
+                  setResult(null)
+                  setStatus('idle')
+                  setCancelledMsg(null)
+                  setQueueSuccess(false)
+                  setIsQueuing(false)
+                  setCurrentJobId(null)
+                }
+                setRefreshKey(k => k + 1)
               }}
               title="Refresh page"
               aria-label="Refresh page"
@@ -540,7 +561,7 @@ export default function App() {
       {activeView === 'tool:audio_merger' && <AudioMergerPage />}
       {activeView === 'tool:script_timestamp' && <ScriptTimestampPage />}
       {activeView === 'tool:media' && <MediaTimelinePage />}
-      {activeView === 'tool:batch_video' && <BatchVideoGeneratorPage />}
+      {(activeView === 'tool:batch_video' || activeView === 'batch_video') && <BatchVideoGeneratorPage />}
       {activeView === 'tool:video' && <VideoTimelinePage />}
 
       {activeView === 'tool:image' && (
