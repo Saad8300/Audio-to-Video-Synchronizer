@@ -116,6 +116,7 @@ export default function N8nWebhookSettingsCard() {
   const [isEditingUrl, setIsEditingUrl] = useState(false)
   const [urlInput, setUrlInput] = useState('')
   const [urlError, setUrlError] = useState('')
+  const [isN8nOpen, setIsN8nOpen] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -198,14 +199,17 @@ export default function N8nWebhookSettingsCard() {
   }
 
   return (
-    <section className="card p-6 space-y-5 relative overflow-hidden">
+    <div className="rounded-2xl transition-all relative" style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-elevated)' }}>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 pb-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+      <div 
+        className="flex items-center justify-between gap-4 p-4 cursor-pointer group select-none"
+        onClick={() => setIsN8nOpen(p => !p)}
+      >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+            <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>
               n8n Webhook Integration
-            </h2>
+            </h3>
             <span
               className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
               style={{
@@ -217,17 +221,28 @@ export default function N8nWebhookSettingsCard() {
               Advanced
             </span>
           </div>
-          <p className="text-[11px] mt-1.5 max-w-lg" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-[11px] mt-1 max-w-lg" style={{ color: 'var(--text-muted)' }}>
             Send render, batch, and system events to n8n so you can trigger Telegram, email, Discord, or custom workflows.
           </p>
         </div>
-        {/* Save status indicator */}
-        <div className="shrink-0 text-[11px] font-bold flex items-center gap-1.5 h-7">
-          {isSaving && <span style={{ color: 'var(--text-muted)' }}>Saving…</span>}
-          {!isSaving && saveStatus === 'saved' && <span style={{ color: '#10b981' }}>✓ Saved</span>}
-          {!isSaving && saveStatus === 'error' && <span style={{ color: '#ef4444' }}>✗ Error</span>}
+        
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Save status indicator */}
+          <div className="text-[11px] font-bold h-7 flex items-center justify-end min-w-[60px]">
+            {isSaving && <span style={{ color: 'var(--text-muted)' }}>Saving…</span>}
+            {!isSaving && saveStatus === 'saved' && <span style={{ color: '#10b981' }}>✓ Saved</span>}
+            {!isSaving && saveStatus === 'error' && <span style={{ color: '#ef4444' }}>✗ Error</span>}
+          </div>
+          <button className="p-1 rounded-lg transition-colors group-hover:bg-black/5 dark:group-hover:bg-white/5" style={{ color: 'var(--text-muted)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isN8nOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
         </div>
       </div>
+
+      {/* Expanded Content */}
+      {isN8nOpen && (
+        <div className="p-5 pt-0 space-y-5 border-t animate-fade-in relative overflow-hidden" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className="pt-5 space-y-5">
 
       {/* Backend offline warning */}
       {backendOffline && (
@@ -450,18 +465,22 @@ export default function N8nWebhookSettingsCard() {
         </>
       )}
 
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-2xl" style={{ background: 'var(--bg-card)', opacity: 0.85 }}>
-          <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
-              <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-            Loading…
           </div>
+
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-b-2xl" style={{ background: 'var(--bg-elevated)', opacity: 0.85 }}>
+              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
+                  <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                Loading…
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </section>
+    </div>
   )
 }

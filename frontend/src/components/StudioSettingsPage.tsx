@@ -16,6 +16,7 @@ export default function StudioSettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [sidebarItems, setSidebarItems] = useState<SidebarItemId[]>(() => loadSidebarItems())
   const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null)
+  const [showNotifications, setShowNotifications] = useState(false)
 
   useEffect(() => {
     setSettings(loadSettings())
@@ -255,114 +256,129 @@ export default function StudioSettingsPage() {
         </section>
 
         {/* ── Notifications ── */}
-        <section className="card p-6 space-y-6">
-          <div className="flex items-center gap-2 border-b pb-2 mb-2" style={{ borderColor: 'var(--border-subtle)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Notifications</h2>
-          </div>
-          <p className="text-[11px] -mt-4 mb-4" style={{ color: 'var(--text-muted)' }}>Control render alerts, batch updates, sound alerts, and desktop notifications.</p>
-          
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Delivery</h3>
-            
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>In-App Notifications</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Show toast alerts inside the app</p>
+        <section className="card p-6">
+          <div 
+            className="flex items-center justify-between gap-4 cursor-pointer group select-none"
+            onClick={() => setShowNotifications(p => !p)}
+          >
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>Notifications</h2>
               </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.inAppNotifications} onChange={(e) => updateNotifSetting('inAppNotifications', e.target.checked)} />
-            </label>
-
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Sound Alerts</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Play a small chime for important events</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.soundAlerts} onChange={(e) => updateNotifSetting('soundAlerts', e.target.checked)} />
-            </label>
-
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Desktop Browser Notifications</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Show native OS notifications when backgrounded</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.desktopNotifications} onChange={(e) => updateNotifSetting('desktopNotifications', e.target.checked)} />
-            </label>
-          </div>
-
-          <div className="w-full h-px" style={{ background: 'var(--border-subtle)' }} />
-
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Render Events</h3>
-            
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Render Completed</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify when a single video finishes rendering</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.renderCompleted} onChange={(e) => updateNotifSetting('renderCompleted', e.target.checked)} />
-            </label>
-
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Render Failed</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify if a video fails to generate</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.renderFailed} onChange={(e) => updateNotifSetting('renderFailed', e.target.checked)} />
-            </label>
-
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Batch Queue Completed</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify when all jobs in the queue are done</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.batchQueueCompleted} onChange={(e) => updateNotifSetting('batchQueueCompleted', e.target.checked)} />
-            </label>
-
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Batch Job Failed</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify if an individual job fails in the queue</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.batchJobFailed} onChange={(e) => updateNotifSetting('batchJobFailed', e.target.checked)} />
-            </label>
-          </div>
-          
-          <div className="w-full h-px" style={{ background: 'var(--border-subtle)' }} />
-
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>System Events</h3>
-            
-            <label className="flex items-center justify-between gap-4 cursor-pointer group">
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Backend Status Alerts</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify when backend disconnects or reconnects</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
-                checked={notifSettings.backendStatusAlerts} onChange={(e) => updateNotifSetting('backendStatusAlerts', e.target.checked)} />
-            </label>
-          </div>
-
-          <div className="pt-2">
-            <button 
-              onClick={testNotification}
-              className="px-4 py-2 rounded-lg font-bold text-xs transition-colors border"
-              style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-subtle)' }}
-            >
-              Test Notification
+              <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Control render alerts, batch updates, sound alerts, and n8n webhook.</p>
+            </div>
+            <button className="p-1 rounded-lg transition-colors group-hover:bg-black/5 dark:group-hover:bg-white/5" style={{ color: 'var(--text-muted)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showNotifications ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
           </div>
-        </section>
+          
+          {showNotifications && (
+            <div className="mt-6 pt-6 space-y-6 border-t animate-fade-in" style={{ borderColor: 'var(--border-subtle)' }}>
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Delivery</h3>
+                
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>In-App Notifications</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Show toast alerts inside the app</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.inAppNotifications} onChange={(e) => updateNotifSetting('inAppNotifications', e.target.checked)} />
+                </label>
 
-        {/* ── n8n Webhook Integration ── */}
-        <N8nWebhookSettingsCard />
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Sound Alerts</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Play a small chime for important events</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.soundAlerts} onChange={(e) => updateNotifSetting('soundAlerts', e.target.checked)} />
+                </label>
+
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Desktop Browser Notifications</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Show native OS notifications when backgrounded</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.desktopNotifications} onChange={(e) => updateNotifSetting('desktopNotifications', e.target.checked)} />
+                </label>
+              </div>
+
+              <div className="w-full h-px" style={{ background: 'var(--border-subtle)' }} />
+
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Render Events</h3>
+                
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Render Completed</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify when a single video finishes rendering</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.renderCompleted} onChange={(e) => updateNotifSetting('renderCompleted', e.target.checked)} />
+                </label>
+
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Render Failed</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify if a video fails to generate</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.renderFailed} onChange={(e) => updateNotifSetting('renderFailed', e.target.checked)} />
+                </label>
+
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Batch Queue Completed</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify when all jobs in the queue are done</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.batchQueueCompleted} onChange={(e) => updateNotifSetting('batchQueueCompleted', e.target.checked)} />
+                </label>
+
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Batch Job Failed</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify if an individual job fails in the queue</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.batchJobFailed} onChange={(e) => updateNotifSetting('batchJobFailed', e.target.checked)} />
+                </label>
+              </div>
+              
+              <div className="w-full h-px" style={{ background: 'var(--border-subtle)' }} />
+
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>System Events</h3>
+                
+                <label className="flex items-center justify-between gap-4 cursor-pointer group">
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Backend Status Alerts</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Notify when backend disconnects or reconnects</p>
+                  </div>
+                  <input type="checkbox" className="w-5 h-5 rounded border-[var(--border-default)] checked:bg-violet-500 cursor-pointer"
+                    checked={notifSettings.backendStatusAlerts} onChange={(e) => updateNotifSetting('backendStatusAlerts', e.target.checked)} />
+                </label>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={testNotification}
+                  className="px-4 py-2 rounded-lg font-bold text-xs transition-colors border"
+                  style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-subtle)' }}
+                >
+                  Test Notification
+                </button>
+              </div>
+
+              <div className="pt-2">
+                <N8nWebhookSettingsCard />
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* ── Sidebar Menu Customization ── */}
         <section className="card p-6 space-y-5">
