@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GenerateSettings } from '../types';
+import { getAllPresets, savePreset, deletePreset, TextOverlayPreset } from '../utils/textOverlayPresets';
 
 export function TextOverlayPanel({
   settings,
@@ -9,6 +10,55 @@ export function TextOverlayPanel({
   onChange: (updates: Partial<GenerateSettings>) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [presets, setPresets] = useState<TextOverlayPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+
+  useEffect(() => {
+    setPresets(getAllPresets());
+  }, []);
+
+  const handleApplyPreset = () => {
+    const preset = presets.find(p => p.id === selectedPresetId);
+    if (!preset) return;
+    onChange({
+      ...preset.settings
+    });
+  };
+
+  const handleSavePreset = () => {
+    const name = prompt('Enter preset name:', 'My Text Overlay Preset');
+    if (!name || !name.trim()) return;
+    const {
+      textOverlayEnabled, textOverlayText, textOverlayFontFamily, textOverlayFontSizePercent,
+      textOverlayFontWeight, textOverlayColor, textOverlayOpacity, textOverlayXPercent,
+      textOverlayYPercent, textOverlayAlign, textOverlayMaxWidthPercent, textOverlayShadowEnabled,
+      textOverlayStrokeEnabled, textOverlayStrokeColor, textOverlayBackgroundEnabled,
+      textOverlayBackgroundColor, textOverlayBackgroundOpacity
+    } = settings;
+    
+    const newPreset = savePreset(name.trim(), {
+      textOverlayEnabled, textOverlayText, textOverlayFontFamily, textOverlayFontSizePercent,
+      textOverlayFontWeight, textOverlayColor, textOverlayOpacity, textOverlayXPercent,
+      textOverlayYPercent, textOverlayAlign, textOverlayMaxWidthPercent, textOverlayShadowEnabled,
+      textOverlayStrokeEnabled, textOverlayStrokeColor, textOverlayBackgroundEnabled,
+      textOverlayBackgroundColor, textOverlayBackgroundOpacity
+    });
+    setPresets(getAllPresets());
+    setSelectedPresetId(newPreset.id);
+    alert('Text overlay preset saved');
+  };
+
+  const handleDeletePreset = () => {
+    if (!selectedPresetId) return;
+    const preset = presets.find(p => p.id === selectedPresetId);
+    if (!preset || preset.type === 'built-in') return;
+    
+    if (confirm(`Delete preset "${preset.name}"?`)) {
+      deletePreset(preset.id);
+      setPresets(getAllPresets());
+      setSelectedPresetId('');
+    }
+  };
 
   const {
     textOverlayEnabled: enabled,
@@ -78,6 +128,64 @@ export function TextOverlayPanel({
 
           <div className="space-y-4 mt-5 transition-opacity" style={{ opacity: enabled ? 1 : 0.4, pointerEvents: enabled ? 'auto' : 'none' }}>
             
+            {/* Overlay Presets Section */}
+            <div className="p-4 rounded border space-y-3" style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Overlay Presets</label>
+                <button 
+                  onClick={handleSavePreset}
+                  className="text-[10px] font-semibold px-2 py-1 rounded transition-colors hover:opacity-80"
+                  style={{ background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                  title="Save Current as Preset"
+                >
+                  Save Current
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <select 
+                  className="form-select flex-1"
+                  value={selectedPresetId}
+                  onChange={e => setSelectedPresetId(e.target.value)}
+                >
+                  <option value="" disabled>Load Preset...</option>
+                  <optgroup label="Built-in Presets">
+                    {presets.filter(p => p.type === 'built-in').map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                  {presets.filter(p => p.type === 'saved').length > 0 && (
+                    <optgroup label="Saved Presets">
+                      {presets.filter(p => p.type === 'saved').map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                <button 
+                  onClick={handleApplyPreset}
+                  disabled={!selectedPresetId}
+                  className="px-3 rounded text-xs font-bold transition-opacity"
+                  style={{ 
+                    background: 'var(--accent-primary)', color: 'white',
+                    opacity: selectedPresetId ? 1 : 0.5,
+                    cursor: selectedPresetId ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Apply
+                </button>
+                {presets.find(p => p.id === selectedPresetId)?.type === 'saved' && (
+                  <button 
+                    onClick={handleDeletePreset}
+                    className="px-2 rounded text-xs font-bold opacity-70 hover:opacity-100 transition-opacity"
+                    style={{ background: '#ef4444', color: 'white' }}
+                    title="Delete Preset"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Live Preview */}
             <div className="rounded overflow-hidden relative" style={{ aspectRatio: settings.aspectRatio.replace(':', '/'), background: 'linear-gradient(135deg, #1e293b, #0f172a)' }}>
               <div 
