@@ -21,6 +21,7 @@ import ScriptTimestampPage from './components/ScriptTimestampPage'
 import BatchVideoGeneratorPage from './components/BatchVideoGeneratorPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
 import ExportPresetPanel from './components/ExportPresetPanel'
+import { TextOverlayPanel } from './components/TextOverlayPanel'
 import {
   IconMusic,
   IconImage,
@@ -60,6 +61,24 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   enableBgMusic:    false,
   musicVolume:      12,
   musicFade:        true,
+  // Batch 16A — Text Overlay
+  textOverlayEnabled: false,
+  textOverlayText: '',
+  textOverlayFontFamily: 'Inter',
+  textOverlayFontSizePercent: 5,
+  textOverlayFontWeight: 'Medium',
+  textOverlayColor: '#FFFFFF',
+  textOverlayOpacity: 100,
+  textOverlayXPercent: 50,
+  textOverlayYPercent: 88,
+  textOverlayAlign: 'center',
+  textOverlayMaxWidthPercent: 90,
+  textOverlayShadowEnabled: true,
+  textOverlayStrokeEnabled: false,
+  textOverlayStrokeColor: '#000000',
+  textOverlayBackgroundEnabled: false,
+  textOverlayBackgroundColor: '#000000',
+  textOverlayBackgroundOpacity: 50,
 }
 
 // ── Theme helpers ───────────────────────────────────────────────────────────
@@ -817,7 +836,12 @@ export default function App() {
                           options={[ { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' } ]} />
                       </div>
                     </div>
-        
+                            {/* Text Overlay card */}
+                    <TextOverlayPanel 
+                      settings={settings} 
+                      onChange={updates => setSettings(s => ({ ...s, ...updates }))} 
+                    />
+
                     {/* Background Music card */}
                     <div className="card p-5 space-y-4">
                       <div>

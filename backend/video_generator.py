@@ -17,6 +17,8 @@ from typing import Any, Callable, Optional
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from text_overlay import make_text_overlay
+
 # ---------------------------------------------------------------------------
 # Pillow compatibility shim — must come BEFORE MoviePy imports.
 # ---------------------------------------------------------------------------
@@ -347,120 +349,7 @@ def make_zoom_clip(
 # Watermark helpers (Pillow-based — no ImageMagick required)
 # ---------------------------------------------------------------------------
 
-def _load_watermark_font(font_size: int) -> Any:
-    candidates: list[str] = []
-    if platform.system() == "Darwin":
-        candidates = [
-            "/System/Library/Fonts/Helvetica.ttc",
-            "/System/Library/Fonts/HelveticaNeue.ttc",
-            "/System/Library/Fonts/SFNSText.ttf",
-            "/System/Library/Fonts/SFNS.ttf",
-            "/Library/Fonts/Arial.ttf",
-        ]
-    else:
-        candidates = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        ]
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, font_size)
-        except (IOError, OSError):
-            pass
-    return ImageFont.load_default()
 
-
-def _make_watermark_overlay(
-    target_w: int, target_h: int, text: str,
-    position_mode: str = "preset", position: str = "bottom_right",
-    coordinate_mode: str = "design_canvas", aspect_ratio: str = "16:9",
-    x_pos: int = 50, y_pos: int = 50,
-    opacity: float = 0.65, size: int = 20, margin: int = 36,
-) -> Optional[np.ndarray]:
-    text = text.strip()
-    if not text:
-        return None
-    size_factor = max(0.01, size * 0.0011)
-    font_size = max(14, int(target_h * size_factor))
-    try:
-        font = _load_watermark_font(font_size)
-        overlay = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay)
-        try:
-            bbox = draw.textbbox((0, 0), text, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
-            text_offset_x = -bbox[0]
-            text_offset_y = -bbox[1]
-        except AttributeError:
-            text_w, text_h = draw.textsize(text, font=font)  # type: ignore[attr-defined]
-            text_offset_x = 0
-            text_offset_y = 0
-        pad_x = max(int(font_size * 0.55), 8)
-        pad_y = max(int(font_size * 0.28), 4)
-        pill_w = text_w + pad_x * 2
-        pill_h = text_h + pad_y * 2
-        margin = max(5, min(margin, min(target_w, target_h) // 4))
-        is_white_default = (position_mode == "preset" and position.lower().replace("-", "_") == "white_default")
-        
-        if position_mode == "custom":
-            x, y = resolve_watermark_position(
-                x_pos, y_pos, coordinate_mode, aspect_ratio, target_w, target_h, "custom"
-            )
-        else:
-            pos = position.lower().replace("-", "_")
-            if pos == "white_default":
-                x = (target_w - text_w) // 2
-                y = int(target_h * 0.85)
-            elif pos == "top_left":
-                x, y = margin, margin
-            elif pos == "top_right":
-                x, y = target_w - pill_w - margin, margin
-            elif pos == "bottom_left":
-                x, y = margin, target_h - pill_h - margin
-            elif pos == "center":
-                x = (target_w - pill_w) // 2
-                y = (target_h - pill_h) // 2
-            else:
-                x = target_w - pill_w - margin
-                y = target_h - pill_h - margin
-        # If not using preset, use raw x/y coordinates directly (allowing negative or off-screen).
-        if position_mode != "preset":
-            pass
-            
-        bg_alpha  = int(opacity * 170)
-        txt_alpha = int(opacity * 255)
-        radius = pill_h // 2
-        
-        if is_white_default:
-            shadow_offset = max(1, int(font_size * 0.06))
-            shadow_a = int(opacity * 220)
-            # Drop shadow
-            draw.text((x+text_offset_x+shadow_offset, y+text_offset_y+shadow_offset), text, font=font, fill=(0,0,0, shadow_a))
-            # Main white text
-            draw.text((x+text_offset_x, y+text_offset_y), text, font=font, fill=(255,255,255, txt_alpha))
-        else:
-            try:
-                draw.rounded_rectangle([x, y, x + pill_w, y + pill_h], radius=radius, fill=(0, 0, 0, bg_alpha))
-            except AttributeError:
-                draw.rectangle([x, y, x + pill_w, y + pill_h], fill=(0, 0, 0, bg_alpha))
-            tx = x + pad_x + text_offset_x
-            ty = y + pad_y + text_offset_y
-            draw.text((tx, ty), text, font=font, fill=(255, 255, 255, txt_alpha))
-            
-        return np.array(overlay)
-    except Exception as exc:
-        logger.warning("Watermark overlay render failed: %s", exc)
-        return None
-
-
-def _apply_wm_frame(frame: np.ndarray, overlay: np.ndarray) -> np.ndarray:
-    alpha = overlay[:, :, 3:4].astype(np.float32) / 255.0
-    rgb   = overlay[:, :, :3].astype(np.float32)
-    out   = frame.astype(np.float32) * (1.0 - alpha) + rgb * alpha
-    return np.clip(out, 0, 255).astype(np.uint8)
 
 
 # ---------------------------------------------------------------------------
@@ -575,17 +464,24 @@ def generate_video(
     visual_effect: str = "none",
     effect_strength: str = "medium",
     style_preset: str = "clean_default",
-    # Watermark (Batch 3)
-    enable_watermark: bool = False,
-    watermark_text: str = "",
-    watermark_position_mode: str = "preset",
-    watermark_coordinate_mode: str = "design_canvas",
-    watermark_position: str = "bottom_right",
-    watermark_x: int = 50,
-    watermark_y: int = 50,
-    watermark_opacity: float = 0.65,
-    watermark_size: int = 20,
-    watermark_margin: int = 36,
+    # Batch 16A — Text Overlay
+    text_overlay_enabled: bool = False,
+    text_overlay_text: str = "",
+    text_overlay_font_family: str = "Inter",
+    text_overlay_font_size_percent: float = 5.0,
+    text_overlay_font_weight: str = "Medium",
+    text_overlay_color: str = "#FFFFFF",
+    text_overlay_opacity: float = 100.0,
+    text_overlay_x_percent: float = 50.0,
+    text_overlay_y_percent: float = 88.0,
+    text_overlay_align: str = "center",
+    text_overlay_max_width_percent: float = 90.0,
+    text_overlay_shadow_enabled: bool = True,
+    text_overlay_stroke_enabled: bool = False,
+    text_overlay_stroke_color: str = "#000000",
+    text_overlay_background_enabled: bool = False,
+    text_overlay_background_color: str = "#000000",
+    text_overlay_background_opacity: float = 50.0,
     # Batch 2/6 — optional features
     intro_path: Optional[str] = None,
     outro_path: Optional[str] = None,
@@ -616,8 +512,6 @@ def generate_video(
 
     # ── Clamp optional numeric params ────────────────────────────────────────
     music_volume      = max(0.0, min(1.0, music_volume))
-    watermark_opacity = max(0.0, min(1.0, watermark_opacity))
-    watermark_margin  = max(5, min(watermark_margin, 200))
     transition_duration = max(0.1, min(float(transition_duration), 2.0))
 
     # ── Effective motion and transition ───────────────────────────────────────
@@ -632,7 +526,7 @@ def generate_video(
     use_intro     = intro_path is not None and os.path.isfile(intro_path)
     use_outro     = outro_path is not None and os.path.isfile(outro_path)
     use_music     = enable_bg_music and bg_music_path is not None and os.path.isfile(bg_music_path)
-    use_watermark = False
+    use_text_overlay = text_overlay_enabled and bool(text_overlay_text.strip())
     use_motion    = effective_motion != "none"
 
     # ── Performance warnings ──────────────────────────────────────────────────
@@ -665,7 +559,7 @@ def generate_video(
     logger.info(
         f"Starting job. Res: {export_resolution}, Profile: {render_profile}, "
         f"Motion: {effective_motion} ({motion_intensity}), "
-        f"Aspect: {aspect_ratio}, Watermark: {use_watermark}"
+        f"Aspect: {aspect_ratio}, TextOverlay: {use_text_overlay}"
     )
 
     def _check_cancel():
@@ -978,31 +872,37 @@ def generate_video(
     _check_cancel()
 
     # ------------------------------------------------------------------
-    # 8. Watermark (optional)
+    # 8. Text Overlay (Batch 16A)
     # ------------------------------------------------------------------
     intro_clip = None
     outro_clip = None
-    if use_watermark:
-        _progress(78, "Applying watermark")
-        wm_overlay = _make_watermark_overlay(
+    if use_text_overlay:
+        _progress(78, "Applying text overlay")
+        overlay_arr = make_text_overlay(
             target_w=target_w,
             target_h=target_h,
-            text=watermark_text,
-            position_mode=watermark_position_mode,
-            position=watermark_position,
-            coordinate_mode=watermark_coordinate_mode,
-            aspect_ratio=aspect_ratio,
-            x_pos=watermark_x,
-            y_pos=watermark_y,
-            opacity=watermark_opacity,
-            size=watermark_size,
-            margin=watermark_margin,
+            text=text_overlay_text,
+            font_family=text_overlay_font_family,
+            font_size_percent=text_overlay_font_size_percent,
+            font_weight=text_overlay_font_weight,
+            color=text_overlay_color,
+            opacity=text_overlay_opacity,
+            x_percent=text_overlay_x_percent,
+            y_percent=text_overlay_y_percent,
+            align=text_overlay_align,
+            max_width_percent=text_overlay_max_width_percent,
+            shadow_enabled=text_overlay_shadow_enabled,
+            stroke_enabled=text_overlay_stroke_enabled,
+            stroke_color=text_overlay_stroke_color,
+            bg_enabled=text_overlay_background_enabled,
+            bg_color=text_overlay_background_color,
+            bg_opacity=text_overlay_background_opacity
         )
-        if wm_overlay is not None:
-            _overlay = wm_overlay
-            video = video.fl_image(lambda frame: _apply_wm_frame(frame, _overlay))
+        if overlay_arr is not None:
+            overlay_clip = ImageClip(overlay_arr).set_duration(video.duration)
+            video = CompositeVideoClip([video, overlay_clip])
         else:
-            warnings.append("Watermark could not be rendered. Continuing without watermark.")
+            warnings.append("Text overlay could not be rendered. Continuing without it.")
         _check_cancel()
 
     # ------------------------------------------------------------------

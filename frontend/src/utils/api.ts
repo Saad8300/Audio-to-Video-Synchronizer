@@ -105,6 +105,25 @@ export async function startJob(
   form.append('music_volume',    (settings.musicVolume / 100).toFixed(4))
   form.append('music_fade',      settings.musicFade ? 'true' : 'false')
 
+  // Batch 16A — Text Overlay
+  form.append('text_overlay_enabled', settings.textOverlayEnabled ? 'true' : 'false')
+  form.append('text_overlay_text', settings.textOverlayText)
+  form.append('text_overlay_font_family', settings.textOverlayFontFamily)
+  form.append('text_overlay_font_size_percent', settings.textOverlayFontSizePercent.toString())
+  form.append('text_overlay_font_weight', settings.textOverlayFontWeight)
+  form.append('text_overlay_color', settings.textOverlayColor)
+  form.append('text_overlay_opacity', settings.textOverlayOpacity.toString())
+  form.append('text_overlay_x_percent', settings.textOverlayXPercent.toString())
+  form.append('text_overlay_y_percent', settings.textOverlayYPercent.toString())
+  form.append('text_overlay_align', settings.textOverlayAlign)
+  form.append('text_overlay_max_width_percent', settings.textOverlayMaxWidthPercent.toString())
+  form.append('text_overlay_shadow_enabled', settings.textOverlayShadowEnabled ? 'true' : 'false')
+  form.append('text_overlay_stroke_enabled', settings.textOverlayStrokeEnabled ? 'true' : 'false')
+  form.append('text_overlay_stroke_color', settings.textOverlayStrokeColor)
+  form.append('text_overlay_background_enabled', settings.textOverlayBackgroundEnabled ? 'true' : 'false')
+  form.append('text_overlay_background_color', settings.textOverlayBackgroundColor)
+  form.append('text_overlay_background_opacity', settings.textOverlayBackgroundOpacity.toString())
+
   // Optional file uploads
   if (introFile)   form.append('intro_file',    introFile)
   if (outroFile)   form.append('outro_file',    outroFile)

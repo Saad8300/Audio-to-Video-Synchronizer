@@ -85,6 +85,24 @@ export interface GenerateSettings {
   musicVolume:   number    // 0–100 (integer percentage)
   musicFade:     boolean
 
+  // Batch 16A — Text Overlay
+  textOverlayEnabled: boolean
+  textOverlayText: string
+  textOverlayFontFamily: string
+  textOverlayFontSizePercent: number
+  textOverlayFontWeight: string
+  textOverlayColor: string
+  textOverlayOpacity: number
+  textOverlayXPercent: number
+  textOverlayYPercent: number
+  textOverlayAlign: 'left' | 'center' | 'right'
+  textOverlayMaxWidthPercent: number
+  textOverlayShadowEnabled: boolean
+  textOverlayStrokeEnabled: boolean
+  textOverlayStrokeColor: string
+  textOverlayBackgroundEnabled: boolean
+  textOverlayBackgroundColor: string
+  textOverlayBackgroundOpacity: number
 }
 
 export interface TimelineRow {

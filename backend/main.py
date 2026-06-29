@@ -207,6 +207,24 @@ async def jobs_start(
     enable_bg_music:   str   = Form("false"),
     music_volume:      float = Form(0.12),
     music_fade:        str   = Form("true"),
+    # Batch 16A — Text Overlay
+    text_overlay_enabled: str = Form("false"),
+    text_overlay_text: str = Form(""),
+    text_overlay_font_family: str = Form("Inter"),
+    text_overlay_font_size_percent: float = Form(5.0),
+    text_overlay_font_weight: str = Form("Medium"),
+    text_overlay_color: str = Form("#FFFFFF"),
+    text_overlay_opacity: float = Form(100.0),
+    text_overlay_x_percent: float = Form(50.0),
+    text_overlay_y_percent: float = Form(88.0),
+    text_overlay_align: str = Form("center"),
+    text_overlay_max_width_percent: float = Form(90.0),
+    text_overlay_shadow_enabled: str = Form("true"),
+    text_overlay_stroke_enabled: str = Form("false"),
+    text_overlay_stroke_color: str = Form("#000000"),
+    text_overlay_background_enabled: str = Form("false"),
+    text_overlay_background_color: str = Form("#000000"),
+    text_overlay_background_opacity: float = Form(50.0),
 ):
     """
     Accept uploaded files and settings, create a background job, return {job_id}.
@@ -253,6 +271,19 @@ async def jobs_start(
     enable_music_bool  = enable_bg_music.strip().lower() == "true"
     music_fade_bool    = music_fade.strip().lower() == "true"
     music_vol_clamped  = max(0.0, min(1.0, float(music_volume)))
+
+    text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+    text_overlay_shadow_bool  = text_overlay_shadow_enabled.strip().lower() == "true"
+    text_overlay_stroke_bool  = text_overlay_stroke_enabled.strip().lower() == "true"
+    text_overlay_bg_bool      = text_overlay_background_enabled.strip().lower() == "true"
+
+    # Clamp numeric text overlay settings safely
+    to_x_pct = max(0.0, min(100.0, float(text_overlay_x_percent)))
+    to_y_pct = max(0.0, min(100.0, float(text_overlay_y_percent)))
+    to_opacity = max(0.0, min(100.0, float(text_overlay_opacity)))
+    to_bg_opacity = max(0.0, min(100.0, float(text_overlay_background_opacity)))
+    to_font_size = max(1.0, min(100.0, float(text_overlay_font_size_percent)))
+    to_max_width = max(1.0, min(100.0, float(text_overlay_max_width_percent)))
 
     # ── Set up job ────────────────────────────────────────────────────────────
     job_id   = uuid.uuid4().hex
@@ -374,6 +405,24 @@ async def jobs_start(
                 enable_bg_music=enable_music_bool,
                 music_volume=music_vol_clamped,
                 music_fade=music_fade_bool,
+                # Batch 16A — Text Overlay
+                text_overlay_enabled=text_overlay_enabled_bool,
+                text_overlay_text=text_overlay_text,
+                text_overlay_font_family=text_overlay_font_family,
+                text_overlay_font_size_percent=to_font_size,
+                text_overlay_font_weight=text_overlay_font_weight,
+                text_overlay_color=text_overlay_color,
+                text_overlay_opacity=to_opacity,
+                text_overlay_x_percent=to_x_pct,
+                text_overlay_y_percent=to_y_pct,
+                text_overlay_align=text_overlay_align,
+                text_overlay_max_width_percent=to_max_width,
+                text_overlay_shadow_enabled=text_overlay_shadow_bool,
+                text_overlay_stroke_enabled=text_overlay_stroke_bool,
+                text_overlay_stroke_color=text_overlay_stroke_color,
+                text_overlay_background_enabled=text_overlay_bg_bool,
+                text_overlay_background_color=text_overlay_background_color,
+                text_overlay_background_opacity=to_bg_opacity,
                 # Infra
                 cancel_event=state["cancel_event"],
                 progress_callback=progress_callback,
