@@ -36,7 +36,7 @@ import {
 } from './components/icons'
 import type { GenerateSettings, GenerateResponse, GenerateStatus, JobStatus } from './types'
 import { checkHealth, startJob, createImageTimelineBatchJob } from './utils/api'
-import { loadSettings, applyThemeMode, saveSettings, AppSettings } from './utils/appSettings'
+import { loadSettings, applyThemeMode, applyAccentColor, saveSettings, AppSettings } from './utils/appSettings'
 import { consumePendingTemplate, saveTemplate } from './utils/templateStore'
 
 // ── Default settings ────────────────────────────────────────────────────────
@@ -194,10 +194,11 @@ export type ViewMode = 'landing' | 'tools' | 'dashboard' | 'history' | 'template
 export default function App() {
   const [appSettingsState, setAppSettingsState] = useState<AppSettings>(() => loadSettings())
   
-  // Apply theme on load
+  // Apply theme and accent on load and change
   useEffect(() => {
     applyThemeMode(appSettingsState.themeMode)
-  }, [appSettingsState.themeMode])
+    applyAccentColor(appSettingsState.accentColor)
+  }, [appSettingsState.themeMode, appSettingsState.accentColor])
 
   const toggleTheme = () => {
     // If it's system, we check current. If it's dark/light, we flip.
@@ -390,7 +391,7 @@ export default function App() {
   // Derived
 
   if (activeView === 'landing') {
-    return <LandingPage onEnterStudio={() => setActiveView('tools')} onViewTools={() => setActiveView('tools')} />
+    return <LandingPage onEnterStudio={() => setActiveView('dashboard')} onViewTools={() => setActiveView('tools')} />
   }
 
   return (

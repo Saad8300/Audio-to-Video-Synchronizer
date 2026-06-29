@@ -95,10 +95,10 @@ export default function StudioSettingsPage() {
             </select>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 opacity-70">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Accent Color</p>
-              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Customize the primary app color (Saves locally, styling coming soon)</p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Customize the primary app color</p>
             </div>
             <select 
               className="form-select w-full sm:w-40 bg-[var(--bg-input)]"

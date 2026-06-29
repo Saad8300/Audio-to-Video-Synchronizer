@@ -140,6 +140,60 @@ export function applyThemeMode(mode: ThemeMode) {
   }
 }
 
+export function applyAccentColor(color: AccentColor) {
+  const root = document.documentElement
+  let primary, hover, subtle, glow, border, gradient
+  switch (color) {
+    case 'blue':
+      primary = '#3b82f6'
+      hover = '#2563eb'
+      subtle = 'rgba(59, 130, 246, 0.10)'
+      glow = 'rgba(59, 130, 246, 0.25)'
+      border = 'rgba(59, 130, 246, 0.35)'
+      gradient = 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)'
+      break
+    case 'cyan':
+      primary = '#06b6d4'
+      hover = '#0891b2'
+      subtle = 'rgba(6, 182, 212, 0.10)'
+      glow = 'rgba(6, 182, 212, 0.25)'
+      border = 'rgba(6, 182, 212, 0.35)'
+      gradient = 'linear-gradient(135deg, #06b6d4 0%, #10b981 100%)'
+      break
+    case 'green':
+      primary = '#10b981'
+      hover = '#059669'
+      subtle = 'rgba(16, 185, 129, 0.10)'
+      glow = 'rgba(16, 185, 129, 0.25)'
+      border = 'rgba(16, 185, 129, 0.35)'
+      gradient = 'linear-gradient(135deg, #10b981 0%, #84cc16 100%)'
+      break
+    case 'orange':
+      primary = '#f97316'
+      hover = '#ea580c'
+      subtle = 'rgba(249, 115, 22, 0.10)'
+      glow = 'rgba(249, 115, 22, 0.25)'
+      border = 'rgba(249, 115, 22, 0.35)'
+      gradient = 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)'
+      break
+    case 'purple':
+    default:
+      primary = '#6366f1'
+      hover = '#4f46e5'
+      subtle = 'rgba(99, 102, 241, 0.10)'
+      glow = 'rgba(99, 102, 241, 0.25)'
+      border = 'rgba(99, 102, 241, 0.35)'
+      gradient = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+      break
+  }
+  root.style.setProperty('--accent-primary', primary)
+  root.style.setProperty('--accent-hover', hover)
+  root.style.setProperty('--accent-subtle', subtle)
+  root.style.setProperty('--accent-glow', glow)
+  root.style.setProperty('--accent-border', border)
+  root.style.setProperty('--accent-gradient', gradient)
+}
+
 // ── Sidebar customization helpers ─────────────────────────────────────────────
 
 export function loadSidebarItems(): SidebarItemId[] {

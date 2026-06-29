@@ -50,12 +50,12 @@ export default function LandingPage({ onEnterStudio, onViewTools }: LandingPageP
             onClick={onEnterStudio}
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              background: 'var(--accent-gradient)',
               color: '#fff',
-              boxShadow: '0 8px 24px rgba(99,102,241,0.3)'
+              boxShadow: '0 8px 24px var(--accent-glow)'
             }}
           >
-            Enter Studio <IconZap size={18} />
+            Studio <IconZap size={18} />
           </button>
           
           <button
