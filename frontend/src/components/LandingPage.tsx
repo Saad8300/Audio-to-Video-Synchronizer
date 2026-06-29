@@ -45,29 +45,29 @@ export default function LandingPage({ onEnterStudio, onViewTools }: LandingPageP
           Create videos, timestamps, audio tools, and media timelines locally.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mx-auto justify-center animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-xs mx-auto justify-center animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <button
             onClick={onEnterStudio}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full px-8 py-3.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             style={{
               background: 'var(--accent-gradient)',
               color: '#fff',
               boxShadow: '0 8px 24px var(--accent-glow)'
             }}
           >
-            Studio <IconZap size={18} />
+            Studio <IconZap size={16} />
           </button>
           
           <button
             onClick={onViewTools}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold transition-all hover:bg-[var(--bg-input)] hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full px-8 py-3.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             style={{
               background: 'var(--bg-elevated)',
               color: 'var(--text-primary)',
               border: '1px solid var(--border-default)'
             }}
           >
-            View Tools
+            Tools
           </button>
         </div>
 

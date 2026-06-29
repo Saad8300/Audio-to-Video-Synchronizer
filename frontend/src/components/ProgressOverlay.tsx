@@ -1,11 +1,11 @@
-// components/ProgressOverlay.tsx – Premium generation progress modal
+// components/ProgressOverlay.tsx – Premium Generation Panel v2
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { IconClock, IconXCircle, IconDownload, IconCheck, IconAlertTriangle, IconLoader } from './icons'
 import type { JobStatus, ExportResolution, RenderProfile } from '../types'
 import { getJobStatus, cancelJob } from '../utils/api'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface RenderSpec {
   resolution:    ExportResolution
@@ -20,14 +20,7 @@ interface ProgressOverlayProps {
   renderSpec?:   RenderSpec
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatTime(seconds: number): string {
-  if (!seconds || seconds < 0) return '—'
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROFILE_FPS: Record<RenderProfile, string> = {
   fast_preview: '24 FPS',
@@ -41,14 +34,41 @@ const PROFILE_LABEL: Record<RenderProfile, string> = {
   high_quality: 'High Quality',
 }
 
-// ─── Spec Chip ────────────────────────────────────────────────────────────────
+const RENDER_STEPS = [
+  { key: 'prepare',  label: 'Prepare'  },
+  { key: 'timeline', label: 'Timeline' },
+  { key: 'render',   label: 'Render'   },
+  { key: 'encode',   label: 'Encode'   },
+  { key: 'finalize', label: 'Finalize' },
+]
 
-function SpecChip({ label }: { label: string }) {
+// Map progress % to a step index (0-4)
+function progressToStep(pct: number): number {
+  if (pct < 10) return 0
+  if (pct < 30) return 1
+  if (pct < 60) return 2
+  if (pct < 85) return 3
+  return 4
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatTime(seconds: number): string {
+  if (!seconds || seconds < 0) return '—'
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function MetaChip({ label }: { label: string }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center',
-      padding: '3px 9px', borderRadius: 8,
+      padding: '3px 10px', borderRadius: 99,
       fontSize: 10, fontWeight: 700, fontFamily: 'ui-monospace, monospace',
+      letterSpacing: '0.04em',
       background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
       color: 'var(--text-secondary)',
     }}>
@@ -57,146 +77,115 @@ function SpecChip({ label }: { label: string }) {
   )
 }
 
-// ─── Animated dots ────────────────────────────────────────────────────────────
-
-function StatusDots() {
+function PulsingDot({ color = 'var(--accent-primary)', size = 6 }: { color?: string; size?: number }) {
   return (
-    <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 4, verticalAlign: 'middle' }}>
-      {([0, 0.22, 0.44] as const).map((delay, i) => (
+    <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size, position: 'relative', flexShrink: 0 }}>
+      <span style={{
+        position: 'absolute', width: size * 2, height: size * 2, borderRadius: '50%',
+        background: color, opacity: 0.3, animation: 'rpo-ping 1.4s cubic-bezier(0,0,0.2,1) infinite',
+      }} />
+      <span style={{ position: 'relative', width: size, height: size, borderRadius: '50%', background: color }} />
+    </span>
+  )
+}
+
+function ThreeDots() {
+  return (
+    <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 5, verticalAlign: 'middle' }}>
+      {[0, 0.2, 0.4].map((delay, i) => (
         <span key={i} style={{
           display: 'inline-block', width: 3, height: 3, borderRadius: '50%',
-          background: 'var(--accent-primary)',
-          animation: `dotPulse 1.5s ease-in-out ${delay}s infinite`,
+          background: 'currentColor', opacity: 0.6,
+          animation: `rpo-dotPulse 1.4s ease-in-out ${delay}s infinite`,
         }} />
       ))}
     </span>
   )
 }
 
-// ─── Frame Scanner ───────────────────────────────────────────────────────────
+// ─── Step Tracker ─────────────────────────────────────────────────────────────
 
-const FRAME_COUNT = 14
+function StepTracker({ progress, isComplete, isFailed }: { progress: number; isComplete: boolean; isFailed: boolean }) {
+  const activeStep = isFailed ? -1 : isComplete ? RENDER_STEPS.length : progressToStep(progress)
 
-function FrameScanner({ active, status }: { active: boolean, status?: string }) {
   return (
-    <div aria-hidden style={{ width: '100%' }}>
-      <div style={{
-        position: 'relative', display: 'flex', gap: 3,
-        padding: '8px 10px', borderRadius: 12,
-        background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
-        overflow: 'hidden',
-      }}>
-        {Array.from({ length: FRAME_COUNT }).map((_, i) => (
-          <div key={i} style={{
-            flex: 1, aspectRatio: '9/6', borderRadius: 3,
-            background: active
-              ? `rgba(99,102,241,${0.04 + (i % 3) * 0.03})`
-              : 'var(--border-subtle)',
-            position: 'relative', overflow: 'hidden',
-            transition: 'background 0.3s ease',
-          }}>
-            <div style={{
-              position: 'absolute', top: '42%', left: 0, right: 0,
-              height: 1, background: 'var(--border-default)', opacity: 0.5,
-            }} />
-          </div>
-        ))}
-        {active && (
-          <div style={{
-            position: 'absolute', top: 0, bottom: 0, width: 32,
-            background: 'linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.5) 40%, rgba(139,92,246,0.6) 60%, transparent 100%)',
-            borderRadius: 2,
-            animation: 'scanSweep 2.0s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          }} />
-        )}
-        {status === 'completed' && (
-          <div style={{
-            position: 'absolute', inset: 0, borderRadius: 12,
-            background: 'linear-gradient(90deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.03) 100%)',
-            border: '1px solid var(--color-success-border)',
-          }} />
-        )}
-        {status === 'failed' && (
-          <div style={{
-            position: 'absolute', inset: 0, borderRadius: 12,
-            background: 'var(--color-error-bg)',
-            border: '1px solid var(--color-error-border)',
-          }} />
-        )}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+      {RENDER_STEPS.map((step, i) => {
+        const done    = isComplete || (!isFailed && i < activeStep)
+        const current = !isFailed && !isComplete && i === activeStep
+        const failed  = isFailed && i === activeStep
+
+        return (
+          <React.Fragment key={step.key}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 9, fontWeight: 900,
+                background: done
+                  ? 'linear-gradient(135deg, #10b981, #34d399)'
+                  : current
+                  ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                  : failed
+                  ? 'linear-gradient(135deg, #ef4444, #f87171)'
+                  : 'var(--bg-elevated)',
+                border: done || current || failed
+                  ? 'none'
+                  : '1px solid var(--border-default)',
+                color: done || current || failed ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.4s ease',
+                boxShadow: current ? '0 0 0 3px rgba(99,102,241,0.25)' : 'none',
+              }}>
+                {done ? '✓' : failed ? '✕' : i + 1}
+              </div>
+              <span style={{
+                fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                color: done ? '#10b981' : current ? 'var(--accent-primary)' : failed ? '#ef4444' : 'var(--text-muted)',
+                transition: 'color 0.3s ease',
+              }}>
+                {step.label}
+              </span>
+            </div>
+            {i < RENDER_STEPS.length - 1 && (
+              <div style={{
+                flex: 1, height: 2, borderRadius: 999, marginBottom: 18, maxWidth: 40,
+                background: done ? '#10b981' : 'var(--border-subtle)',
+                transition: 'background 0.4s ease',
+              }} />
+            )}
+          </React.Fragment>
+        )
+      })}
     </div>
   )
 }
 
-// ─── Status Icon ─────────────────────────────────────────────────────────────
+// ─── Activity Log ─────────────────────────────────────────────────────────────
 
-function StatusIcon({ status, cancelling }: { status?: string, cancelling: boolean }) {
-  if (cancelling) return (
-    <div style={{
-      width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)',
-    }}>
-      <IconLoader size={22} style={{ color: 'var(--color-warning)' }} />
-    </div>
-  )
-  if (status === 'completed') return (
-    <div style={{
-      width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--color-success-bg)', border: '1px solid var(--color-success-border)',
-      animation: 'popIn 0.4s cubic-bezier(0.34,1.2,0.64,1)',
-    }}>
-      <IconCheck size={22} style={{ color: 'var(--color-success)' }} />
-    </div>
-  )
-  if (status === 'failed') return (
-    <div style={{
-      width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)',
-    }}>
-      <IconAlertTriangle size={22} style={{ color: 'var(--color-error)' }} />
-    </div>
-  )
-  // Running
-  return (
-    <div style={{
-      width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)',
-    }}>
-      <IconLoader size={22} style={{ color: 'var(--accent-primary)' }} />
-    </div>
-  )
-}
-
-// ─── Live Activity Log ────────────────────────────────────────────────────────
-
-function LiveActivityLog({ log, isActive }: { log: string[]; isActive: boolean }) {
+function ActivityLog({ log, isActive }: { log: string[]; isActive: boolean }) {
   if (log.length === 0) return null
   return (
     <div style={{
       background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
-      borderRadius: 12, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6,
+      borderRadius: 12, padding: '10px 14px',
     }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-        {isActive && (
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0, animation: 'livePulse 1.8s ease-in-out infinite' }} />
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        {isActive && <PulsingDot color="#10b981" size={5} />}
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
           {isActive ? 'Live Activity' : 'Activity Log'}
         </span>
       </div>
-      {/* Log lines */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {log.map((entry, i) => {
           const isCurrent = i === log.length - 1 && isActive
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isCurrent ? 1 : 0.45 + (i / log.length) * 0.4 }}>
-              <span style={{ width: 4, height: 4, borderRadius: '50%', flexShrink: 0, background: isCurrent ? '#10b981' : 'var(--border-default)' }} />
-              <span style={{ fontSize: 11, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'ui-monospace, monospace', fontWeight: isCurrent ? 600 : 400 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8,
+              opacity: isCurrent ? 1 : 0.35 + (i / log.length) * 0.45 }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', flexShrink: 0,
+                background: isCurrent ? '#10b981' : 'var(--border-default)' }} />
+              <span style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace',
+                color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontWeight: isCurrent ? 600 : 400 }}>
                 {entry}
               </span>
             </div>
@@ -207,7 +196,32 @@ function LiveActivityLog({ log, isActive }: { log: string[]; isActive: boolean }
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Progress Bar ─────────────────────────────────────────────────────────────
+
+function ProgressBar({ pct, color, animated }: { pct: number; color: string; animated: boolean }) {
+  return (
+    <div style={{ height: 8, borderRadius: 999, overflow: 'hidden',
+      background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
+      position: 'relative' }}>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, bottom: 0,
+        width: `${pct}%`, borderRadius: 999, background: color,
+        transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+        overflow: 'hidden',
+      }}>
+        {animated && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.28) 50%, transparent 80%)',
+            animation: 'rpo-shimmer 1.8s linear infinite',
+          }} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onClose, renderSpec }: ProgressOverlayProps) {
   const [jobStatus,   setJobStatus]   = useState<JobStatus | null>(null)
@@ -234,13 +248,12 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
       try {
         const status = await getJobStatus(jobId)
         setJobStatus(status); setPollError(null)
-        // Append new unique step messages to the activity log
         const newStep = status.current_step
         if (newStep && newStep !== lastStepRef.current) {
           lastStepRef.current = newStep
           setActivityLog(prev => {
             const filtered = prev.filter(s => s !== newStep)
-            return [...filtered, newStep].slice(-5)
+            return [...filtered, newStep].slice(-6)
           })
         }
         if (status.status === 'completed' || status.status === 'failed') {
@@ -276,223 +289,204 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
     ? 'Cancelling…'
     : isFailed ? 'Generation Failed'
     : isComplete ? 'Export Complete'
-    : 'Generating Video'
-
-  const stepColor = isFailed
-    ? 'var(--color-error)'
-    : isComplete
-    ? 'var(--color-success)'
-    : 'var(--accent-primary)'
+    : 'Rendering Video'
 
   const progressColor = isFailed
-    ? 'linear-gradient(90deg, var(--color-error) 0%, #f87171 100%)'
+    ? 'linear-gradient(90deg, #ef4444, #f87171)'
     : isComplete
-    ? 'linear-gradient(90deg, var(--color-success) 0%, #34d399 100%)'
-    : 'linear-gradient(90deg, var(--accent-primary) 0%, #8b5cf6 60%, #06b6d4 100%)'
+    ? 'linear-gradient(90deg, #10b981, #34d399)'
+    : 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 55%, #06b6d4 100%)'
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  const accentColor = isFailed ? '#ef4444' : isComplete ? '#10b981' : 'var(--accent-primary)'
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
       <style>{`
-        @keyframes scanSweep {
-          0%   { left: -36px; }
-          100% { left: calc(100% + 4px); }
-        }
-        @keyframes dotPulse {
-          0%, 100% { opacity: 0.2; transform: scale(0.7); }
-          50%       { opacity: 1;   transform: scale(1.15); }
-        }
-        @keyframes shimmerProg {
-          0%   { transform: translateX(-120%); }
-          100% { transform: translateX(200%); }
-        }
-        @keyframes rpo-fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes rpo-slideUp {
-          from { opacity: 0; transform: translateY(20px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0)    scale(1); }
-        }
-        @keyframes borderTravel {
-          0%   { background-position: 0% 0%; }
-          100% { background-position: 200% 0%; }
-        }
-        @keyframes popIn {
-          0%   { opacity: 0; transform: scale(0.7); }
-          70%  { transform: scale(1.1); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes livePulse {
-          0%, 100% { opacity: 0.4; transform: scale(0.85); }
-          50%       { opacity: 1;   transform: scale(1.2); box-shadow: 0 0 6px #10b981; }
-        }
+        @keyframes rpo-fadeIn    { from { opacity: 0; }                             to { opacity: 1; } }
+        @keyframes rpo-slideUp   { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes rpo-shimmer   { 0% { transform: translateX(-120%); } 100% { transform: translateX(220%); } }
+        @keyframes rpo-ping      { 75%, 100% { transform: scale(2); opacity: 0; } }
+        @keyframes rpo-dotPulse  { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.2); } }
+        @keyframes rpo-scanLine  { 0% { left: -40px; } 100% { left: calc(100% + 8px); } }
+        @keyframes rpo-border    { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }
+        @keyframes rpo-popIn     { 0% { opacity: 0; transform: scale(0.65); } 70% { transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
       `}</style>
 
-      {/* ── Backdrop ─────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: 50,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0, 0, 0, 0.72)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          animation: 'rpo-fadeIn 0.22s ease-out',
-          padding: '16px',
-        }}
-      >
-        {/* ── Animated border wrapper ─────────────────────────────────────── */}
-        <div
-          style={{
-            position: 'relative',
-            padding: isActive ? 1.5 : 1,
-            borderRadius: 24,
-            background: isActive
-              ? 'linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #6366f1)'
-              : isFailed
-              ? 'var(--color-error-border)'
-              : isComplete
-              ? 'var(--color-success-border)'
-              : 'var(--border-default)',
-            backgroundSize: isActive ? '200% 100%' : '100% 100%',
-            animation: isActive ? 'borderTravel 2.8s linear infinite' : 'none',
-            boxShadow: isActive
-              ? '0 0 32px rgba(99,102,241,0.25), 0 8px 40px rgba(0,0,0,0.40)'
-              : '0 8px 40px rgba(0,0,0,0.40)',
-          }}
-        >
-          {/* ── Card ──────────────────────────────────────────────────────── */}
+      {/* ── Backdrop ─────────────────────────────────────────────── */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.75)',
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        animation: 'rpo-fadeIn 0.20s ease-out',
+        padding: 20,
+      }}>
+        {/* ── Glow border wrapper ──────────────────────────────────── */}
+        <div style={{
+          position: 'relative',
+          padding: isActive ? 1.5 : 1,
+          borderRadius: 26,
+          background: isActive
+            ? 'linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #6366f1)'
+            : isFailed ? '#ef444450' : isComplete ? '#10b98150' : 'var(--border-default)',
+          backgroundSize: isActive ? '200% 100%' : '100% 100%',
+          animation: isActive ? 'rpo-border 3s linear infinite' : 'none',
+          boxShadow: isActive
+            ? '0 0 40px rgba(99,102,241,0.22), 0 12px 48px rgba(0,0,0,0.45)'
+            : isFailed ? '0 12px 48px rgba(239,68,68,0.15), 0 4px 20px rgba(0,0,0,0.4)'
+            : isComplete ? '0 12px 48px rgba(16,185,129,0.15), 0 4px 20px rgba(0,0,0,0.4)'
+            : '0 12px 48px rgba(0,0,0,0.45)',
+        }}>
+          {/* ── Card ─────────────────────────────────────────────── */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label={titleText}
             style={{
-              width: 460,
-              maxWidth: 'calc(100vw - 32px)',
+              width: 500,
+              maxWidth: 'calc(100vw - 40px)',
               background: 'var(--bg-card)',
-              borderRadius: 22,
-              boxShadow: '0 24px 64px rgba(0,0,0,0.50), 0 4px 16px rgba(0,0,0,0.25)',
-              animation: 'rpo-slideUp 0.30s cubic-bezier(0.34,1.1,0.64,1)',
+              borderRadius: 24,
+              animation: 'rpo-slideUp 0.28s cubic-bezier(0.34,1.1,0.64,1)',
               overflow: 'hidden',
             }}
           >
-            {/* Top stripe */}
+            {/* ── Status stripe ────────────────────────────────── */}
             <div style={{
-              height: 3,
+              height: 4,
               background: isFailed
-                ? 'var(--color-error)'
+                ? '#ef4444'
                 : isComplete
-                ? 'linear-gradient(90deg, var(--color-success), #34d399)'
+                ? 'linear-gradient(90deg, #10b981, #34d399)'
                 : 'linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4)',
               transition: 'background 0.5s ease',
-            }} />
+              position: 'relative', overflow: 'hidden',
+            }}>
+              {isActive && (
+                <div style={{
+                  position: 'absolute', top: 0, bottom: 0, width: 60,
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)',
+                  animation: 'rpo-scanLine 2s cubic-bezier(0.4,0,0.6,1) infinite',
+                }} />
+              )}
+            </div>
 
-            <div style={{ padding: '24px 28px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ padding: '26px 30px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Zone 1 — Identity row */}
+              {/* Zone 1 — Header */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <StatusIcon status={jobStatus?.status} cancelling={cancelling} />
+                {/* Status icon */}
+                <div style={{
+                  width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isFailed
+                    ? 'rgba(239,68,68,0.12)'
+                    : isComplete
+                    ? 'rgba(16,185,129,0.12)'
+                    : cancelling
+                    ? 'rgba(245,158,11,0.12)'
+                    : 'rgba(99,102,241,0.12)',
+                  border: `1.5px solid ${
+                    isFailed ? 'rgba(239,68,68,0.3)'
+                    : isComplete ? 'rgba(16,185,129,0.3)'
+                    : cancelling ? 'rgba(245,158,11,0.3)'
+                    : 'rgba(99,102,241,0.3)'
+                  }`,
+                  animation: isComplete ? 'rpo-popIn 0.4s cubic-bezier(0.34,1.2,0.64,1)' : 'none',
+                }}>
+                  {isFailed ? (
+                    <IconAlertTriangle size={22} style={{ color: '#ef4444' }} />
+                  ) : isComplete ? (
+                    <IconCheck size={22} style={{ color: '#10b981' }} />
+                  ) : (
+                    <IconLoader size={22} style={{ color: cancelling ? '#f59e0b' : 'var(--accent-primary)' }} />
+                  )}
+                </div>
+
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{
-                    margin: 0, fontSize: 17, fontWeight: 700,
-                    letterSpacing: '-0.02em', color: 'var(--text-primary)',
+                    margin: 0, fontSize: 18, fontWeight: 800,
+                    letterSpacing: '-0.025em', color: 'var(--text-primary)',
+                    lineHeight: 1.2,
                   }}>
                     {titleText}
                   </h3>
-                  <div
-                    aria-live="polite"
-                    style={{
-                      fontSize: 12, fontWeight: 500, color: stepColor,
-                      display: 'flex', alignItems: 'center', marginTop: 3, minHeight: 18,
-                    }}
-                  >
+                  <div aria-live="polite" style={{
+                    fontSize: 12, fontWeight: 500, marginTop: 4,
+                    color: isFailed ? '#ef4444' : isComplete ? '#10b981' : cancelling ? '#f59e0b' : 'var(--accent-primary)',
+                    display: 'flex', alignItems: 'center', minHeight: 18,
+                  }}>
                     {isFailed && jobStatus?.errors?.length
                       ? jobStatus.errors[0]
                       : isComplete
-                      ? 'Your video is ready to download.'
+                      ? 'Your video is ready.'
                       : step}
-                    {isActive && <StatusDots />}
+                    {isActive && <ThreeDots />}
                   </div>
                 </div>
+
+                {/* Elapsed time badge */}
+                {elapsed > 0 && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                    padding: '4px 10px', borderRadius: 99,
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
+                    fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    <IconClock size={11} style={{ color: 'var(--text-muted)' }} />
+                    {formatTime(elapsed)}
+                  </div>
+                )}
               </div>
 
               {/* Zone 2 — Spec chips */}
               {renderSpec && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <SpecChip label={renderSpec.resolution} />
-                  <SpecChip label={PROFILE_FPS[renderSpec.renderProfile]} />
-                  <SpecChip label={PROFILE_LABEL[renderSpec.renderProfile]} />
+                  <MetaChip label={renderSpec.resolution} />
+                  <MetaChip label={PROFILE_FPS[renderSpec.renderProfile]} />
+                  <MetaChip label={PROFILE_LABEL[renderSpec.renderProfile]} />
                 </div>
               )}
 
-              {/* Zone 3 — Frame scanner */}
-              <FrameScanner active={isActive} status={jobStatus?.status} />
-
-              {/* Zone 3b — Live Activity Log */}
-              <LiveActivityLog log={activityLog} isActive={isActive} />
+              {/* Zone 3 — Step tracker */}
+              <StepTracker progress={progress} isComplete={isComplete} isFailed={isFailed} />
 
               {/* Zone 4 — Progress */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{
-                    fontSize: 28, fontWeight: 800, letterSpacing: '-0.04em',
-                    color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums',
-                    flexShrink: 0, minWidth: 58, lineHeight: 1,
-                  }}>
-                    {progress}<span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 2 }}>%</span>
-                  </div>
-                  <div style={{
-                    flex: 1, height: 8, borderRadius: 99, overflow: 'hidden',
-                    background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
-                    position: 'relative',
-                  }}>
-                    <div style={{
-                      position: 'absolute', top: 0, left: 0, bottom: 0,
-                      width: `${progress}%`, borderRadius: 99,
-                      background: progressColor,
-                      transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease',
-                      overflow: 'hidden',
-                    }}>
-                      {isActive && (
-                        <div style={{
-                          position: 'absolute', inset: 0,
-                          background: 'linear-gradient(90deg, transparent 20%, rgba(255,255,255,0.30) 50%, transparent 80%)',
-                          animation: 'shimmerProg 1.8s linear infinite',
-                        }} />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Zone 5 — Timing */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '10px 14px', borderRadius: 12,
-                background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)',
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)' }}>
-                  <IconClock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  <span style={{ color: 'var(--text-muted)' }}>Elapsed</span>
-                  <strong style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-primary)', fontSize: 13 }}>
-                    {formatTime(elapsed)}
-                  </strong>
-                  <span style={{ color: 'var(--border-default)', marginLeft: 4 }}>·</span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                    Render time varies by resolution and hardware.
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
+                    {isFailed ? 'Stopped' : isComplete ? 'Complete' : 'Progress'}
                   </span>
-                </span>
+                  <span style={{
+                    fontSize: 22, fontWeight: 900, letterSpacing: '-0.04em',
+                    color: accentColor, fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+                  }}>
+                    {progress}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 1 }}>%</span>
+                  </span>
+                </div>
+                <ProgressBar pct={progress} color={progressColor} animated={isActive} />
               </div>
 
-              {/* Zone 6 — Actions */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {pollError && (
-                  <div className="alert-error text-xs text-center animate-fade-in">
-                    ⚠ Connection lost — retrying…
-                  </div>
-                )}
+              {/* Zone 5 — Live Activity */}
+              <ActivityLog log={activityLog} isActive={isActive} />
 
+              {/* Zone 6 — Poll error */}
+              {pollError && (
+                <div style={{
+                  fontSize: 11, textAlign: 'center', color: '#f59e0b',
+                  padding: '6px 10px', borderRadius: 8,
+                  background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+                }}>
+                  ⚠ Connection lost — retrying…
+                </div>
+              )}
+
+              {/* Zone 7 — Actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Abort button (while running) */}
                 {!isTerminal && !cancelling && (
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <button
@@ -501,15 +495,15 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
                       aria-label="Cancel video generation"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '7px 16px', borderRadius: 10,
+                        padding: '7px 18px', borderRadius: 10,
                         fontSize: 12, fontWeight: 500, color: 'var(--text-muted)',
                         background: 'transparent', border: '1px solid transparent',
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.color = 'var(--color-error)'
-                        e.currentTarget.style.borderColor = 'var(--color-error-border)'
-                        e.currentTarget.style.background = 'var(--color-error-bg)'
+                        e.currentTarget.style.color = '#ef4444'
+                        e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'
+                        e.currentTarget.style.background = 'rgba(239,68,68,0.07)'
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.color = 'var(--text-muted)'
@@ -523,44 +517,49 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
                   </div>
                 )}
 
+                {/* Terminal actions */}
                 {isTerminal && onClose && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {/* Download button */}
                     {isComplete && jobStatus?.output_video_url && (
                       <a
                         href={jobStatus.output_video_url}
                         download={jobStatus.output_filename ?? 'video.mp4'}
                         onClick={() => { setTimeout(onClose!, 100) }}
                         style={{
-                          flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                          padding: '10px 16px', borderRadius: 12, textDecoration: 'none',
+                          flex: 1, display: 'inline-flex', alignItems: 'center',
+                          justifyContent: 'center', gap: 8,
+                          padding: '11px 18px', borderRadius: 12, textDecoration: 'none',
                           fontSize: 13, fontWeight: 700, color: '#fff',
-                          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                          boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                          boxShadow: '0 4px 16px rgba(99,102,241,0.38)',
                           cursor: 'pointer', transition: 'all 0.15s',
                         }}
                         onMouseEnter={e => {
                           e.currentTarget.style.transform = 'translateY(-1px)'
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(99,102,241,0.45)'
+                          e.currentTarget.style.boxShadow = '0 8px 24px rgba(99,102,241,0.5)'
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.transform = 'translateY(0)'
-                          e.currentTarget.style.boxShadow = '0 4px 14px rgba(99,102,241,0.35)'
+                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.38)'
                         }}
                       >
                         <IconDownload size={15} />
                         Download Video
                       </a>
                     )}
+
+                    {/* Close/View Result button */}
                     <button
                       onClick={onClose}
                       style={{
                         flex: isComplete && jobStatus?.output_video_url ? '0 0 auto' : 1,
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        padding: '10px 20px', borderRadius: 12,
+                        padding: '11px 20px', borderRadius: 12,
                         fontSize: 13, fontWeight: 600,
-                        color: isFailed ? 'var(--color-error)' : 'var(--text-primary)',
-                        background: isFailed ? 'var(--color-error-bg)' : 'var(--bg-elevated)',
-                        border: `1px solid ${isFailed ? 'var(--color-error-border)' : 'var(--border-strong)'}`,
+                        color: isFailed ? '#ef4444' : 'var(--text-primary)',
+                        background: isFailed ? 'rgba(239,68,68,0.07)' : 'var(--bg-elevated)',
+                        border: `1px solid ${isFailed ? 'rgba(239,68,68,0.25)' : 'var(--border-default)'}`,
                         cursor: 'pointer', transition: 'all 0.15s',
                       }}
                     >
@@ -569,38 +568,52 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
                   </div>
                 )}
               </div>
+
+              {/* Success file info */}
+              {isComplete && jobStatus?.output_filename && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)',
+                }}>
+                  <IconCheck size={12} style={{ color: '#10b981', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {jobStatus.output_filename}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ── Cancel confirmation dialog ─────────────────────────────────── */}
+        {/* ── Cancel confirmation ─────────────────────────────────── */}
         {showConfirm && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 60,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(6px)',
+            background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
             animation: 'rpo-fadeIn 0.15s ease-out',
           }}>
             <div style={{
-              width: 320, maxWidth: '92vw',
+              width: 340, maxWidth: '90vw',
               background: 'var(--bg-card)', border: '1px solid var(--border-default)',
-              borderRadius: 18, padding: '28px 24px 22px',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
+              borderRadius: 20, padding: '30px 26px 24px',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
               animation: 'rpo-slideUp 0.2s ease-out',
-              display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center',
+              display: 'flex', flexDirection: 'column', gap: 18, textAlign: 'center',
             }}>
               <div style={{
-                width: 48, height: 48, borderRadius: 14, margin: '0 auto',
+                width: 52, height: 52, borderRadius: 16, margin: '0 auto',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-border)',
+                background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
                 fontSize: 22,
               }}>⚠</div>
               <div>
-                <h4 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <h4 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
                   Abort generation?
                 </h4>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  All current progress will be lost and the job will stop.
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                  All current progress will be lost and the job will stop immediately.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -608,7 +621,7 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
                   id="cancel-confirm-no-btn"
                   onClick={handleCancelDismiss}
                   className="btn-secondary"
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 10 }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 11 }}
                 >
                   Keep going
                 </button>
@@ -616,10 +629,10 @@ export default function ProgressOverlay({ jobId, onJobComplete, onCancelled, onC
                   id="cancel-confirm-yes-btn"
                   onClick={handleCancelConfirm}
                   style={{
-                    flex: 1, padding: '10px 0', borderRadius: 10,
+                    flex: 1, padding: '10px 0', borderRadius: 11,
                     fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
-                    background: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)',
-                    color: 'var(--color-error)',
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#ef4444',
                   }}
                 >
                   Yes, abort

@@ -12,7 +12,7 @@ import {
   IconSparkles,
   IconArrowRight,
 } from './icons'
-import { getHistory, getBatchStats } from '../utils/api'
+import { getHistory, getBatchStats, getBatchState, startBatchQueue, pauseBatchAfterCurrent, stopBatchQueue, type BatchState } from '../utils/api'
 import StudioPageHeader from './StudioPageHeader'
 
 // ── Tiny inline icons not in icons.tsx ──────────────────────────────────────
@@ -343,27 +343,236 @@ function EmptyDashboard() {
   )
 }
 
+// ── Queue State Helpers ──────────────────────────────────────────────────────
+
+function getQueueStateLabel(state: BatchState | null): { label: string; color: string; bg: string; dot: string } {
+  if (!state) return { label: 'Unknown', color: 'var(--text-muted)', bg: 'var(--bg-elevated)', dot: '#94a3b8' }
+  if (state.stopping) return { label: 'Stopping…', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', dot: '#f59e0b' }
+  if (state.paused_after_current) return { label: 'Pausing after current', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', dot: '#f59e0b' }
+  if (state.is_running) return { label: 'Running', color: '#10b981', bg: 'rgba(16,185,129,0.1)', dot: '#10b981' }
+  return { label: 'Idle', color: '#6366f1', bg: 'rgba(99,102,241,0.08)', dot: '#6366f1' }
+}
+
+// ── Batch Queue Panel (premium main-area card) ────────────────────────────────
+
+function BatchQueuePanel({
+  batchStats, batchState, queueActionLoading, onAction, onOpenBatch,
+}: {
+  batchStats: any
+  batchState: BatchState | null
+  queueActionLoading: boolean
+  onAction: (action: 'start' | 'pause' | 'stop') => void
+  onOpenBatch?: () => void
+}) {
+  const stats = batchStats || {}
+  const total = stats.total || 0
+  const queued = stats.queued || 0
+  const running = stats.running || 0
+  const completed = stats.completed || 0
+  const failed = stats.failed || 0
+  const isRunning = batchState?.is_running ?? false
+  const stateInfo = getQueueStateLabel(batchState)
+  const completionPct = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  const counters = [
+    { label: 'Total Jobs', value: total, color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
+    { label: 'Queued', value: queued, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+    { label: 'Running', value: running, color: '#a855f7', bg: 'rgba(168,85,247,0.1)' },
+    { label: 'Completed', value: completed, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+    { label: 'Failed', value: failed, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  ]
+
+  return (
+    <div className="card p-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Batch Queue Status</h2>
+          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Live render queue overview</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
+               style={{ background: stateInfo.bg, color: stateInfo.color }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%', background: stateInfo.dot, display: 'inline-block',
+              animation: isRunning ? 'dashLivePulse 1.8s ease-in-out infinite' : 'none',
+            }} />
+            {stateInfo.label}
+          </div>
+          {onOpenBatch && (
+            <button
+              onClick={onOpenBatch}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+              style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)', border: '1px solid var(--accent-border)' }}
+            >
+              <IconZap size={11} /> Open Queue
+            </button>
+          )}
+        </div>
+      </div>
+
+      {total === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+               style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
+            <IconGrid size={20} style={{ color: 'var(--text-muted)' } as React.CSSProperties} />
+          </div>
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>No batch jobs queued yet</p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>Add jobs from any timeline tool to get started</p>
+        </div>
+      ) : (
+        <>
+          {/* Counter chips */}
+          <div className="grid grid-cols-5 gap-3 mb-5">
+            {counters.map(c => (
+              <div key={c.label} className="flex flex-col items-center justify-center rounded-xl py-3 gap-1"
+                   style={{ background: c.bg, border: `1px solid ${c.color}28` }}>
+                <span style={{ fontSize: 20, fontWeight: 900, lineHeight: 1, color: c.color, fontVariantNumeric: 'tabular-nums' }}>{c.value}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>{c.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-1.5">
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Overall Completion</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{completionPct}%</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 999, background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 999, width: `${completionPct}%`,
+                background: 'linear-gradient(90deg, #6366f1, #10b981)',
+                transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
+              }} />
+            </div>
+          </div>
+
+          {/* Current job */}
+          {batchState?.current_job_id && (
+            <div className="mb-5 flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                 style={{ background: 'rgba(168,85,247,0.07)', border: '1px solid rgba(168,85,247,0.2)' }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', background: '#a855f7', flexShrink: 0,
+                animation: 'dashLivePulse 1.8s ease-in-out infinite',
+              }} />
+              <div className="min-w-0 flex-1">
+                <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a855f7' }}>Currently Rendering</p>
+                <p className="truncate text-xs font-semibold" style={{ color: 'var(--text-primary)', marginTop: 1 }}>{batchState.current_job_id}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Controls */}
+          <div className="flex items-center gap-2">
+            {!isRunning ? (
+              <button
+                disabled={queueActionLoading || queued === 0}
+                onClick={() => onAction('start')}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{
+                  background: queueActionLoading || queued === 0 ? 'var(--bg-elevated)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: queueActionLoading || queued === 0 ? 'var(--text-muted)' : '#fff',
+                  opacity: queueActionLoading || queued === 0 ? 0.5 : 1,
+                  cursor: queueActionLoading || queued === 0 ? 'not-allowed' : 'pointer',
+                  boxShadow: queueActionLoading || queued === 0 ? 'none' : '0 4px 14px rgba(99,102,241,0.3)',
+                }}
+              >
+                <IconZap size={12} /> Start Queue
+              </button>
+            ) : (
+              <>
+                <button
+                  disabled={queueActionLoading || !!(batchState?.paused_after_current)}
+                  onClick={() => onAction('pause')}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all"
+                  style={{
+                    background: 'rgba(245,158,11,0.1)', color: '#f59e0b',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    opacity: queueActionLoading || batchState?.paused_after_current ? 0.5 : 1,
+                    cursor: queueActionLoading || batchState?.paused_after_current ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Pause After Current
+                </button>
+                <button
+                  disabled={queueActionLoading}
+                  onClick={() => onAction('stop')}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold"
+                  style={{
+                    background: 'rgba(239,68,68,0.08)', color: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    opacity: queueActionLoading ? 0.5 : 1,
+                    cursor: queueActionLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Stop
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      <style>{`
+        @keyframes dashLivePulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.2); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
-export default function StudioDashboardPage() {
+export default function StudioDashboardPage({ onNavigateToBatch }: { onNavigateToBatch?: () => void } = {}) {
   const [records, setRecords] = useState<HistoryRecord[]>([])
   const [batchStats, setBatchStats] = useState<any>(null)
+  const [batchState, setBatchState] = useState<BatchState | null>(null)
   const [loading, setLoading] = useState(true)
+  const [queueActionLoading, setQueueActionLoading] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
     Promise.all([
       getHistory().catch(() => []),
-      getBatchStats().catch(() => ({}))
+      getBatchStats().catch(() => ({})),
+      getBatchState().catch(() => null),
     ])
-      .then(([historyData, batchData]) => { 
+      .then(([historyData, batchData, stateData]) => { 
         setRecords(historyData)
         setBatchStats(batchData)
+        setBatchState(stateData)
         setLoading(false) 
       })
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Refresh batch state on a lighter poll
+  useEffect(() => {
+    const t = setInterval(() => {
+      getBatchState().catch(() => null).then(s => { if (s) setBatchState(s) })
+      getBatchStats().catch(() => null).then(s => { if (s) setBatchStats(s) })
+    }, 4000)
+    return () => clearInterval(t)
+  }, [])
+
+  const handleQueueAction = async (action: 'start' | 'pause' | 'stop') => {
+    setQueueActionLoading(true)
+    try {
+      if (action === 'start') await startBatchQueue()
+      else if (action === 'pause') await pauseBatchAfterCurrent()
+      else if (action === 'stop') await stopBatchQueue()
+      setTimeout(() => {
+        getBatchState().catch(() => null).then(s => { if (s) setBatchState(s) })
+        getBatchStats().catch(() => null).then(s => { if (s) setBatchStats(s) })
+      }, 500)
+    } catch { /* ignore */ } finally {
+      setQueueActionLoading(false)
+    }
+  }
 
   const stats = computeStats(records)
   const hasActivity = stats.total_exports > 0
@@ -463,55 +672,17 @@ export default function StudioDashboardPage() {
           {/* ── Middle Section: Wide Analytics + Sidebar ── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* ── Left: Activity + Tool Distribution ── */}
+            {/* ── Left: Batch Queue + Tool Distribution ── */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* Weekly Activity Card */}
-              <div className="card p-5">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Weekly Activity</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Exports per day — last 7 days</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'var(--accent-subtle)', color: 'var(--accent-primary)' }}>
-                    <IconActivity size={12} />
-                    7-day view
-                  </div>
-                </div>
-
-                {/* Bar Chart */}
-                <div className="flex items-end gap-2 h-28">
-                  {weeklyData.map((v, i) => {
-                    const maxV = Math.max(...weeklyData, 1)
-                    const pct = (v / maxV) * 100
-                    const isToday = i === 6
-                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                    const dayIdx = (new Date().getDay() - (6 - i) + 7) % 7
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1 group/bar">
-                        <div className="w-full rounded-t-lg relative overflow-hidden transition-all duration-200" style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                          <div
-                            className="w-full rounded-t-lg transition-all duration-700"
-                            style={{
-                              height: `${Math.max(pct, v > 0 ? 8 : 3)}%`,
-                              background: isToday
-                                ? 'linear-gradient(180deg, #6366f1, #8b5cf6)'
-                                : v > 0 ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.05)',
-                              minHeight: 3,
-                            }}
-                          />
-                        </div>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: isToday ? 'var(--accent-primary)' : 'var(--text-muted)', textTransform: 'uppercase' }}>
-                          {days[dayIdx]}
-                        </span>
-                        {v > 0 && (
-                          <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)' }}>{v}</span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+              {/* ── Batch Queue Status ── */}
+              <BatchQueuePanel
+                batchStats={batchStats}
+                batchState={batchState}
+                queueActionLoading={queueActionLoading}
+                onAction={handleQueueAction}
+                onOpenBatch={onNavigateToBatch}
+              />
 
               {/* Tool Distribution Card */}
               {toolDistribution.length > 0 && (
@@ -612,28 +783,6 @@ export default function StudioDashboardPage() {
                 ))}
               </div>
 
-              {/* Batch Queue Stats */}
-              {batchStats && (
-                <div className="card p-5 space-y-3">
-                  <h2 className="text-sm font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Batch Queue Status</h2>
-                  
-                  {[
-                    { label: 'Total Jobs', count: batchStats.total || 0, color: '#94a3b8' },
-                    { label: 'Queued', count: batchStats.queued || 0, color: '#3b82f6' },
-                    { label: 'Running', count: batchStats.running || 0, color: '#a855f7' },
-                    { label: 'Completed', count: batchStats.completed || 0, color: '#10b981' },
-                    { label: 'Failed', count: batchStats.failed || 0, color: '#ef4444' },
-                  ].map(item => (
-                    <div key={item.label} className="flex items-center justify-between py-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ background: item.color }} />
-                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-                      </div>
-                      <span className="text-xs font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>{item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
