@@ -543,7 +543,7 @@ def generate_video(
     logger.info(
         f"Starting job. Res: {export_resolution}, Profile: {render_profile}, "
         f"Motion: {effective_motion} ({motion_intensity}), "
-        f"Aspect: {aspect_ratio}, TextOverlay: {use_text_overlay}"
+        f"Aspect: {aspect_ratio}, TextOverlay: {text_overlay_config.get('enabled', False) if text_overlay_config else False}"
     )
 
     def _check_cancel():
