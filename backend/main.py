@@ -225,6 +225,8 @@ async def jobs_start(
     text_overlay_background_enabled: str = Form("false"),
     text_overlay_background_color: str = Form("#000000"),
     text_overlay_background_opacity: float = Form(50.0),
+    text_overlay_mode: str = Form("whole_video"),
+    text_overlay_items: str = Form("[]"),
 ):
     """
     Accept uploaded files and settings, create a background job, return {job_id}.
@@ -406,23 +408,7 @@ async def jobs_start(
                 music_volume=music_vol_clamped,
                 music_fade=music_fade_bool,
                 # Batch 16A — Text Overlay
-                text_overlay_enabled=text_overlay_enabled_bool,
-                text_overlay_text=text_overlay_text,
-                text_overlay_font_family=text_overlay_font_family,
-                text_overlay_font_size_percent=to_font_size,
-                text_overlay_font_weight=text_overlay_font_weight,
-                text_overlay_color=text_overlay_color,
-                text_overlay_opacity=to_opacity,
-                text_overlay_x_percent=to_x_pct,
-                text_overlay_y_percent=to_y_pct,
-                text_overlay_align=text_overlay_align,
-                text_overlay_max_width_percent=to_max_width,
-                text_overlay_shadow_enabled=text_overlay_shadow_bool,
-                text_overlay_stroke_enabled=text_overlay_stroke_bool,
-                text_overlay_stroke_color=text_overlay_stroke_color,
-                text_overlay_background_enabled=text_overlay_bg_bool,
-                text_overlay_background_color=text_overlay_background_color,
-                text_overlay_background_opacity=to_bg_opacity,
+                text_overlay_config=text_overlay_config,
                 # Infra
                 cancel_event=state["cancel_event"],
                 progress_callback=progress_callback,
@@ -780,6 +766,8 @@ async def jobs_start_video_timeline(
     text_overlay_background_enabled: str = Form("false"),
     text_overlay_background_color: str = Form("#000000"),
     text_overlay_background_opacity: float = Form(50.0),
+    text_overlay_mode: str = Form("whole_video"),
+    text_overlay_items: str = Form("[]"),
 ):
     """
     Accept uploaded files and settings for Video Timeline mode (Batch 10B + 10C).
@@ -787,7 +775,15 @@ async def jobs_start_video_timeline(
     """
 
     text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+    import json
+    try:
+        parsed_items = json.loads(text_overlay_items)
+    except:
+        parsed_items = []
+        
     text_overlay_config = {
+        "mode": text_overlay_mode,
+        "items": parsed_items,
         "enabled": text_overlay_enabled_bool,
         "text": text_overlay_text,
         "font_family": text_overlay_font_family,
@@ -1091,6 +1087,8 @@ async def jobs_start_media_timeline(
     text_overlay_background_enabled: str = Form("false"),
     text_overlay_background_color: str = Form("#000000"),
     text_overlay_background_opacity: float = Form(50.0),
+    text_overlay_mode: str = Form("whole_video"),
+    text_overlay_items: str = Form("[]"),
 ):
     """
     Accept uploaded files and settings for Media Timeline mode (Batch 11B).
@@ -1098,7 +1096,15 @@ async def jobs_start_media_timeline(
     """
 
     text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+    import json
+    try:
+        parsed_items = json.loads(text_overlay_items)
+    except:
+        parsed_items = []
+        
     text_overlay_config = {
+        "mode": text_overlay_mode,
+        "items": parsed_items,
         "enabled": text_overlay_enabled_bool,
         "text": text_overlay_text,
         "font_family": text_overlay_font_family,
@@ -1722,6 +1728,8 @@ async def api_batch_job_video_timeline(
     text_overlay_background_enabled: str = Form("false"),
     text_overlay_background_color: str = Form("#000000"),
     text_overlay_background_opacity: float = Form(50.0),
+    text_overlay_mode: str = Form("whole_video"),
+    text_overlay_items: str = Form("[]"),
     intro_file:    Optional[UploadFile] = File(None),
     outro_file:    Optional[UploadFile] = File(None),
 ):

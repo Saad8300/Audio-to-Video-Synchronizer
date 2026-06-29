@@ -87,6 +87,8 @@ export interface GenerateSettings {
 
   // Batch 16A — Text Overlay
   textOverlayEnabled: boolean
+  textOverlayMode?: 'whole_video' | 'timed_text' | 'csv_text'
+  textOverlayItems?: Array<{ id: string; text: string; start: string; end: string; }>
   textOverlayText: string
   textOverlayFontFamily: string
   textOverlayFontSizePercent: number
@@ -182,6 +184,8 @@ export interface VideoTimelineSettings {
 
   // Batch 16C — Text Overlay
   textOverlayEnabled: boolean
+  textOverlayMode?: 'whole_video' | 'timed_text' | 'csv_text'
+  textOverlayItems?: Array<{ id: string; text: string; start: string; end: string; }>
   textOverlayText: string
   textOverlayFontFamily: string
   textOverlayFontSizePercent: number
@@ -246,6 +250,8 @@ export interface MediaTimelineSettings {
 
   // Batch 16C — Text Overlay
   textOverlayEnabled: boolean
+  textOverlayMode?: 'whole_video' | 'timed_text' | 'csv_text'
+  textOverlayItems?: Array<{ id: string; text: string; start: string; end: string; }>
   textOverlayText: string
   textOverlayFontFamily: string
   textOverlayFontSizePercent: number

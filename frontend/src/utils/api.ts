@@ -61,6 +61,8 @@ export async function checkHealth(): Promise<boolean> {
 
 function appendTextOverlaySettings(form: FormData, settings: any) {
   form.append('text_overlay_enabled', settings.textOverlayEnabled ? 'true' : 'false')
+  form.append('text_overlay_mode', settings.textOverlayMode || 'whole_video')
+  form.append('text_overlay_items', JSON.stringify(settings.textOverlayItems || []))
   form.append('text_overlay_text', settings.textOverlayText || '')
   form.append('text_overlay_font_family', settings.textOverlayFontFamily || 'Inter')
   form.append('text_overlay_font_size_percent', String(settings.textOverlayFontSizePercent || 5))

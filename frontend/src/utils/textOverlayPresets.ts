@@ -1,6 +1,8 @@
 
 export interface TextOverlaySettings {
   textOverlayEnabled: boolean
+  textOverlayMode?: 'whole_video' | 'timed_text' | 'csv_text'
+  textOverlayItems?: Array<{ id: string; text: string; start: string; end: string; }>
   textOverlayText: string
   textOverlayFontFamily: string
   textOverlayFontSizePercent: number
@@ -39,6 +41,8 @@ export const BUILT_IN_PRESETS: TextOverlayPreset[] = [
     updatedAt: 0,
     settings: {
       textOverlayEnabled: true,
+      textOverlayMode: 'whole_video',
+      textOverlayItems: [],
       textOverlayText: 'Your Channel',
       textOverlayFontFamily: 'Inter',
       textOverlayFontSizePercent: 3,
@@ -65,6 +69,8 @@ export const BUILT_IN_PRESETS: TextOverlayPreset[] = [
     updatedAt: 0,
     settings: {
       textOverlayEnabled: true,
+      textOverlayMode: 'whole_video',
+      textOverlayItems: [],
       textOverlayText: 'Your caption here',
       textOverlayFontFamily: 'Impact',
       textOverlayFontSizePercent: 6,
@@ -91,6 +97,8 @@ export const BUILT_IN_PRESETS: TextOverlayPreset[] = [
     updatedAt: 0,
     settings: {
       textOverlayEnabled: true,
+      textOverlayMode: 'whole_video',
+      textOverlayItems: [],
       textOverlayText: 'Lower third title',
       textOverlayFontFamily: 'Inter',
       textOverlayFontSizePercent: 4.5,
@@ -117,6 +125,8 @@ export const BUILT_IN_PRESETS: TextOverlayPreset[] = [
     updatedAt: 0,
     settings: {
       textOverlayEnabled: true,
+      textOverlayMode: 'whole_video',
+      textOverlayItems: [],
       textOverlayText: 'Follow for more',
       textOverlayFontFamily: 'Inter',
       textOverlayFontSizePercent: 5,
@@ -143,6 +153,8 @@ export const BUILT_IN_PRESETS: TextOverlayPreset[] = [
     updatedAt: 0,
     settings: {
       textOverlayEnabled: true,
+      textOverlayMode: 'whole_video',
+      textOverlayItems: [],
       textOverlayText: 'A cinematic quote',
       textOverlayFontFamily: 'Georgia',
       textOverlayFontSizePercent: 5,
@@ -169,6 +181,8 @@ export const BUILT_IN_PRESETS: TextOverlayPreset[] = [
     updatedAt: 0,
     settings: {
       textOverlayEnabled: true,
+      textOverlayMode: 'whole_video',
+      textOverlayItems: [],
       textOverlayText: 'Video Title',
       textOverlayFontFamily: 'Inter',
       textOverlayFontSizePercent: 3.5,
