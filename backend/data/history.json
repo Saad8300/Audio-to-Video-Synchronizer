@@ -294,5 +294,107 @@
       "text_overlay_enabled": true,
       "text_overlay_mode": "whole_video"
     }
+  },
+  {
+    "id": "hist_05f35058799c",
+    "created_at": "2026-06-29T09:36:54.749194Z",
+    "tool": "image_timeline",
+    "tool_label": "Image Timeline",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": 0,
+    "resolution": "720p",
+    "aspect_ratio": "9:16",
+    "render_profile": "fast_preview",
+    "file_size_bytes": 14817886,
+    "status": "completed",
+    "metadata": {
+      "text_overlay_enabled": true,
+      "text_overlay_mode": "whole_video"
+    }
+  },
+  {
+    "id": "hist_6d6ec67400ea",
+    "created_at": "2026-06-29T10:00:36.790038Z",
+    "tool": "image_timeline",
+    "tool_label": "Image Timeline",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": 0,
+    "resolution": "720p",
+    "aspect_ratio": "9:16",
+    "render_profile": "fast_preview",
+    "file_size_bytes": 14819018,
+    "status": "completed",
+    "metadata": {
+      "text_overlay_enabled": true,
+      "text_overlay_mode": "whole_video"
+    }
+  },
+  {
+    "id": "hist_c7f9f0c15f5e",
+    "created_at": "2026-06-29T10:02:02.687245Z",
+    "tool": "batch_video_generator",
+    "tool_label": "Batch Video Generator",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": null,
+    "resolution": "720p",
+    "aspect_ratio": "9:16",
+    "render_profile": "fast_preview",
+    "file_size_bytes": 14808244,
+    "status": "completed",
+    "metadata": {
+      "batch_job_id": "batch_e03a8be599d9",
+      "source_tool": "image_timeline",
+      "generated_via": "batch_queue"
+    }
+  },
+  {
+    "id": "hist_61acd03a7ae0",
+    "created_at": "2026-06-29T10:02:28.408957Z",
+    "tool": "batch_video_generator",
+    "tool_label": "Batch Video Generator",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": null,
+    "resolution": "1080p",
+    "aspect_ratio": "9:16",
+    "render_profile": "balanced",
+    "file_size_bytes": 20782486,
+    "status": "completed",
+    "metadata": {
+      "batch_job_id": "batch_52bc82dfd01a",
+      "source_tool": "image_timeline",
+      "generated_via": "batch_queue"
+    }
+  },
+  {
+    "id": "hist_06013139a768",
+    "created_at": "2026-06-29T10:06:01.275727Z",
+    "tool": "image_timeline",
+    "tool_label": "Image Timeline",
+    "output_name": "my_video.mp4",
+    "output_type": "video",
+    "output_url": "/outputs/my_video.mp4",
+    "file_extension": "mp4",
+    "duration_seconds": 0,
+    "resolution": "1080p",
+    "aspect_ratio": "9:16",
+    "render_profile": "balanced",
+    "file_size_bytes": 20937589,
+    "status": "completed",
+    "metadata": {
+      "text_overlay_enabled": true,
+      "text_overlay_mode": "whole_video"
+    }
   }
 ]
