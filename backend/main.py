@@ -762,11 +762,51 @@ async def jobs_start_video_timeline(
     background_music_volume: float = Form(15.0),
     background_music_loop:   bool  = Form(True),
     background_music_fade:   bool  = Form(True),
+    # Batch 16A — Text Overlay
+    text_overlay_enabled: str = Form("false"),
+    text_overlay_text: str = Form(""),
+    text_overlay_font_family: str = Form("Inter"),
+    text_overlay_font_size_percent: float = Form(5.0),
+    text_overlay_font_weight: str = Form("Bold"),
+    text_overlay_color: str = Form("#FFFFFF"),
+    text_overlay_opacity: float = Form(100.0),
+    text_overlay_x_percent: float = Form(50.0),
+    text_overlay_y_percent: float = Form(90.0),
+    text_overlay_align: str = Form("center"),
+    text_overlay_max_width_percent: float = Form(80.0),
+    text_overlay_shadow_enabled: str = Form("true"),
+    text_overlay_stroke_enabled: str = Form("true"),
+    text_overlay_stroke_color: str = Form("#000000"),
+    text_overlay_background_enabled: str = Form("false"),
+    text_overlay_background_color: str = Form("#000000"),
+    text_overlay_background_opacity: float = Form(50.0),
 ):
     """
     Accept uploaded files and settings for Video Timeline mode (Batch 10B + 10C).
     Creates a background job; client polls GET /api/jobs/{job_id}/status.
     """
+
+    text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+    text_overlay_config = {
+        "enabled": text_overlay_enabled_bool,
+        "text": text_overlay_text,
+        "font_family": text_overlay_font_family,
+        "font_size_percent": text_overlay_font_size_percent,
+        "font_weight": text_overlay_font_weight,
+        "color": text_overlay_color,
+        "opacity": text_overlay_opacity,
+        "x_percent": text_overlay_x_percent,
+        "y_percent": text_overlay_y_percent,
+        "align": text_overlay_align,
+        "max_width_percent": text_overlay_max_width_percent,
+        "shadow_enabled": text_overlay_shadow_enabled.strip().lower() == "true",
+        "stroke_enabled": text_overlay_stroke_enabled.strip().lower() == "true",
+        "stroke_color": text_overlay_stroke_color,
+        "background_enabled": text_overlay_background_enabled.strip().lower() == "true",
+        "background_color": text_overlay_background_color,
+        "background_opacity": text_overlay_background_opacity,
+    }
+
     # Validate
     if aspect_ratio not in VALID_ASPECT_RATIOS:
         raise HTTPException(400, f"Invalid aspect_ratio '{aspect_ratio}'.")
@@ -905,6 +945,7 @@ async def jobs_start_video_timeline(
                 background_music_volume=background_music_volume,
                 background_music_loop=background_music_loop,
                 background_music_fade=background_music_fade,
+                text_overlay_config=text_overlay_config,
                 intro_path=intro_path,
                 outro_path=outro_path,
                 cancel_event=state["cancel_event"],
@@ -1032,11 +1073,51 @@ async def jobs_start_media_timeline(
     # Batch 11D — Intro / Outro
     intro_file:              Optional[UploadFile] = File(None),
     outro_file:              Optional[UploadFile] = File(None),
+    # Batch 16A — Text Overlay
+    text_overlay_enabled: str = Form("false"),
+    text_overlay_text: str = Form(""),
+    text_overlay_font_family: str = Form("Inter"),
+    text_overlay_font_size_percent: float = Form(5.0),
+    text_overlay_font_weight: str = Form("Bold"),
+    text_overlay_color: str = Form("#FFFFFF"),
+    text_overlay_opacity: float = Form(100.0),
+    text_overlay_x_percent: float = Form(50.0),
+    text_overlay_y_percent: float = Form(90.0),
+    text_overlay_align: str = Form("center"),
+    text_overlay_max_width_percent: float = Form(80.0),
+    text_overlay_shadow_enabled: str = Form("true"),
+    text_overlay_stroke_enabled: str = Form("true"),
+    text_overlay_stroke_color: str = Form("#000000"),
+    text_overlay_background_enabled: str = Form("false"),
+    text_overlay_background_color: str = Form("#000000"),
+    text_overlay_background_opacity: float = Form(50.0),
 ):
     """
     Accept uploaded files and settings for Media Timeline mode (Batch 11B).
     Creates a background job; client polls GET /api/jobs/{job_id}/status.
     """
+
+    text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+    text_overlay_config = {
+        "enabled": text_overlay_enabled_bool,
+        "text": text_overlay_text,
+        "font_family": text_overlay_font_family,
+        "font_size_percent": text_overlay_font_size_percent,
+        "font_weight": text_overlay_font_weight,
+        "color": text_overlay_color,
+        "opacity": text_overlay_opacity,
+        "x_percent": text_overlay_x_percent,
+        "y_percent": text_overlay_y_percent,
+        "align": text_overlay_align,
+        "max_width_percent": text_overlay_max_width_percent,
+        "shadow_enabled": text_overlay_shadow_enabled.strip().lower() == "true",
+        "stroke_enabled": text_overlay_stroke_enabled.strip().lower() == "true",
+        "stroke_color": text_overlay_stroke_color,
+        "background_enabled": text_overlay_background_enabled.strip().lower() == "true",
+        "background_color": text_overlay_background_color,
+        "background_opacity": text_overlay_background_opacity,
+    }
+
     # Validate
     if aspect_ratio not in VALID_ASPECT_RATIOS:
         raise HTTPException(400, f"Invalid aspect_ratio '{aspect_ratio}'.")
@@ -1171,6 +1252,7 @@ async def jobs_start_media_timeline(
                 background_music_volume=background_music_volume,
                 background_music_loop=background_music_loop,
                 background_music_fade=background_music_fade,
+                text_overlay_config=text_overlay_config,
                 intro_path=intro_path,
                 outro_path=outro_path,
                 cancel_event=state["cancel_event"],
@@ -1622,6 +1704,24 @@ async def api_batch_job_video_timeline(
     background_music_volume: float = Form(15.0),
     background_music_loop:   bool  = Form(True),
     background_music_fade:   bool  = Form(True),
+    # Batch 16A — Text Overlay
+    text_overlay_enabled: str = Form("false"),
+    text_overlay_text: str = Form(""),
+    text_overlay_font_family: str = Form("Inter"),
+    text_overlay_font_size_percent: float = Form(5.0),
+    text_overlay_font_weight: str = Form("Bold"),
+    text_overlay_color: str = Form("#FFFFFF"),
+    text_overlay_opacity: float = Form(100.0),
+    text_overlay_x_percent: float = Form(50.0),
+    text_overlay_y_percent: float = Form(90.0),
+    text_overlay_align: str = Form("center"),
+    text_overlay_max_width_percent: float = Form(80.0),
+    text_overlay_shadow_enabled: str = Form("true"),
+    text_overlay_stroke_enabled: str = Form("true"),
+    text_overlay_stroke_color: str = Form("#000000"),
+    text_overlay_background_enabled: str = Form("false"),
+    text_overlay_background_color: str = Form("#000000"),
+    text_overlay_background_opacity: float = Form(50.0),
     intro_file:    Optional[UploadFile] = File(None),
     outro_file:    Optional[UploadFile] = File(None),
 ):
@@ -1651,6 +1751,27 @@ async def api_batch_job_video_timeline(
         await save_upload(outro_file, "outro_file")
         await save_upload(background_music_file, "background_music_file")
         
+        text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+        text_overlay_config = {
+            "enabled": text_overlay_enabled_bool,
+            "text": text_overlay_text,
+            "font_family": text_overlay_font_family,
+            "font_size_percent": text_overlay_font_size_percent,
+            "font_weight": text_overlay_font_weight,
+            "color": text_overlay_color,
+            "opacity": text_overlay_opacity,
+            "x_percent": text_overlay_x_percent,
+            "y_percent": text_overlay_y_percent,
+            "align": text_overlay_align,
+            "max_width_percent": text_overlay_max_width_percent,
+            "shadow_enabled": text_overlay_shadow_enabled.strip().lower() == "true",
+            "stroke_enabled": text_overlay_stroke_enabled.strip().lower() == "true",
+            "stroke_color": text_overlay_stroke_color,
+            "background_enabled": text_overlay_background_enabled.strip().lower() == "true",
+            "background_color": text_overlay_background_color,
+            "background_opacity": text_overlay_background_opacity,
+        }
+
         config = {
             "audio_input_mode": audio_input_mode,
             "aspect_ratio": aspect_ratio,
@@ -1668,6 +1789,7 @@ async def api_batch_job_video_timeline(
             "background_music_volume": background_music_volume,
             "background_music_loop": background_music_loop,
             "background_music_fade": background_music_fade,
+            "text_overlay_config": text_overlay_config,
         }
         
         if watermark_text:
@@ -1762,6 +1884,27 @@ async def api_batch_job_media_timeline(
         await save_upload(outro_file, "outro_file")
         await save_upload(background_music_file, "background_music_file")
         
+        text_overlay_enabled_bool = text_overlay_enabled.strip().lower() == "true"
+        text_overlay_config = {
+            "enabled": text_overlay_enabled_bool,
+            "text": text_overlay_text,
+            "font_family": text_overlay_font_family,
+            "font_size_percent": text_overlay_font_size_percent,
+            "font_weight": text_overlay_font_weight,
+            "color": text_overlay_color,
+            "opacity": text_overlay_opacity,
+            "x_percent": text_overlay_x_percent,
+            "y_percent": text_overlay_y_percent,
+            "align": text_overlay_align,
+            "max_width_percent": text_overlay_max_width_percent,
+            "shadow_enabled": text_overlay_shadow_enabled.strip().lower() == "true",
+            "stroke_enabled": text_overlay_stroke_enabled.strip().lower() == "true",
+            "stroke_color": text_overlay_stroke_color,
+            "background_enabled": text_overlay_background_enabled.strip().lower() == "true",
+            "background_color": text_overlay_background_color,
+            "background_opacity": text_overlay_background_opacity,
+        }
+
         config = {
             "audio_input_mode": audio_input_mode,
             "aspect_ratio": aspect_ratio,
@@ -1785,6 +1928,7 @@ async def api_batch_job_media_timeline(
             "background_music_volume": background_music_volume,
             "background_music_loop": background_music_loop,
             "background_music_fade": background_music_fade,
+            "text_overlay_config": text_overlay_config,
         }
         
         if watermark_text:

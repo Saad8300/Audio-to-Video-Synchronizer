@@ -6,8 +6,8 @@ export function TextOverlayPanel({
   settings,
   onChange
 }: {
-  settings: GenerateSettings;
-  onChange: (updates: Partial<GenerateSettings>) => void;
+  settings: any;
+  onChange: (updates: any) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [presets, setPresets] = useState<TextOverlayPreset[]>([]);

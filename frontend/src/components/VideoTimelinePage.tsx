@@ -17,6 +17,7 @@ import {
 import ProgressOverlay from './ProgressOverlay'
 import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
 import ExportPresetPanel from './ExportPresetPanel'
+import { TextOverlayPanel } from './TextOverlayPanel'
 import type {
   VideoTimelineSettings,
   AspectRatio,
@@ -66,6 +67,24 @@ const DEFAULT_SETTINGS: VideoTimelineSettings = {
   // Intro / Outro
   enableIntro: false,
   enableOutro: false,
+  // Text Overlay
+  textOverlayEnabled: false,
+  textOverlayText: '',
+  textOverlayFontFamily: 'Inter',
+  textOverlayFontSizePercent: 5,
+  textOverlayFontWeight: 'Bold',
+  textOverlayColor: '#FFFFFF',
+  textOverlayOpacity: 100,
+  textOverlayXPercent: 50,
+  textOverlayYPercent: 90,
+  textOverlayAlign: 'center',
+  textOverlayMaxWidthPercent: 80,
+  textOverlayShadowEnabled: true,
+  textOverlayStrokeEnabled: true,
+  textOverlayStrokeColor: '#000000',
+  textOverlayBackgroundEnabled: false,
+  textOverlayBackgroundColor: '#000000',
+  textOverlayBackgroundOpacity: 50,
 }
 
 // ── Reusable Select ───────────────────────────────────────────────────────────
@@ -828,6 +847,13 @@ export default function VideoTimelinePage() {
                   options={[ { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' } ]} />
               </div>
             </div>
+
+            {/* Text Overlay */}
+            <TextOverlayPanel 
+              settings={settings}
+              onChange={(updates) => setSettings(s => ({ ...s, ...updates }))}
+            />
+
 
 
 

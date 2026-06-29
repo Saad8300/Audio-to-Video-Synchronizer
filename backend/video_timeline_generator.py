@@ -27,6 +27,7 @@ from typing import Optional, Callable, Any
 logger = logging.getLogger(__name__)
 
 from media_helpers import resolve_watermark_position
+from text_overlay import make_text_overlay
 
 # ---------------------------------------------------------------------------
 # Tables
@@ -1019,6 +1020,38 @@ def generate_video_timeline(
                     warnings_out.append("Watermark could not be rendered; continuing without it.")
             except Exception as we:
                 warnings_out.append(f"Watermark failed: {we}; continuing without it.")
+
+
+        # ── Step 7.5: Text Overlay (Batch 16A) ────────────────────────────────
+        if text_overlay_config and text_overlay_config.get("enabled"):
+            report(60, "Applying text overlay")
+            overlay_arr = make_text_overlay(
+                target_w=target_w,
+                target_h=target_h,
+                text=text_overlay_config.get("text", ""),
+                font_family=text_overlay_config.get("font_family", "Inter"),
+                font_size_percent=text_overlay_config.get("font_size_percent", 5.0),
+                font_weight=text_overlay_config.get("font_weight", "Bold"),
+                color=text_overlay_config.get("color", "#FFFFFF"),
+                opacity=text_overlay_config.get("opacity", 100.0),
+                x_percent=text_overlay_config.get("x_percent", 50.0),
+                y_percent=text_overlay_config.get("y_percent", 90.0),
+                align=text_overlay_config.get("align", "center"),
+                max_width_percent=text_overlay_config.get("max_width_percent", 80.0),
+                shadow_enabled=text_overlay_config.get("shadow_enabled", True),
+                stroke_enabled=text_overlay_config.get("stroke_enabled", True),
+                stroke_color=text_overlay_config.get("stroke_color", "#000000"),
+                bg_enabled=text_overlay_config.get("background_enabled", False),
+                bg_color=text_overlay_config.get("background_color", "#000000"),
+                bg_opacity=text_overlay_config.get("background_opacity", 50.0)
+            )
+            if overlay_arr is not None:
+                from moviepy.editor import ImageClip, CompositeVideoClip
+                overlay_clip = ImageClip(overlay_arr).set_duration(final_video.duration)
+                final_video = CompositeVideoClip([final_video, overlay_clip])
+            else:
+                warnings_out.append("Text overlay could not be rendered; continuing without it.")
+            check_cancel()
 
         # ── Step 8: Intro / Outro ─────────────────────────────────────────────
         clips_to_concat: list = []

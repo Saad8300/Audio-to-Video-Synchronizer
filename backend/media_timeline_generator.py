@@ -765,6 +765,41 @@ def generate_media_timeline(
             except Exception as e:
                 warnings.append(f"Watermark failed to apply: {e}")
 
+
+        # ── Step 7.5: Text Overlay (Batch 16A) ────────────────────────────────
+        if text_overlay_config and text_overlay_config.get("enabled"):
+            report(72, "Applying text overlay")
+            overlay_arr = make_text_overlay(
+                target_w=width,
+                target_h=height,
+                text=text_overlay_config.get("text", ""),
+                font_family=text_overlay_config.get("font_family", "Inter"),
+                font_size_percent=text_overlay_config.get("font_size_percent", 5.0),
+                font_weight=text_overlay_config.get("font_weight", "Bold"),
+                color=text_overlay_config.get("color", "#FFFFFF"),
+                opacity=text_overlay_config.get("opacity", 100.0),
+                x_percent=text_overlay_config.get("x_percent", 50.0),
+                y_percent=text_overlay_config.get("y_percent", 90.0),
+                align=text_overlay_config.get("align", "center"),
+                max_width_percent=text_overlay_config.get("max_width_percent", 80.0),
+                shadow_enabled=text_overlay_config.get("shadow_enabled", True),
+                stroke_enabled=text_overlay_config.get("stroke_enabled", True),
+                stroke_color=text_overlay_config.get("stroke_color", "#000000"),
+                bg_enabled=text_overlay_config.get("background_enabled", False),
+                bg_color=text_overlay_config.get("background_color", "#000000"),
+                bg_opacity=text_overlay_config.get("background_opacity", 50.0)
+            )
+            if overlay_arr is not None:
+                from moviepy.editor import ImageClip, CompositeVideoClip
+                overlay_clip = ImageClip(overlay_arr).set_duration(visual_dur)
+                saved_audio = main_video.audio
+                main_video = CompositeVideoClip([main_video.without_audio(), overlay_clip], size=(width, height))
+                if saved_audio:
+                    main_video = main_video.set_audio(saved_audio)
+            else:
+                warnings.append("Text overlay could not be rendered; continuing without it.")
+            check_cancel()
+
         # Intro / Outro
         use_intro = intro_path is not None and os.path.isfile(intro_path)
         use_outro = outro_path is not None and os.path.isfile(outro_path)

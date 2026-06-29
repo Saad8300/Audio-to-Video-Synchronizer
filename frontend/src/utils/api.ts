@@ -58,6 +58,27 @@ export async function checkHealth(): Promise<boolean> {
  * Start a background generation job.
  * Returns immediately with a job_id; poll getJobStatus() for updates.
  */
+
+function appendTextOverlaySettings(form: FormData, settings: any) {
+  form.append('text_overlay_enabled', settings.textOverlayEnabled ? 'true' : 'false')
+  form.append('text_overlay_text', settings.textOverlayText || '')
+  form.append('text_overlay_font_family', settings.textOverlayFontFamily || 'Inter')
+  form.append('text_overlay_font_size_percent', String(settings.textOverlayFontSizePercent || 5))
+  form.append('text_overlay_font_weight', settings.textOverlayFontWeight || 'Bold')
+  form.append('text_overlay_color', settings.textOverlayColor || '#FFFFFF')
+  form.append('text_overlay_opacity', String(settings.textOverlayOpacity || 100))
+  form.append('text_overlay_x_percent', String(settings.textOverlayXPercent || 50))
+  form.append('text_overlay_y_percent', String(settings.textOverlayYPercent || 90))
+  form.append('text_overlay_align', settings.textOverlayAlign || 'center')
+  form.append('text_overlay_max_width_percent', String(settings.textOverlayMaxWidthPercent || 80))
+  form.append('text_overlay_shadow_enabled', settings.textOverlayShadowEnabled ? 'true' : 'false')
+  form.append('text_overlay_stroke_enabled', settings.textOverlayStrokeEnabled ? 'true' : 'false')
+  form.append('text_overlay_stroke_color', settings.textOverlayStrokeColor || '#000000')
+  form.append('text_overlay_background_enabled', settings.textOverlayBackgroundEnabled ? 'true' : 'false')
+  form.append('text_overlay_background_color', settings.textOverlayBackgroundColor || '#000000')
+  form.append('text_overlay_background_opacity', String(settings.textOverlayBackgroundOpacity || 50))
+}
+
 export async function startJob(
   audioInputMode: 'single' | 'zip',
   audioFile:    File | null,
@@ -105,24 +126,7 @@ export async function startJob(
   form.append('music_volume',    (settings.musicVolume / 100).toFixed(4))
   form.append('music_fade',      settings.musicFade ? 'true' : 'false')
 
-  // Batch 16A — Text Overlay
-  form.append('text_overlay_enabled', settings.textOverlayEnabled ? 'true' : 'false')
-  form.append('text_overlay_text', settings.textOverlayText)
-  form.append('text_overlay_font_family', settings.textOverlayFontFamily)
-  form.append('text_overlay_font_size_percent', settings.textOverlayFontSizePercent.toString())
-  form.append('text_overlay_font_weight', settings.textOverlayFontWeight)
-  form.append('text_overlay_color', settings.textOverlayColor)
-  form.append('text_overlay_opacity', settings.textOverlayOpacity.toString())
-  form.append('text_overlay_x_percent', settings.textOverlayXPercent.toString())
-  form.append('text_overlay_y_percent', settings.textOverlayYPercent.toString())
-  form.append('text_overlay_align', settings.textOverlayAlign)
-  form.append('text_overlay_max_width_percent', settings.textOverlayMaxWidthPercent.toString())
-  form.append('text_overlay_shadow_enabled', settings.textOverlayShadowEnabled ? 'true' : 'false')
-  form.append('text_overlay_stroke_enabled', settings.textOverlayStrokeEnabled ? 'true' : 'false')
-  form.append('text_overlay_stroke_color', settings.textOverlayStrokeColor)
-  form.append('text_overlay_background_enabled', settings.textOverlayBackgroundEnabled ? 'true' : 'false')
-  form.append('text_overlay_background_color', settings.textOverlayBackgroundColor)
-  form.append('text_overlay_background_opacity', settings.textOverlayBackgroundOpacity.toString())
+  appendTextOverlaySettings(form, settings)
 
   // Optional file uploads
   if (introFile)   form.append('intro_file',    introFile)
@@ -197,6 +201,8 @@ export async function createImageTimelineBatchJob(
   if (outroFile)   form.append('outro_file',    outroFile)
   if (bgMusicFile) form.append('bg_music_file', bgMusicFile)
 
+  appendTextOverlaySettings(form, settings)
+
   const res = await fetch(`${BASE_URL}/api/batch/jobs/image-timeline`, {
     method: 'POST',
     body: form,
@@ -265,6 +271,8 @@ export async function createVideoTimelineBatchJob(
   form.append('background_music_volume', String(settings.backgroundMusicVolume))
   form.append('background_music_loop',   String(settings.backgroundMusicLoop))
   form.append('background_music_fade',   String(settings.backgroundMusicFade))
+
+  appendTextOverlaySettings(form, settings)
 
   const res = await fetch(`${BASE_URL}/api/batch/jobs/video-timeline`, {
     method: 'POST',
@@ -360,6 +368,8 @@ export async function createMediaTimelineBatchJob(
 
   if (introFile) form.append('intro_file', introFile)
   if (outroFile) form.append('outro_file', outroFile)
+
+  appendTextOverlaySettings(form, settings)
 
   const res = await fetch(`${BASE_URL}/api/batch/jobs/media-timeline`, {
     method: 'POST',
@@ -458,6 +468,8 @@ export async function startVideoTimelineJob(
   form.append('background_music_volume', String(settings.backgroundMusicVolume))
   form.append('background_music_loop',   String(settings.backgroundMusicLoop))
   form.append('background_music_fade',   String(settings.backgroundMusicFade))
+
+  appendTextOverlaySettings(form, settings)
 
   const res = await fetch(`${BASE_URL}/api/jobs/start-video-timeline`, {
     method: 'POST',
@@ -595,6 +607,8 @@ export async function startMediaTimelineJob(
 
   if (introFile) form.append('intro_file', introFile)
   if (outroFile) form.append('outro_file', outroFile)
+
+  appendTextOverlaySettings(form, settings)
 
   const res = await fetch(`${BASE_URL}/api/jobs/start-media-timeline`, {
     method: 'POST',

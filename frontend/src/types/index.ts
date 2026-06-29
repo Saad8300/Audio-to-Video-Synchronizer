@@ -179,6 +179,25 @@ export interface VideoTimelineSettings {
   // Batch 10C — intro / outro
   enableIntro:  boolean
   enableOutro:  boolean
+
+  // Batch 16C — Text Overlay
+  textOverlayEnabled: boolean
+  textOverlayText: string
+  textOverlayFontFamily: string
+  textOverlayFontSizePercent: number
+  textOverlayFontWeight: string
+  textOverlayColor: string
+  textOverlayOpacity: number
+  textOverlayXPercent: number
+  textOverlayYPercent: number
+  textOverlayAlign: 'left' | 'center' | 'right'
+  textOverlayMaxWidthPercent: number
+  textOverlayShadowEnabled: boolean
+  textOverlayStrokeEnabled: boolean
+  textOverlayStrokeColor: string
+  textOverlayBackgroundEnabled: boolean
+  textOverlayBackgroundColor: string
+  textOverlayBackgroundOpacity: number
 }
 
 // ── Batch 11C — Media Timeline Text Styling ────────────────────────────────
@@ -224,6 +243,25 @@ export interface MediaTimelineSettings {
   backgroundMusicFade:   boolean
   enableIntro:           boolean
   enableOutro:           boolean
+
+  // Batch 16C — Text Overlay
+  textOverlayEnabled: boolean
+  textOverlayText: string
+  textOverlayFontFamily: string
+  textOverlayFontSizePercent: number
+  textOverlayFontWeight: string
+  textOverlayColor: string
+  textOverlayOpacity: number
+  textOverlayXPercent: number
+  textOverlayYPercent: number
+  textOverlayAlign: 'left' | 'center' | 'right'
+  textOverlayMaxWidthPercent: number
+  textOverlayShadowEnabled: boolean
+  textOverlayStrokeEnabled: boolean
+  textOverlayStrokeColor: string
+  textOverlayBackgroundEnabled: boolean
+  textOverlayBackgroundColor: string
+  textOverlayBackgroundOpacity: number
 }
 
 // ── Batch Queue ──────────────────────────────────────────────────────────────
