@@ -15,7 +15,7 @@ import {
 import ProgressOverlay from './ProgressOverlay'
 import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
 import ExportPresetPanel from './ExportPresetPanel'
-import { TextOverlayPanel, TextOverlayPreview } from './TextOverlayPanel'
+import { TextOverlayPanel } from './TextOverlayPanel'
 import type {
   MediaTimelineSettings,
   GenerateStatus,
@@ -389,6 +389,13 @@ export default function MediaTimelinePage() {
     setTimeout(() => setErrorMsg(null), 4000)
   }, [])
 
+  const computeActiveSettings = (s: MediaTimelineSettings) => {
+    const isActive = s.textOverlayMode === 'whole_video' ? (s.textOverlayText || '').trim().length > 0
+                   : s.textOverlayMode === 'timed_text' ? (s.textOverlayItems || []).length > 0
+                   : s.textOverlayMode === 'csv_text';
+    return { ...s, textOverlayEnabled: isActive };
+  };
+
   const handleGenerate = async () => {
     if (!isReady) return
     setStatus('uploading')
@@ -398,13 +405,14 @@ export default function MediaTimelinePage() {
     setJobStatus(null)
 
     try {
+      const activeSettings = computeActiveSettings(settings);
       const res = await startMediaTimelineJob(
         audioInputMode,
         audioFile,
         audioZip,
         mediaZip,
         timelineCsv,
-        settings,
+        activeSettings,
         introFile,
         outroFile
       )
@@ -424,13 +432,14 @@ export default function MediaTimelinePage() {
     setSuccessQueueMsg(null)
 
     try {
+      const activeSettings = computeActiveSettings(settings);
       await createMediaTimelineBatchJob(
         audioInputMode,
         audioFile,
         audioZip,
         mediaZip,
         timelineCsv,
-        settings,
+        activeSettings,
         introFile,
         outroFile
       )
@@ -833,11 +842,7 @@ export default function MediaTimelinePage() {
 
         {/* ── RIGHT COLUMN ── */}
         <div className="xl:w-[320px] shrink-0 space-y-6">
-          {/* Live Preview (Sticky) */}
-          {settings.textOverlayEnabled && (
-            <TextOverlayPreview settings={settings} />
-          )}
-
+          
           {/* Action Card */}
           <div className="card p-5 space-y-4">
             <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Action</h2>

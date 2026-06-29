@@ -17,7 +17,7 @@ import {
 import ProgressOverlay from './ProgressOverlay'
 import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
 import ExportPresetPanel from './ExportPresetPanel'
-import { TextOverlayPanel, TextOverlayPreview } from './TextOverlayPanel'
+import { TextOverlayPanel } from './TextOverlayPanel'
 import type {
   VideoTimelineSettings,
   AspectRatio,
@@ -494,12 +494,20 @@ export default function VideoTimelinePage() {
   }
 
   // Generate
+  const computeActiveSettings = (s: VideoTimelineSettings) => {
+    const isActive = s.textOverlayMode === 'whole_video' ? (s.textOverlayText || '').trim().length > 0
+                   : s.textOverlayMode === 'timed_text' ? (s.textOverlayItems || []).length > 0
+                   : s.textOverlayMode === 'csv_text';
+    return { ...s, textOverlayEnabled: isActive };
+  };
+
   const handleGenerate = async () => {
     if ((audioInputMode === 'single' ? !audioFile : !audioZip) || !videosZip || !csvFile) return
     setResult(null); setCancelledMsg(null); setStatus('uploading')
     try {
+      const activeSettings = computeActiveSettings(settings);
       const { job_id } = await startVideoTimelineJob(
-        audioInputMode, audioFile, audioZip, videosZip, csvFile, settings,
+        audioInputMode, audioFile, audioZip, videosZip, csvFile, activeSettings,
         introFile, outroFile,
       )
       setCurrentJobId(job_id); setStatus('generating')
@@ -516,8 +524,9 @@ export default function VideoTimelinePage() {
     setSuccessQueueMsg(null)
 
     try {
+      const activeSettings = computeActiveSettings(settings);
       await createVideoTimelineBatchJob(
-        audioInputMode, audioFile, audioZip, videosZip, csvFile, settings,
+        audioInputMode, audioFile, audioZip, videosZip, csvFile, activeSettings,
         introFile, outroFile,
       )
       setSuccessQueueMsg("Added to Batch Queue")
@@ -876,11 +885,6 @@ export default function VideoTimelinePage() {
 
           {/* ── RIGHT COLUMN ── */}
           <div className="xl:w-[320px] shrink-0 space-y-6">
-
-            {/* Live Preview (Sticky) */}
-            {settings.textOverlayEnabled && (
-              <TextOverlayPreview settings={settings} />
-            )}
 
             {/* Action / Generate Card */}
             <div className="card p-5 space-y-4">

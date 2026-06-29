@@ -21,7 +21,7 @@ import ScriptTimestampPage from './components/ScriptTimestampPage'
 import BatchVideoGeneratorPage from './components/BatchVideoGeneratorPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
 import ExportPresetPanel from './components/ExportPresetPanel'
-import { TextOverlayPanel, TextOverlayPreview } from './components/TextOverlayPanel'
+import { TextOverlayPanel } from './components/TextOverlayPanel'
 import {
   IconMusic,
   IconImage,
@@ -353,11 +353,19 @@ export default function App() {
     (audioInputMode === 'single' ? !!audioFile : !!audioZip) || imagesZip || csvFile ? 2 : 1
 
   // Generate
+  const computeActiveSettings = (s: GenerateSettings) => {
+    const isActive = s.textOverlayMode === 'whole_video' ? (s.textOverlayText || '').trim().length > 0
+                   : s.textOverlayMode === 'timed_text' ? (s.textOverlayItems || []).length > 0
+                   : s.textOverlayMode === 'csv_text';
+    return { ...s, textOverlayEnabled: isActive };
+  };
+
   const handleGenerate = async () => {
     if ((audioInputMode === 'single' ? !audioFile : !audioZip) || !imagesZip || !csvFile) return
     setStatus('uploading')
     try {
-      const { job_id } = await startJob(audioInputMode, audioFile, audioZip, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
+      const activeSettings = computeActiveSettings(settings);
+      const { job_id } = await startJob(audioInputMode, audioFile, audioZip, imagesZip, csvFile, activeSettings, introFile, outroFile, bgMusicFile)
       setCurrentJobId(job_id); setStatus('generating')
     } catch (err) {
       setResult({ success: false, errors: [String(err)], warnings: [], timeline_report: [] })
@@ -370,7 +378,8 @@ export default function App() {
     setIsQueuing(true)
     setQueueSuccess(false)
     try {
-      await createImageTimelineBatchJob(audioInputMode, audioFile, audioZip, imagesZip, csvFile, settings, introFile, outroFile, bgMusicFile)
+      const activeSettings = computeActiveSettings(settings);
+      await createImageTimelineBatchJob(audioInputMode, audioFile, audioZip, imagesZip, csvFile, activeSettings, introFile, outroFile, bgMusicFile)
       setQueueSuccess(true)
     } catch (err) {
       alert("Failed to add to queue: " + err)
@@ -896,11 +905,7 @@ export default function App() {
         
                   {/* ── RIGHT COLUMN ── */}
                   <div className="xl:w-[320px] shrink-0 space-y-6">
-                    {/* Live Preview (Sticky) */}
-                    {settings.textOverlayEnabled && (
-                      <TextOverlayPreview settings={settings} />
-                    )}
-
+        
                     {/* Generate Button */}
                     <div className="card p-5 space-y-4">
                       {/* Action card title */}
