@@ -574,6 +574,7 @@ def generate_video(
     motion_intensity: str = "medium",
     visual_effect: str = "none",
     effect_strength: str = "medium",
+    style_preset: str = "clean_default",
     # Watermark (Batch 3)
     enable_watermark: bool = False,
     watermark_text: str = "",

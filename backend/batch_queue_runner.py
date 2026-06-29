@@ -198,6 +198,7 @@ def _process_job(job: Dict[str, Any]):
                 motion_intensity=config.get("motion_intensity", "medium"),
                 visual_effect=config.get("visual_effect", "none"),
                 effect_strength=config.get("effect_strength", "medium"),
+                style_preset=config.get("style_preset", "clean_default"),
                 intro_path=intro_path,
                 outro_path=outro_path,
                 bg_music_path=bg_music_path,
