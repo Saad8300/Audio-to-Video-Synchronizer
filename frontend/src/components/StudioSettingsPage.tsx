@@ -10,6 +10,7 @@ import {
 } from '../utils/notificationSettings'
 import { testNotification, requestDesktopNotificationPermission } from '../utils/notifications'
 import StudioPageHeader from './StudioPageHeader'
+import N8nWebhookSettingsCard from './N8nWebhookSettingsCard'
 
 export default function StudioSettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -359,6 +360,9 @@ export default function StudioSettingsPage() {
             </button>
           </div>
         </section>
+
+        {/* ── n8n Webhook Integration ── */}
+        <N8nWebhookSettingsCard />
 
         {/* ── Sidebar Menu Customization ── */}
         <section className="card p-6 space-y-5">
