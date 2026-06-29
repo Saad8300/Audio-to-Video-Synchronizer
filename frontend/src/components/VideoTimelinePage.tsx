@@ -17,7 +17,7 @@ import {
 import ProgressOverlay from './ProgressOverlay'
 import PreflightCheck, { buildPreflightChecks } from './PreflightCheck'
 import ExportPresetPanel from './ExportPresetPanel'
-import { TextOverlayPanel } from './TextOverlayPanel'
+import { TextOverlayPanel, TextOverlayPreview } from './TextOverlayPanel'
 import type {
   VideoTimelineSettings,
   AspectRatio,
@@ -876,6 +876,11 @@ export default function VideoTimelinePage() {
 
           {/* ── RIGHT COLUMN ── */}
           <div className="xl:w-[320px] shrink-0 space-y-6">
+
+            {/* Live Preview (Sticky) */}
+            {settings.textOverlayEnabled && (
+              <TextOverlayPreview settings={settings} />
+            )}
 
             {/* Action / Generate Card */}
             <div className="card p-5 space-y-4">

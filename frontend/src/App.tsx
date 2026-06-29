@@ -21,7 +21,7 @@ import ScriptTimestampPage from './components/ScriptTimestampPage'
 import BatchVideoGeneratorPage from './components/BatchVideoGeneratorPage'
 import PreflightCheck, { buildPreflightChecks } from './components/PreflightCheck'
 import ExportPresetPanel from './components/ExportPresetPanel'
-import { TextOverlayPanel } from './components/TextOverlayPanel'
+import { TextOverlayPanel, TextOverlayPreview } from './components/TextOverlayPanel'
 import {
   IconMusic,
   IconImage,
@@ -838,12 +838,6 @@ export default function App() {
                           options={[ { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' } ]} />
                       </div>
                     </div>
-                            {/* Text Overlay card */}
-                    <TextOverlayPanel 
-                      settings={settings} 
-                      onChange={updates => setSettings(s => ({ ...s, ...updates }))} 
-                    />
-
                     {/* Background Music card */}
                     <div className="card p-5 space-y-4">
                       <div>
@@ -887,6 +881,12 @@ export default function App() {
                         </div>
                       )}
                     </div>
+
+                    {/* Text Overlay card */}
+                    <TextOverlayPanel 
+                      settings={settings} 
+                      onChange={updates => setSettings(s => ({ ...s, ...updates }))} 
+                    />
         
         
         
@@ -896,7 +896,11 @@ export default function App() {
         
                   {/* ── RIGHT COLUMN ── */}
                   <div className="xl:w-[320px] shrink-0 space-y-6">
-        
+                    {/* Live Preview (Sticky) */}
+                    {settings.textOverlayEnabled && (
+                      <TextOverlayPreview settings={settings} />
+                    )}
+
                     {/* Generate Button */}
                     <div className="card p-5 space-y-4">
                       {/* Action card title */}
