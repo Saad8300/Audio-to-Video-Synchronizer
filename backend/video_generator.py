@@ -921,7 +921,6 @@ def generate_video(
                     if c: overlay_clips.append(c)
 
         if overlay_clips:
-            from moviepy.editor import CompositeVideoClip
             saved_audio = video.audio
             video = CompositeVideoClip([video.without_audio()] + overlay_clips, size=(target_w, target_h))
             if saved_audio:

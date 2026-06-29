@@ -24,6 +24,18 @@ import zipfile
 from pathlib import Path
 from typing import Optional, Callable, Any
 
+import numpy as np
+from PIL import Image, ImageEnhance, ImageDraw, ImageFont
+
+from moviepy.editor import (
+    VideoFileClip,
+    AudioFileClip,
+    ImageClip,
+    CompositeVideoClip,
+    concatenate_videoclips
+)
+from moviepy.video.fx.all import fadein, fadeout
+
 logger = logging.getLogger(__name__)
 
 from media_helpers import resolve_watermark_position
@@ -94,8 +106,6 @@ def _make_black_clip(width: int, height: int, duration: float, fps: int):
     A solid-black clip backed by a numpy array. Works reliably with
     concatenate_videoclips(method='chain') and get_frame().
     """
-    import numpy as np
-    from moviepy.editor import ImageClip
     frame = np.zeros((height, width, 3), dtype=np.uint8)
     clip = ImageClip(frame, duration=duration)
     clip = clip.set_fps(fps)
@@ -286,9 +296,6 @@ def _apply_visual_style_frame(frame, visual_effect: str, strength_factor: float)
     if visual_effect == "none" or strength_factor <= 0:
         return frame
 
-    import numpy as np
-    from PIL import Image, ImageEnhance
-
     img = Image.fromarray(frame.astype("uint8"), "RGB")
     s = strength_factor
 
@@ -319,7 +326,6 @@ def _apply_visual_style_frame(frame, visual_effect: str, strength_factor: float)
         w, h = img.size
         sw, sh = 128, 128
         mask = Image.new("L", (sw, sh), 0)
-        from PIL import ImageDraw, ImageFilter
         draw = ImageDraw.Draw(mask)
         draw.ellipse((10, 10, 118, 118), fill=255)
         try:
@@ -374,7 +380,6 @@ def _fit_clip_to_target(raw_clip, target_w: int, target_h: int, fit_mode: str, f
         bg = _make_black_clip(target_w, target_h, raw_clip.duration, fps)
         x_off = (target_w - new_w) // 2
         y_off = (target_h - new_h) // 2
-        from moviepy.editor import CompositeVideoClip
         resized_pos = resized.set_position((x_off, y_off))
         fitted = CompositeVideoClip([bg, resized_pos], size=(target_w, target_h))
     else:  # cover
@@ -416,8 +421,6 @@ def _build_segment_clip(
     raw_clips_registry so the caller can close it AFTER write_videofile.
     This prevents the 'NoneType get_frame' bug caused by premature close.
     """
-    from moviepy.editor import VideoFileClip, concatenate_videoclips
-
     raw = VideoFileClip(video_path, audio=False)
     raw_clips_registry.append(raw)  # track for deferred close
     source_dur = raw.duration
@@ -475,9 +478,6 @@ def _apply_transition_to_pair(
     For fade transitions: applies fade-out/fade-in and returns (prev, next, 0.0).
     For 'none': returns clips unchanged with 0.0 overlap.
     """
-    import numpy as np
-    from PIL import Image
-    from moviepy.video.fx.all import fadein, fadeout
 
     if transition == "none" or t_dur <= 0:
         return clip_prev, clip_next, 0.0
@@ -594,9 +594,7 @@ def _make_watermark_overlay(
     x_pos: int = 50, y_pos: int = 50,
     opacity: float = 0.65, size: int = 20, margin: int = 36,
 ):
-    import numpy as np
     import platform
-    from PIL import Image as PILImage, ImageDraw, ImageFont
 
     text = text.strip()
     if not text:
@@ -628,7 +626,7 @@ def _make_watermark_overlay(
     if font is None:
         font = ImageFont.load_default()
 
-    overlay = PILImage.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
+    overlay = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     try:
         bbox = draw.textbbox((0, 0), text, font=font)
@@ -693,7 +691,6 @@ def _make_watermark_overlay(
 
 
 def _apply_wm_frame(frame, overlay) -> object:
-    import numpy as np
     alpha = overlay[:, :, 3:4].astype(np.float32) / 255.0
     rgb   = overlay[:, :, :3].astype(np.float32)
     out   = frame.astype(np.float32) * (1.0 - alpha) + rgb * alpha
@@ -706,7 +703,6 @@ def _apply_wm_frame(frame, overlay) -> object:
 
 def _load_media_clip(media_path: str, target_w: int, target_h: int, fps: int, raw_clips_registry: list):
     """Load and fit an intro/outro clip. Appended to raw_clips_registry for deferred close."""
-    from moviepy.editor import VideoFileClip
     raw = VideoFileClip(media_path, audio=True)
     raw_clips_registry.append(raw)
     src_w, src_h = raw.size
@@ -764,6 +760,8 @@ def generate_video_timeline(
     background_music_volume: float = 15.0,
     background_music_loop:   bool  = True,
     background_music_fade:   bool  = True,
+    # Text overlay
+    text_overlay_config:     Optional[dict] = None,
     # Cancellation
     cancel_event:        Optional[threading.Event]    = None,
     progress_callback:   Optional[Callable[[int, str], None]] = None,
@@ -846,7 +844,7 @@ def generate_video_timeline(
         profile  = PROFILE_SETTINGS.get(render_profile, PROFILE_SETTINGS["balanced"])
         fps      = profile["fps"]
         t_dur    = max(0.1, min(float(transition_duration), 2.0))
-        use_wm = False
+        use_wm = (watermark_text != "")
         use_intro = intro_path is not None and os.path.isfile(intro_path)
         use_outro = outro_path is not None and os.path.isfile(outro_path)
 
@@ -867,9 +865,6 @@ def generate_video_timeline(
                 warnings_out.append("Visual Style High + long video (>10 min) may significantly increase render time.")
             if use_intro or use_outro or use_wm:
                 warnings_out.append("Long Video Timeline exports with watermark/intro/outro can take several minutes. Use 720p Fast Preview first for testing.")
-
-        from moviepy.editor import concatenate_videoclips, AudioFileClip, CompositeVideoClip
-        from media_helpers import apply_motion_to_clip, mix_background_music, pad_clip_to_size
 
         report(15, "Preparing clips")
         all_clips: list = []
@@ -994,10 +989,6 @@ def generate_video_timeline(
 
         check_cancel()
         
-        # ── Step 6: Visual Style (Done per-frame inside segment clip loop) ────
-        if visual_effect != "none":
-            report(55, "Applying visual style")
-
         # ── Step 7: Watermark ─────────────────────────────────────────────────
         if use_wm:
             report(58, "Applying watermark")
@@ -1046,7 +1037,6 @@ def generate_video_timeline(
                 bg_opacity=text_overlay_config.get("background_opacity", 50.0)
             )
             if overlay_arr is not None:
-                from moviepy.editor import ImageClip, CompositeVideoClip
                 overlay_clip = ImageClip(overlay_arr).set_duration(final_video.duration)
                 final_video = CompositeVideoClip([final_video, overlay_clip])
             else:

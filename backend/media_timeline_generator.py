@@ -27,7 +27,7 @@ from moviepy.editor import (
     concatenate_videoclips,
     AudioFileClip
 )
-from moviepy.video.fx.all import resize
+from moviepy.video.fx.all import resize, loop
 
 from video_timeline_generator import (
     _apply_visual_style_to_clip,
@@ -559,8 +559,7 @@ def generate_media_timeline(
                     else:
                         if dur > v_dur:
                             if fill_mode == "loop":
-                                from moviepy.video.fx.all import loop
-                                base_clip = raw.fx(loop, duration=dur)
+                                base_clip = loop(raw, duration=dur)
                             elif fill_mode == "freeze":
                                 freeze = raw.to_ImageClip(t=v_dur - 0.1).set_duration(dur - v_dur)
                                 base_clip = concatenate_videoclips([raw, freeze], method="chain")
@@ -790,7 +789,6 @@ def generate_media_timeline(
                 bg_opacity=text_overlay_config.get("background_opacity", 50.0)
             )
             if overlay_arr is not None:
-                from moviepy.editor import ImageClip, CompositeVideoClip
                 overlay_clip = ImageClip(overlay_arr).set_duration(visual_dur)
                 saved_audio = main_video.audio
                 main_video = CompositeVideoClip([main_video.without_audio(), overlay_clip], size=(width, height))

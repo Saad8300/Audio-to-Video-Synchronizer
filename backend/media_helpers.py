@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image, ImageFilter
-from moviepy.editor import VideoClip, ColorClip, CompositeVideoClip, ImageClip
+from moviepy.editor import VideoClip, ColorClip, CompositeVideoClip, ImageClip, AudioFileClip, CompositeAudioClip
+from moviepy.audio.fx.all import audio_fadein, audio_fadeout, volumex, audio_loop
 
 # Map intensity to factor
 INTENSITY_FACTOR = {
@@ -67,9 +68,6 @@ def mix_background_music(
     loop: bool,
     fade: bool
 ):
-    from moviepy.editor import AudioFileClip, CompositeAudioClip
-    from moviepy.audio.fx.all import audio_fadein, audio_fadeout, volx, audio_loop
-    
     try:
         bg_clip = AudioFileClip(music_path)
     except Exception as e:
@@ -77,7 +75,7 @@ def mix_background_music(
         
     try:
         vol_factor = max(0.0, min(1.0, volume / 100.0))
-        bg_clip = volx(bg_clip, vol_factor)
+        bg_clip = volumex(bg_clip, vol_factor)
         
         if loop and bg_clip.duration < final_duration:
             bg_clip = audio_loop(bg_clip, duration=final_duration)
@@ -110,7 +108,6 @@ def pad_clip_to_size(clip, target_w: int, target_h: int):
     """
     if clip.w == target_w and clip.h == target_h:
         return clip
-    from moviepy.editor import ColorClip, CompositeVideoClip
     bg = ColorClip(size=(target_w, target_h), color=(0, 0, 0)).set_duration(clip.duration)
     return CompositeVideoClip([bg, clip.set_position("center")])
 

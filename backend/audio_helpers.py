@@ -18,6 +18,7 @@ import re
 import zipfile
 from pathlib import Path
 from typing import Optional
+from moviepy.editor import AudioFileClip, concatenate_audioclips
 
 logger = logging.getLogger(__name__)
 
