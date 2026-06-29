@@ -287,6 +287,29 @@ async def jobs_start(
     to_font_size = max(1.0, min(100.0, float(text_overlay_font_size_percent)))
     to_max_width = max(1.0, min(100.0, float(text_overlay_max_width_percent)))
 
+    # Assemble Text Overlay Config
+    text_overlay_config = {
+        "enabled": text_overlay_enabled_bool,
+        "mode": text_overlay_mode,
+        "items": [], # Image Timeline legacy endpoint doesn't support timed items or csv columns
+        "text": text_overlay_text,
+        "font_family": text_overlay_font_family,
+        "font_size_percent": to_font_size,
+        "font_weight": text_overlay_font_weight,
+        "color": text_overlay_color,
+        "opacity": to_opacity,
+        "x_percent": to_x_pct,
+        "y_percent": to_y_pct,
+        "align": text_overlay_align,
+        "max_width_percent": to_max_width,
+        "shadow_enabled": text_overlay_shadow_bool,
+        "stroke_enabled": text_overlay_stroke_bool,
+        "stroke_color": text_overlay_stroke_color,
+        "background_enabled": text_overlay_bg_bool,
+        "background_color": text_overlay_background_color,
+        "background_opacity": to_bg_opacity,
+    }
+
     # ── Set up job ────────────────────────────────────────────────────────────
     job_id   = uuid.uuid4().hex
     job_temp = TEMP_DIR / job_id
