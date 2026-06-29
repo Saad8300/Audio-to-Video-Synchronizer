@@ -450,7 +450,11 @@ async def jobs_start(
                                 resolution=export_resolution,
                                 aspect_ratio=aspect_ratio,
                                 render_profile=render_profile,
-                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None
+                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None,
+                                metadata={
+                                    "text_overlay_enabled": str(text_overlay_enabled).strip().lower() == "true",
+                                    "text_overlay_mode": text_overlay_mode
+                                }
                             )
                         except Exception as e:
                             logger.error(f"Failed to add history: {e}")
@@ -984,7 +988,11 @@ async def jobs_start_video_timeline(
                                 resolution=export_resolution,
                                 aspect_ratio=aspect_ratio,
                                 render_profile=render_profile,
-                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None
+                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None,
+                                metadata={
+                                    "text_overlay_enabled": str(text_overlay_enabled).strip().lower() == "true",
+                                    "text_overlay_mode": text_overlay_mode
+                                }
                             )
                         except Exception as e:
                             logger.error(f"Failed to add history: {e}")
@@ -1301,7 +1309,11 @@ async def jobs_start_media_timeline(
                                 resolution=export_resolution,
                                 aspect_ratio=aspect_ratio,
                                 render_profile=render_profile,
-                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None
+                                file_size_bytes=os.path.getsize(output_path) if os.path.exists(output_path) else None,
+                                metadata={
+                                    "text_overlay_enabled": str(text_overlay_enabled).strip().lower() == "true",
+                                    "text_overlay_mode": text_overlay_mode
+                                }
                             )
                         except Exception as e:
                             logger.error(f"Failed to add history: {e}")

@@ -505,6 +505,14 @@ export default function StudioHistoryPage() {
                                   Batch
                                 </span>
                               )}
+                              {item.metadata?.text_overlay_enabled && (
+                                <span className="text-[9px] font-bold px-1.5 rounded" style={{ background: 'var(--bg-elevated)', color: 'var(--color-accent)', border: '1px solid var(--border-subtle)' }}>
+                                  Text Overlay · {
+                                    item.metadata.text_overlay_mode === 'timed_text' ? 'Timed Text' : 
+                                    item.metadata.text_overlay_mode === 'csv_text' ? 'CSV Text' : 'Whole Video'
+                                  }
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -583,6 +591,15 @@ export default function StudioHistoryPage() {
                       <>
                         <span>•</span>
                         <span className="px-1.5 rounded" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>Batch</span>
+                      </>
+                    )}
+                    {item.metadata?.text_overlay_enabled && (
+                      <>
+                        <span>•</span>
+                        <span className="px-1.5 rounded font-bold" style={{ background: 'var(--bg-elevated)', color: 'var(--color-accent)', border: '1px solid var(--border-subtle)' }}>
+                          {item.metadata.text_overlay_mode === 'timed_text' ? 'Timed Text' : 
+                           item.metadata.text_overlay_mode === 'csv_text' ? 'CSV Text' : 'Text Overlay'}
+                        </span>
                       </>
                     )}
                   </div>

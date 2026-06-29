@@ -60,6 +60,8 @@ const DEFAULT_SETTINGS: MediaTimelineSettings = {
   enableOutro: false,
   // Text Overlay
   textOverlayEnabled: false,
+  textOverlayMode: 'whole_video',
+  textOverlayItems: [],
   textOverlayText: '',
   textOverlayFontFamily: 'Inter',
   textOverlayFontSizePercent: 5,

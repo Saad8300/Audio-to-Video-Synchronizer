@@ -63,6 +63,8 @@ const DEFAULT_SETTINGS: GenerateSettings = {
   musicFade:        true,
   // Batch 16A — Text Overlay
   textOverlayEnabled: false,
+  textOverlayMode: 'whole_video',
+  textOverlayItems: [],
   textOverlayText: '',
   textOverlayFontFamily: 'Inter',
   textOverlayFontSizePercent: 5,

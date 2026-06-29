@@ -520,6 +520,14 @@ function JobRow({ job, isSelected, onSelect, onMoveUp, onMoveDown, onDuplicate, 
           <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded" style={{ background: `${getStatusColor(job.status)}15`, color: getStatusColor(job.status) }}>
             {job.status}
           </span>
+          {job.config?.text_overlay_enabled === true && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'var(--bg-elevated)', color: 'var(--color-accent)', border: '1px solid var(--border-subtle)' }}>
+              Text Overlay · {
+                job.config.text_overlay_mode === 'timed_text' ? 'Timed Text' : 
+                job.config.text_overlay_mode === 'csv_text' ? 'CSV Text' : 'Whole Video'
+              }
+            </span>
+          )}
           {isCompleted && <span className="text-[10px] font-bold text-gray-400 ml-1">Added to History</span>}
         </div>
         <h4 className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{job.title}</h4>
